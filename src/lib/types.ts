@@ -79,6 +79,27 @@ export type AuditEntry = {
   createdAt: string;
 };
 
+export type UserRole = "platform-admin" | "tenant-owner" | "tenant-editor" | "tenant-viewer";
+
+export type TenantUser = {
+  id: string;
+  tenantId: string;
+  email: string;
+  role: Exclude<UserRole, "platform-admin">;
+  passwordHash?: string;
+  emailVerifiedAt?: string;
+  createdAt: string;
+};
+
+export type PrivacyRequest = {
+  id: string;
+  tenantId: string;
+  email: string;
+  type: "export" | "delete";
+  status: "new" | "processing" | "done" | "rejected";
+  createdAt: string;
+};
+
 export type Station = {
   id: string;
   tenantId: string;
@@ -129,4 +150,6 @@ export type Tenant = {
   guestGuide: GuestGuideItem[];
   feedback: FeedbackMessage[];
   auditLog: AuditEntry[];
+  users: TenantUser[];
+  privacyRequests: PrivacyRequest[];
 };

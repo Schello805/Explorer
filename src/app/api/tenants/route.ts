@@ -1,21 +1,30 @@
 import { NextResponse } from "next/server";
+import { headers } from "next/headers";
+import { hash } from "bcryptjs";
 import { z } from "zod";
+import { rateLimit } from "@/lib/rate-limit";
 import { createTenantInstance } from "@/lib/tenant-store";
 
 const tenantCreateSchema = z.object({
   name: z.string().trim().min(2).max(120),
   slug: z.string().trim().min(2).max(80).regex(/^[a-z0-9-]+$/),
-  ownerEmail: z.string().trim().email()
+  ownerEmail: z.string().trim().email(),
+  ownerPassword: z.string().min(12).max(200)
 });
 
 export async function POST(request: Request) {
   if (process.env.ALLOW_PUBLIC_SIGNUP !== "true") {
     return NextResponse.json({ error: "Self-Service ist aktuell deaktiviert." }, { status: 403 });
   }
+  const requestHeaders = await headers();
+  const ip = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
+  const limited = rateLimit(`signup:${ip}`, 5, 60 * 60 * 1000);
+  if (!limited.ok) return NextResponse.json({ error: "Zu viele Registrierungen. Bitte später erneut versuchen." }, { status: 429 });
   const parsed = tenantCreateSchema.safeParse(await request.json());
   if (!parsed.success) return NextResponse.json({ error: "Bitte Name, Subdomain und E-Mail prüfen." }, { status: 400 });
   try {
-    const tenant = await createTenantInstance(parsed.data);
+    const ownerPasswordHash = await hash(parsed.data.ownerPassword, 12);
+    const tenant = await createTenantInstance({ ...parsed.data, ownerPasswordHash });
     return NextResponse.json({
       id: tenant.id,
       name: tenant.name,

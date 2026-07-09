@@ -26,6 +26,10 @@ bleiben je Mandant getrennt.
   Kartenquellen, E-Mail, Tracking und Funktionsmodulen
 - Optionale Module: Veranstaltungen, Rundgänge, Platzguide-Pass, Feedback,
   Check-ins, Statusanzeigen und digitale Gästemappe
+- Rollenmodell für Plattform-Admin, Betreiber, Bearbeiter und Leser
+- Datenschutzfunktionen für Mandantenexport und protokollierte Löschanfragen
+- Healthcheck unter `/api/health` für Monitoring und Deployments
+- Self-Service mit Rate-Limit und starkem Betreiber-Passwort vorbereitet
 - Ein Plattform-Admin: `admin@schellenberger.biz`
 - Tenant-Kontext in jeder Anfrage und PostgreSQL-RLS als zweite Schutzschicht
 - Revisionsnummer im Footer, bei jedem GitHub-Actions-Lauf automatisch erhöht
@@ -93,6 +97,9 @@ Umgebungsvariable gemappt werden.
 - Öffentliche Selbstregistrierung ist standardmäßig deaktiviert
   (`ALLOW_PUBLIC_SIGNUP=false`), bis E-Mail-Verifikation, Rate-Limits und
   Nutzungsbedingungen produktiv eingerichtet sind.
+- Medien werden aktuell als geprüfte externe URLs gespeichert. Binär-Uploads
+  brauchen vor Produktion Storage-Signaturen, Größenlimits und optionalen
+  Virenscan.
 
 ## Qualität
 

@@ -12,9 +12,11 @@ innerhalb von sieben Tagen.
 - Tenant-Filter in der Zugriffsschicht
 - PostgreSQL Row-Level Security
 - HTTP-only, SameSite-Strict Admin-Session
-- Ein erlaubtes Admin-Konto
+- Rollen: Plattform-Admin, Betreiber, Bearbeiter und Leser
 - Keine Geheimnisse im Browser-Bundle
 - Öffentliche Registrierung standardmäßig deaktiviert
+- Rate-Limit für vorbereiteten Self-Service
+- Datenschutzexport und Löschanfragen mit Audit-Log
 
 ## Vor Produktion
 
@@ -26,3 +28,7 @@ Beratung.
 Self-Service für Campingplatz-Betreiber darf erst öffentlich aktiviert werden,
 wenn E-Mail-Verifikation, Rate-Limits, Nutzungsbedingungen, Missbrauchsschutz
 und ein klares Lösch-/Exportkonzept umgesetzt sind.
+
+Medien werden derzeit als geprüfte URLs gespeichert. Vor echten Datei-Uploads
+sind tenantgetrennte Storage-Pfade, Dateityp-/Größenprüfung, kurzlebige
+Upload-Signaturen und optionaler Virenscan nötig.

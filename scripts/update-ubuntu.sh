@@ -117,7 +117,7 @@ health_check() {
   port="$(grep -E '^PORT=' "${APP_DIR}/.env.local" 2>/dev/null | cut -d= -f2 || true)"
   port="${port:-3000}"
   log "Prüfe HTTP-Antwort auf Port ${port} ..."
-  if curl -fsS "http://127.0.0.1:${port}" >/dev/null; then
+  if curl -fsS "http://127.0.0.1:${port}/api/health" >/dev/null; then
     ok "App antwortet lokal."
   else
     fail "App antwortet nicht auf http://127.0.0.1:${port}"

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Activity, Bell, BookOpen, CalendarDays, Caravan, ChevronRight, CircleAlert, FileText, Gift, Globe2, ImageIcon, LayoutDashboard, MapPinned, Menu, MessageSquareWarning, Palette, Plus, Search, Settings, ShieldCheck, Users, X } from "lucide-react";
+import { Activity, Bell, BookOpen, CalendarDays, Caravan, ChevronRight, CircleAlert, Download, FileText, Gift, Globe2, ImageIcon, LayoutDashboard, MapPinned, Menu, MessageSquareWarning, Palette, Plus, Search, Settings, ShieldCheck, Trash2, Users, X } from "lucide-react";
 import type { Category, EventItem, GuestGuideItem, MediaAsset, Reward, Station, Tenant, Tour } from "@/lib/types";
 import { cn, statusLabel } from "@/lib/utils";
 import { StationLocationPicker } from "@/components/station-location-picker";
@@ -21,7 +21,8 @@ const navigation = [
   { id: "feedback", label: "Feedback", icon: MessageSquareWarning },
   { id: "legal", label: "Recht & Datenschutz", icon: FileText },
   { id: "modules", label: "Module", icon: Settings },
-  { id: "security", label: "Sicherheit", icon: ShieldCheck }
+  { id: "security", label: "Sicherheit", icon: ShieldCheck },
+  { id: "profile", label: "Profil", icon: Users }
 ];
 
 export function AdminConsole({ tenant, adminEmail }: { tenant: Tenant; adminEmail: string }) {
@@ -99,6 +100,7 @@ export function AdminConsole({ tenant, adminEmail }: { tenant: Tenant; adminEmai
         {section === "rewards" && <Rewards tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "guide" && <GuestGuide tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "feedback" && <Feedback tenant={currentTenant} saving={saving} onSave={saveTenant} />}
+        {section === "profile" && <Profile tenant={currentTenant} adminEmail={adminEmail} />}
         {section === "security" && <Security />}
         {section === "media" && <Media tenant={currentTenant} saving={saving} onSave={saveTenant} />}
       </div>
@@ -218,7 +220,29 @@ function Feedback({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean;
     <Save saving={saving} onClick={() => onSave(draft)} />
   </SettingsCard>;
 }
-function Security() { return <div className="grid min-w-0 gap-6 xl:grid-cols-2"><SettingsCard title="Sicherheitsstatus" description="Zentrale Schutzmaßnahmen für die Plattform.">{["Ein einzelner Plattform-Admin", "HTTP-only Session-Cookie", "Tenant-Kontext pro Anfrage", "Datenbank-RLS vorbereitet", "Keine geheimen Schlüssel im Frontend"].map((item) => <p key={item} className="flex min-w-0 items-center gap-3 border-b border-black/5 py-3 text-sm"><ShieldCheck size={18} className="shrink-0 text-emerald-600" /><span className="min-w-0 break-words">{item}</span></p>)}</SettingsCard><SettingsCard title="Produktions-Checkliste" description="Diese Punkte müssen beim Deployment gesetzt werden.">{["Sicheres ADMIN_PASSWORD_HASH", "Zufälliges AUTH_SECRET", "PostgreSQL-Verbindung", "DNS/Wildcard-Domain", "Rechtstexte juristisch prüfen"].map((item) => <label key={item} className="flex min-w-0 items-center gap-3 border-b border-black/5 py-3 text-sm"><input type="checkbox" className="h-4 w-4 shrink-0" /><span className="min-w-0 break-words">{item}</span></label>)}</SettingsCard></div>; }
+function Profile({ tenant, adminEmail }: { tenant: Tenant; adminEmail: string }) {
+  async function requestDeletion() {
+    if (!confirm("Löschanfrage für diesen Mandanten erstellen?")) return;
+    const response = await fetch("/api/admin/privacy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "delete" })
+    });
+    alert(response.ok ? "Löschanfrage wurde protokolliert." : "Löschanfrage fehlgeschlagen.");
+  }
+  return <div className="grid gap-6 xl:grid-cols-2">
+    <SettingsCard title="Profil" description="Zugriff und Verantwortlichkeit für diesen Campingplatz.">
+      <p className="rounded-xl bg-[#f7f7f4] p-4 text-sm"><strong>{adminEmail}</strong><br />Plattform- oder Betreiberzugang</p>
+      <p className="text-sm text-black/55">Mandant: {tenant.name}<br />Tenant-ID: <span className="break-all">{tenant.id}</span></p>
+    </SettingsCard>
+    <SettingsCard title="Datenschutz" description="Export und Löschanfragen werden protokolliert.">
+      <a href="/api/admin/privacy" target="_blank" className="inline-flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold"><Download size={17} /> Datenexport öffnen</a>
+      <button onClick={requestDeletion} className="ml-0 inline-flex items-center gap-2 rounded-xl border border-red-200 px-4 py-3 text-sm font-bold text-red-700 sm:ml-2"><Trash2 size={17} /> Löschanfrage erstellen</button>
+      <p className="text-xs leading-5 text-black/45">Produktive Löschung sollte erst nach Identitätsprüfung und Backup-Frist final ausgeführt werden.</p>
+    </SettingsCard>
+  </div>;
+}
+function Security() { return <div className="grid min-w-0 gap-6 xl:grid-cols-2"><SettingsCard title="Sicherheitsstatus" description="Zentrale Schutzmaßnahmen für die Plattform.">{["Rollenmodell für Plattform und Mandanten", "HTTP-only Session-Cookie", "Tenant-Kontext pro Anfrage", "Datenbank-RLS vorbereitet", "Self-Service standardmäßig geschlossen", "Datenschutz-Export und Löschanfrage"].map((item) => <p key={item} className="flex min-w-0 items-center gap-3 border-b border-black/5 py-3 text-sm"><ShieldCheck size={18} className="shrink-0 text-emerald-600" /><span className="min-w-0 break-words">{item}</span></p>)}</SettingsCard><SettingsCard title="Produktions-Checkliste" description="Diese Punkte müssen beim Deployment gesetzt werden.">{["Sicheres ADMIN_PASSWORD_HASH", "Zufälliges AUTH_SECRET", "PostgreSQL-Verbindung", "DNS/Wildcard-Domain", "E-Mail-Verifikation und Rate-Limits", "Rechtstexte juristisch prüfen"].map((item) => <label key={item} className="flex min-w-0 items-center gap-3 border-b border-black/5 py-3 text-sm"><input type="checkbox" className="h-4 w-4 shrink-0" /><span className="min-w-0 break-words">{item}</span></label>)}</SettingsCard></div>; }
 function SettingsCard({ title, description, children }: { title: string; description: string; children: React.ReactNode }) { return <section className="min-w-0 w-full overflow-hidden animate-enter rounded-xl bg-white p-5 shadow-sm"><h2 className="break-words font-display text-2xl">{title}</h2><p className="mt-1 break-words text-sm text-black/45">{description}</p><div className="mt-4 min-w-0 space-y-4">{children}</div></section>; }
 function ModuleListHeader({ onAdd, saving, onSave }: { onAdd: () => void; saving: boolean; onSave: () => void }) { return <div className="flex flex-wrap gap-2"><button onClick={onAdd} className="rounded-xl border px-4 py-3 text-sm font-bold"><Plus size={16} className="mr-2 inline" />Hinzufügen</button><Save saving={saving} onClick={onSave} /></div>; }
 function AdminItem({ active, onToggle, onRemove, children }: { active: boolean; onToggle: (active: boolean) => void; onRemove: () => void; children: React.ReactNode }) { return <div className="space-y-3 rounded-xl border border-black/10 p-4"><div className="flex items-center justify-between gap-3"><label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={active} onChange={(event) => onToggle(event.target.checked)} className="h-4 w-4 accent-[#286551]" /> Aktiv</label><button onClick={onRemove} className="text-sm font-bold text-red-600">Entfernen</button></div>{children}</div>; }

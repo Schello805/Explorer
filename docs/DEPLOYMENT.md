@@ -18,6 +18,10 @@ ein zufälliges `AUTH_SECRET`, der bcrypt-Hash des Admin-Passworts,
 E-Mail-Verifikation, Rate-Limit, Nutzungsbedingungen und Missbrauchsschutz darf
 öffentliche Selbstregistrierung aktiviert werden.
 
+Monitoring kann `/api/health` abfragen. Der Endpunkt liefert App-Name,
+Revision, Mandantenanzahl und Latenz oder Status `503`, wenn der Datenzugriff
+fehlschlägt.
+
 ## Datenbank
 
 1. Eigene Application-DB-Rolle ohne `SUPERUSER` und ohne `BYPASSRLS` anlegen.
@@ -25,6 +29,9 @@ E-Mail-Verifikation, Rate-Limit, Nutzungsbedingungen und Missbrauchsschutz darf
 3. Pro Request eine Transaktion öffnen.
 4. Darin `set_config('app.tenant_id', tenantId, true)` setzen.
 5. Erst danach Queries ausführen.
+
+Die Tabellen `tenant_users`, `media_assets`, `privacy_requests`, `stations`
+und `audit_log` sind tenantgebunden und per RLS geschützt.
 
 ## Domains
 

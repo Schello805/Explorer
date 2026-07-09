@@ -1,7 +1,7 @@
 import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { ADMIN_EMAIL, verifyAdminSession } from "@/lib/auth";
+import { ADMIN_EMAIL, canManageTenant, verifyAdminSession } from "@/lib/auth";
 import { resolveTenant } from "@/lib/tenant-resolver";
 import { deleteStation, listTenants, saveStation } from "@/lib/tenant-store";
 
@@ -31,9 +31,10 @@ async function authorize() {
   const host = requestHeaders.get("host") ?? "localhost";
   const tenants = await listTenants();
   const normalized = host.split(":")[0];
-  return tenants.find((tenant) => tenant.hosts.includes(normalized))
-    ?? tenants.find((tenant) => tenant.slug === normalized.split(".")[0])
+  const tenant = tenants.find((candidate) => candidate.hosts.includes(normalized))
+    ?? tenants.find((candidate) => candidate.slug === normalized.split(".")[0])
     ?? resolveTenant(host);
+  return canManageTenant(session, tenant.id) ? tenant : null;
 }
 
 export async function POST(request: Request) {

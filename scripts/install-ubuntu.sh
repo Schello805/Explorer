@@ -227,8 +227,8 @@ health_check() {
   log "Prüfe lokalen Dienst ..."
   sleep 2
   systemctl is-active --quiet "${APP_NAME}.service" || fail "systemd-Service läuft nicht. Prüfe: journalctl -u ${APP_NAME} -n 100"
-  if curl -fsS "http://127.0.0.1:${PORT}" >/dev/null; then
-    ok "App antwortet lokal auf http://127.0.0.1:${PORT}"
+  if curl -fsS "http://127.0.0.1:${PORT}/api/health" >/dev/null; then
+    ok "App antwortet lokal auf http://127.0.0.1:${PORT}/api/health"
   else
     fail "App antwortet nicht auf Port ${PORT}. Prüfe: journalctl -u ${APP_NAME} -n 100"
   fi

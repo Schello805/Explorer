@@ -182,7 +182,17 @@ export const demoTenant: Tenant = {
     }
   ],
   feedback: [],
-  auditLog: []
+  auditLog: [],
+  users: [
+    {
+      id: "81111111-1111-4111-8111-111111111111",
+      tenantId: "11111111-1111-4111-8111-111111111111",
+      email: "admin@schellenberger.biz",
+      role: "tenant-owner",
+      createdAt: "2026-07-09T08:00:00.000Z"
+    }
+  ],
+  privacyRequests: []
 };
 
 export const tenants = [demoTenant];

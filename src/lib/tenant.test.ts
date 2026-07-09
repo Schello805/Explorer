@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { canManageTenant, canViewTenant } from "@/lib/auth";
+import { rateLimit } from "@/lib/rate-limit";
 import { onlyTenantRecords, resolveTenant } from "@/lib/tenant-resolver";
 
 describe("tenant isolation", () => {
@@ -16,5 +18,24 @@ describe("tenant isolation", () => {
 
   it("rejects record access without tenant context", () => {
     expect(() => onlyTenantRecords("", [])).toThrow("Tenant context is required");
+  });
+
+  it("allows tenant owners only on their own tenant", () => {
+    const session = { email: "owner@example.org", role: "tenant-owner" as const, tenantId: "tenant-a" };
+    expect(canManageTenant(session, "tenant-a")).toBe(true);
+    expect(canManageTenant(session, "tenant-b")).toBe(false);
+  });
+
+  it("allows tenant viewers to view but not manage", () => {
+    const session = { email: "viewer@example.org", role: "tenant-viewer" as const, tenantId: "tenant-a" };
+    expect(canViewTenant(session, "tenant-a")).toBe(true);
+    expect(canManageTenant(session, "tenant-a")).toBe(false);
+  });
+
+  it("rate limits repeated self-service actions", () => {
+    const key = `test-${crypto.randomUUID()}`;
+    expect(rateLimit(key, 2, 10_000).ok).toBe(true);
+    expect(rateLimit(key, 2, 10_000).ok).toBe(true);
+    expect(rateLimit(key, 2, 10_000).ok).toBe(false);
   });
 });

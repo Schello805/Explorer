@@ -9,6 +9,7 @@ export function PlatformLanding({ allowSignup }: { allowSignup: boolean }) {
   const [name, setName] = useState("Camping Sonnental");
   const [slug, setSlug] = useState("sonnental");
   const [ownerEmail, setOwnerEmail] = useState("admin@schellenberger.biz");
+  const [ownerPassword, setOwnerPassword] = useState("");
   const [result, setResult] = useState<{ localUrl: string; subdomain: string } | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,7 +25,7 @@ export function PlatformLanding({ allowSignup }: { allowSignup: boolean }) {
     const response = await fetch("/api/tenants", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, slug, ownerEmail })
+      body: JSON.stringify({ name, slug, ownerEmail, ownerPassword })
     });
     const payload = await response.json();
     setLoading(false);
@@ -57,6 +58,7 @@ export function PlatformLanding({ allowSignup }: { allowSignup: boolean }) {
           <Field label="Name der App" value={name} onChange={setName} />
           <Field label="Subdomain" value={slug} onChange={(value) => setSlug(value.toLowerCase().replace(/[^a-z0-9-]/g, ""))} suffix=".app-domain.de" />
           <Field label="Admin-E-Mail" value={ownerEmail} onChange={setOwnerEmail} />
+          <Field label="Admin-Passwort" type="password" value={ownerPassword} onChange={setOwnerPassword} />
         </div>
         {error && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p>}
         {result && <div className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900"><strong>Erstellt:</strong><br /><a className="font-bold underline" href={result.localUrl}>Lokale Instanz öffnen</a><br />Spätere Subdomain: {result.subdomain}</div>}
@@ -70,6 +72,6 @@ function MiniFeature({ icon, title, text }: { icon: ReactNode; title: string; te
   return <div className="rounded-2xl bg-white p-4 shadow-sm"><div className="text-[#195f4c]">{icon}</div><p className="mt-3 font-bold">{title}</p><p className="mt-1 text-sm text-[#18332b]/55">{text}</p></div>;
 }
 
-function Field({ label, value, suffix, onChange }: { label: string; value: string; suffix?: string; onChange: (value: string) => void }) {
-  return <label className="block text-sm font-bold">{label}<div className="mt-2 flex rounded-xl border border-black/10 bg-[#fafaf8]"><input required value={value} onChange={(event) => onChange(event.target.value)} className="min-w-0 flex-1 bg-transparent px-4 py-3 outline-none" />{suffix && <span className="shrink-0 border-l border-black/10 px-3 py-3 text-black/40">{suffix}</span>}</div></label>;
+function Field({ label, value, suffix, type = "text", onChange }: { label: string; value: string; suffix?: string; type?: string; onChange: (value: string) => void }) {
+  return <label className="block text-sm font-bold">{label}<div className="mt-2 flex rounded-xl border border-black/10 bg-[#fafaf8]"><input required type={type} minLength={type === "password" ? 12 : undefined} value={value} onChange={(event) => onChange(event.target.value)} className="min-w-0 flex-1 bg-transparent px-4 py-3 outline-none" />{suffix && <span className="shrink-0 border-l border-black/10 px-3 py-3 text-black/40">{suffix}</span>}</div></label>;
 }

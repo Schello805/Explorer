@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { compare } from "bcryptjs";
 import { z } from "zod";
-import { ADMIN_EMAIL, createAdminSession } from "@/lib/auth";
+import { ADMIN_EMAIL, createAdminSession, createSession } from "@/lib/auth";
+import { findTenantUser } from "@/lib/tenant-store";
 
 const credentials = z.object({
   email: z.string().email(),
@@ -10,19 +11,35 @@ const credentials = z.object({
 
 export async function POST(request: Request) {
   const parsed = credentials.safeParse(await request.json());
-  if (!parsed.success || parsed.data.email.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+  if (!parsed.success) {
     return NextResponse.json({ error: "E-Mail oder Passwort ist nicht korrekt." }, { status: 401 });
   }
 
-  const hash = process.env.ADMIN_PASSWORD_HASH;
-  const developmentMatch = process.env.NODE_ENV !== "production" && parsed.data.password === "platzguide-admin";
-  const passwordMatches = hash ? await compare(parsed.data.password, hash) : developmentMatch;
-  if (!passwordMatches) {
-    return NextResponse.json({ error: "E-Mail oder Passwort ist nicht korrekt." }, { status: 401 });
+  const email = parsed.data.email.toLowerCase();
+  let token: string | null = null;
+
+  if (email === ADMIN_EMAIL.toLowerCase()) {
+    const hash = process.env.ADMIN_PASSWORD_HASH;
+    const developmentMatch = process.env.NODE_ENV !== "production" && parsed.data.password === "platzguide-admin";
+    const passwordMatches = hash ? await compare(parsed.data.password, hash) : developmentMatch;
+    if (passwordMatches) token = await createAdminSession(parsed.data.email);
   }
+
+  if (!token) {
+    const tenantUser = await findTenantUser(email);
+    if (tenantUser?.user.passwordHash && await compare(parsed.data.password, tenantUser.user.passwordHash)) {
+      token = await createSession({
+        email: tenantUser.user.email,
+        role: tenantUser.user.role,
+        tenantId: tenantUser.tenant.id
+      });
+    }
+  }
+
+  if (!token) return NextResponse.json({ error: "E-Mail oder Passwort ist nicht korrekt." }, { status: 401 });
 
   const response = NextResponse.json({ ok: true });
-  response.cookies.set("platzguide_session", await createAdminSession(parsed.data.email), {
+  response.cookies.set("platzguide_session", token, {
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
