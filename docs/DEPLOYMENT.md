@@ -33,3 +33,64 @@ Unbekannte Hosts müssen vor Produktion auf eine neutrale Plattformseite führen
 Der CI-Workflow erzeugt bei jedem Push eine höhere GitHub-Run-Nummer. Das
 Deployment muss den verifizierten Build-Artefakt verwenden oder
 `NEXT_PUBLIC_APP_REVISION` identisch setzen.
+
+## Ubuntu-Installation
+
+Für einen eigenen Ubuntu-Server liegen fertige Skripte im Ordner `scripts`.
+Sie prüfen Betriebssystem, Rechte, Node.js, Git, Build, systemd und optional
+Nginx/PostgreSQL. Alle Schritte geben klare Statusmeldungen aus.
+
+### Minimal mit externer Datenbank
+
+```bash
+sudo APP_DIR=/opt/entdecker \
+  DOMAIN=example.org \
+  ADMIN_PASSWORD='sehr-sicheres-passwort' \
+  DATABASE_URL='postgresql://user:pass@db-host:5432/explorer' \
+  bash scripts/install-ubuntu.sh
+```
+
+### Mit lokalem PostgreSQL
+
+```bash
+sudo INSTALL_POSTGRES=true \
+  DB_PASSWORD='langes-db-passwort' \
+  DOMAIN=example.org \
+  ADMIN_PASSWORD='sehr-sicheres-passwort' \
+  bash scripts/install-ubuntu.sh
+```
+
+Wichtige Optionen:
+
+- `APP_DIR`: Zielordner, Standard `/opt/entdecker`
+- `APP_USER`: Systembenutzer, Standard `entdecker`
+- `DOMAIN`: Nginx-Domain oder `_` für alle Hosts
+- `PORT`: interner Next.js-Port, Standard `3000`
+- `INSTALL_NGINX=false`: Nginx nicht installieren
+- `INSTALL_POSTGRES=true`: PostgreSQL lokal installieren
+- `ADMIN_PASSWORD`: erzeugt automatisch den bcrypt-Hash
+
+Nach der Installation:
+
+```bash
+systemctl status entdecker
+journalctl -u entdecker -f
+```
+
+## Ubuntu-Updates
+
+Das Updatescript erstellt ein Backup von `.env.local` und `.data`, prüft den
+Git-Arbeitsbaum, lädt Updates per Fast-Forward, baut die App neu, aktualisiert
+`NEXT_PUBLIC_APP_REVISION` und startet den Service neu.
+
+```bash
+sudo bash /opt/entdecker/scripts/update-ubuntu.sh
+```
+
+Optionen:
+
+- `APP_DIR=/opt/entdecker`
+- `APP_NAME=entdecker`
+- `BRANCH=main`
+- `RUN_VERIFY=false` für nur `npm run build` statt vollständiger Prüfung
+- `BACKUP_DIR=/var/backups/entdecker`

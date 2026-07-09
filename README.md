@@ -100,6 +100,17 @@ npm run build
 npm run verify
 ```
 
+## Ubuntu-Server
+
+Für eigene Ubuntu-/Debian-Server gibt es geprüfte Skripte:
+
+```bash
+sudo bash scripts/install-ubuntu.sh
+sudo bash /opt/entdecker/scripts/update-ubuntu.sh
+```
+
+Details und Optionen stehen in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
 ## Mitwirken
 
 Fehlerberichte und nicht-kommerzielle Beiträge sind willkommen. Bitte zuerst
