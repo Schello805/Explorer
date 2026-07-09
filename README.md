@@ -30,6 +30,7 @@ bleiben je Mandant getrennt.
 - Datenschutzfunktionen für Mandantenexport und protokollierte Löschanfragen
 - Healthcheck unter `/api/health` für Monitoring und Deployments
 - Self-Service mit Rate-Limit und starkem Betreiber-Passwort vorbereitet
+- E-Mail-Verifikation per Webhook oder lokaler Mail-Outbox vorbereitet
 - Ein Plattform-Admin: `admin@schellenberger.biz`
 - Tenant-Kontext in jeder Anfrage und PostgreSQL-RLS als zweite Schutzschicht
 - Revisionsnummer im Footer, bei jedem GitHub-Actions-Lauf automatisch erhöht
@@ -50,6 +51,9 @@ Danach:
 - Beispiel-Subdomain: `http://sonnental.localhost:3000`
 - Admin: `http://localhost:3000/admin`
 - Lokales Entwicklungspasswort: `platzguide-admin`
+
+Wenn die Startseite lokal nicht lädt: `DATABASE_URL` in `.env.local` leer
+lassen, solange keine lokale PostgreSQL-Datenbank läuft.
 
 Für Produktion muss `ADMIN_PASSWORD_HASH` gesetzt werden:
 
@@ -97,6 +101,8 @@ Umgebungsvariable gemappt werden.
 - Öffentliche Selbstregistrierung ist standardmäßig deaktiviert
   (`ALLOW_PUBLIC_SIGNUP=false`), bis E-Mail-Verifikation, Rate-Limits und
   Nutzungsbedingungen produktiv eingerichtet sind.
+- Ohne `MAIL_WEBHOOK_URL` schreibt Platzguide Bestätigungsmails in
+  `.data/mail-outbox.json`. Für Produktion muss ein Maildienst angebunden sein.
 - Medien werden aktuell als geprüfte externe URLs gespeichert. Binär-Uploads
   brauchen vor Produktion Storage-Signaturen, Größenlimits und optionalen
   Virenscan.

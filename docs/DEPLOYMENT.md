@@ -18,6 +18,10 @@ ein zufälliges `AUTH_SECRET`, der bcrypt-Hash des Admin-Passworts,
 E-Mail-Verifikation, Rate-Limit, Nutzungsbedingungen und Missbrauchsschutz darf
 öffentliche Selbstregistrierung aktiviert werden.
 
+Für Betreiber-Registrierungen muss `MAIL_WEBHOOK_URL` auf einen transaktionalen
+Maildienst zeigen. Ohne diesen Wert werden E-Mails nur lokal in
+`.data/mail-outbox.json` abgelegt.
+
 Monitoring kann `/api/health` abfragen. Der Endpunkt liefert App-Name,
 Revision, Mandantenanzahl und Latenz oder Status `503`, wenn der Datenzugriff
 fehlschlägt.

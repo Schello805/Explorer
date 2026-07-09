@@ -1,9 +1,11 @@
 import "server-only";
 
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import net from "node:net";
 import path from "node:path";
 import postgres from "postgres";
 import { tenants as seedTenants } from "@/lib/demo-data";
+import { sendMail } from "@/lib/mail";
 import type { AuditEntry, FeedbackMessage, PrivacyRequest, Station, Tenant } from "@/lib/types";
 
 const dataDirectory = path.join(process.cwd(), ".data");
@@ -27,7 +29,7 @@ async function writeLocalTenants(tenants: Tenant[]) {
 }
 
 async function readPostgresTenants(): Promise<Tenant[]> {
-  const sql = postgres(process.env.DATABASE_URL!, { max: 5 });
+  const sql = postgres(process.env.DATABASE_URL!, { connect_timeout: 3, idle_timeout: 5, max: 5 });
   try {
     const rows = await sql<{ configuration: Tenant }[]>`
       SELECT configuration FROM tenants ORDER BY created_at
@@ -69,16 +71,43 @@ function audit(tenantId: string, actorEmail: string, action: string, entityType:
 }
 
 export async function listTenants(): Promise<Tenant[]> {
-  return process.env.DATABASE_URL
-    ? readPostgresTenants()
-    : readLocalTenants();
+  if (!process.env.DATABASE_URL) return readLocalTenants();
+  try {
+    if (process.env.NODE_ENV !== "production") {
+      if (!await canReachDatabase(process.env.DATABASE_URL, 800)) {
+        throw new Error("PostgreSQL not reachable");
+      }
+    }
+    return await readPostgresTenants();
+  } catch (error) {
+    if (process.env.NODE_ENV === "production") throw error;
+    console.warn("PostgreSQL nicht erreichbar, nutze lokale Demo-Daten.");
+    return readLocalTenants();
+  }
+}
+
+async function canReachDatabase(databaseUrl: string, timeoutMs: number) {
+  const parsed = new URL(databaseUrl);
+  const port = Number(parsed.port || 5432);
+  return new Promise<boolean>((resolve) => {
+    const socket = net.createConnection({ host: parsed.hostname, port });
+    const done = (result: boolean) => {
+      socket.removeAllListeners();
+      socket.destroy();
+      resolve(result);
+    };
+    socket.setTimeout(timeoutMs);
+    socket.once("connect", () => done(true));
+    socket.once("timeout", () => done(false));
+    socket.once("error", () => done(false));
+  });
 }
 
 export async function saveTenantConfiguration(tenantId: string, tenant: Tenant, actorEmail: string) {
   if (tenant.id !== tenantId) throw new Error("Cross-tenant configuration write rejected");
   const normalized = normalizeTenant(tenant);
   if (process.env.DATABASE_URL) {
-    const sql = postgres(process.env.DATABASE_URL, { max: 1 });
+    const sql = postgres(process.env.DATABASE_URL, { connect_timeout: 3, idle_timeout: 5, max: 1 });
     try {
       await sql.begin(async (transaction) => {
         await transaction`SELECT set_config('app.tenant_id', ${tenantId}, true)`;
@@ -123,6 +152,8 @@ export async function createTenantInstance(input: { name: string; slug: string; 
   }
 
   const base = seedTenants[0];
+  const verificationToken = crypto.randomUUID();
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
   const tenant: Tenant = normalizeTenant({
     ...structuredClone(base),
     id: crypto.randomUUID(),
@@ -145,6 +176,8 @@ export async function createTenantInstance(input: { name: string; slug: string; 
       email: input.ownerEmail.toLowerCase(),
       role: "tenant-owner",
       passwordHash: input.ownerPasswordHash,
+      emailVerificationToken: verificationToken,
+      emailVerificationExpiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(),
       createdAt: new Date().toISOString()
     }],
     privacyRequests: [],
@@ -162,7 +195,7 @@ export async function createTenantInstance(input: { name: string; slug: string; 
   tenant.users = tenant.users.map((user) => ({ ...user, tenantId: tenant.id }));
 
   if (process.env.DATABASE_URL) {
-    const sql = postgres(process.env.DATABASE_URL, { max: 1 });
+    const sql = postgres(process.env.DATABASE_URL, { connect_timeout: 3, idle_timeout: 5, max: 1 });
     try {
       await sql.begin(async (transaction) => {
         await transaction`SELECT set_config('app.tenant_id', ${tenant.id}, true)`;
@@ -174,19 +207,47 @@ export async function createTenantInstance(input: { name: string; slug: string; 
     } finally {
       await sql.end();
     }
+    await sendMail({
+      to: input.ownerEmail,
+      subject: "Platzguide E-Mail bestätigen",
+      text: `Bitte bestätige deine Platzguide-Adresse: ${baseUrl}/api/auth/verify-email?token=${verificationToken}`
+    });
     return tenant;
   }
 
   const localTenants = await readLocalTenants();
   localTenants.push(tenant);
   await writeLocalTenants(localTenants);
+  await sendMail({
+    to: input.ownerEmail,
+    subject: "Platzguide E-Mail bestätigen",
+    text: `Bitte bestätige deine Platzguide-Adresse: ${baseUrl}/api/auth/verify-email?token=${verificationToken}`
+  });
   return tenant;
+}
+
+export async function verifyTenantUserEmail(token: string) {
+  const tenants = await readLocalTenants();
+  for (const tenant of tenants) {
+    const user = tenant.users.find((candidate) => candidate.emailVerificationToken === token);
+    if (!user) continue;
+    if (!user.emailVerificationExpiresAt || new Date(user.emailVerificationExpiresAt).getTime() < Date.now()) {
+      throw new Error("Verification token expired");
+    }
+    user.emailVerifiedAt = new Date().toISOString();
+    delete user.emailVerificationToken;
+    delete user.emailVerificationExpiresAt;
+    tenant.auditLog = [audit(tenant.id, user.email, "verify-email", "tenant-user", user.id), ...tenant.auditLog].slice(0, 100);
+    await writeLocalTenants(tenants);
+    return { tenant, user };
+  }
+  throw new Error("Verification token not found");
 }
 
 export async function saveStation(tenantId: string, station: Station, actorEmail: string) {
   if (station.tenantId !== tenantId) throw new Error("Cross-tenant write rejected");
   if (process.env.DATABASE_URL) {
-    const sql = postgres(process.env.DATABASE_URL, { max: 1 });
+    const sql = postgres(process.env.DATABASE_URL, { connect_timeout: 3, idle_timeout: 5, max: 1 });
     try {
       await sql.begin(async (transaction) => {
         await transaction`SELECT set_config('app.tenant_id', ${tenantId}, true)`;
@@ -222,7 +283,7 @@ export async function saveStation(tenantId: string, station: Station, actorEmail
 
 export async function deleteStation(tenantId: string, stationId: string, actorEmail: string) {
   if (process.env.DATABASE_URL) {
-    const sql = postgres(process.env.DATABASE_URL, { max: 1 });
+    const sql = postgres(process.env.DATABASE_URL, { connect_timeout: 3, idle_timeout: 5, max: 1 });
     try {
       await sql.begin(async (transaction) => {
         await transaction`SELECT set_config('app.tenant_id', ${tenantId}, true)`;

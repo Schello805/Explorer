@@ -9,7 +9,8 @@ const tenantCreateSchema = z.object({
   name: z.string().trim().min(2).max(120),
   slug: z.string().trim().min(2).max(80).regex(/^[a-z0-9-]+$/),
   ownerEmail: z.string().trim().email(),
-  ownerPassword: z.string().min(12).max(200)
+  ownerPassword: z.string().min(12).max(200),
+  website: z.string().max(0).optional()
 });
 
 export async function POST(request: Request) {

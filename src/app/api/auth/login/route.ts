@@ -27,6 +27,9 @@ export async function POST(request: Request) {
 
   if (!token) {
     const tenantUser = await findTenantUser(email);
+    if (tenantUser?.user.passwordHash && !tenantUser.user.emailVerifiedAt) {
+      return NextResponse.json({ error: "Bitte bestätige zuerst deine E-Mail-Adresse." }, { status: 403 });
+    }
     if (tenantUser?.user.passwordHash && await compare(parsed.data.password, tenantUser.user.passwordHash)) {
       token = await createSession({
         email: tenantUser.user.email,

@@ -88,6 +88,8 @@ export type TenantUser = {
   role: Exclude<UserRole, "platform-admin">;
   passwordHash?: string;
   emailVerifiedAt?: string;
+  emailVerificationToken?: string;
+  emailVerificationExpiresAt?: string;
   createdAt: string;
 };
 

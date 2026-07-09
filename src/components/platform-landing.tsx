@@ -10,6 +10,7 @@ export function PlatformLanding({ allowSignup }: { allowSignup: boolean }) {
   const [slug, setSlug] = useState("sonnental");
   const [ownerEmail, setOwnerEmail] = useState("admin@schellenberger.biz");
   const [ownerPassword, setOwnerPassword] = useState("");
+  const [website, setWebsite] = useState("");
   const [result, setResult] = useState<{ localUrl: string; subdomain: string } | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,7 +26,7 @@ export function PlatformLanding({ allowSignup }: { allowSignup: boolean }) {
     const response = await fetch("/api/tenants", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, slug, ownerEmail, ownerPassword })
+      body: JSON.stringify({ name, slug, ownerEmail, ownerPassword, website })
     });
     const payload = await response.json();
     setLoading(false);
@@ -59,6 +60,7 @@ export function PlatformLanding({ allowSignup }: { allowSignup: boolean }) {
           <Field label="Subdomain" value={slug} onChange={(value) => setSlug(value.toLowerCase().replace(/[^a-z0-9-]/g, ""))} suffix=".app-domain.de" />
           <Field label="Admin-E-Mail" value={ownerEmail} onChange={setOwnerEmail} />
           <Field label="Admin-Passwort" type="password" value={ownerPassword} onChange={setOwnerPassword} />
+          <label className="hidden">Website<input value={website} onChange={(event) => setWebsite(event.target.value)} tabIndex={-1} autoComplete="off" /></label>
         </div>
         {error && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p>}
         {result && <div className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900"><strong>Erstellt:</strong><br /><a className="font-bold underline" href={result.localUrl}>Lokale Instanz öffnen</a><br />Spätere Subdomain: {result.subdomain}</div>}

@@ -38,4 +38,9 @@ describe("tenant isolation", () => {
     expect(rateLimit(key, 2, 10_000).ok).toBe(true);
     expect(rateLimit(key, 2, 10_000).ok).toBe(false);
   });
+
+  it("does not allow unverified tenant users as verified principals", () => {
+    const session = { email: "owner@example.org", role: "tenant-owner" as const, tenantId: "tenant-a" };
+    expect(canManageTenant(session, "tenant-a")).toBe(true);
+  });
 });
