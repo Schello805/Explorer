@@ -8,7 +8,7 @@ import { cn, statusLabel } from "@/lib/utils";
 import { CampMap } from "@/components/camp-map";
 
 export function ExplorerApp({ tenant }: { tenant: Tenant }) {
-  const [view, setView] = useState<"map" | "list">("map");
+  const [view, setView] = useState<"map" | "list">("list");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [selected, setSelected] = useState<Station | null>(null);
@@ -47,7 +47,7 @@ export function ExplorerApp({ tenant }: { tenant: Tenant }) {
 
   return (
     <main>
-      <header className="relative overflow-hidden bg-[var(--primary)] py-5 text-white">
+      <header className="relative overflow-hidden bg-[var(--primary)] py-4 text-white">
         <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full border-[42px] border-white/5" />
         <div className="relative mx-auto w-[90%]">
           <div className="flex items-center justify-between">
@@ -57,9 +57,9 @@ export function ExplorerApp({ tenant }: { tenant: Tenant }) {
             </div>
             <a href="/hinweise" aria-label="Wichtige Hinweise" className="rounded-full bg-white/10 p-3"><Info size={20} /></a>
           </div>
-          <div className="mt-6">
-            <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[.2em] text-[var(--secondary)]"><Compass size={16} /> Schön, dass du da bist</p>
-            <h1 className="font-display text-3xl leading-[1.05] sm:text-4xl">Was möchtest du heute entdecken?</h1>
+          <div className="mt-5">
+            <p className="mb-1 flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-[var(--secondary)]"><Compass size={15} /> Vor Ort</p>
+            <h1 className="font-display text-3xl leading-[1.05] sm:text-4xl">Orte auf dem Platz</h1>
           </div>
           <label className="mt-5 flex w-full items-center gap-3 rounded-xl bg-white px-4 py-3 text-[#18332b] shadow-xl">
             <Search size={20} className="text-[#18332b]/50" />

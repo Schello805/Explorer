@@ -24,10 +24,15 @@ export function CampMap({
   const markersRef = useRef<import("maplibre-gl").Marker[]>([]);
   const [layer, setLayer] = useState<Layer>("map");
   const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     let cancelled = false;
+    let loaded = false;
+    const fallbackTimer = window.setTimeout(() => {
+      if (!loaded) setFailed(true);
+    }, 7000);
 
     if (!cancelled && containerRef.current) {
       const map = new maplibregl.Map({
@@ -46,8 +51,12 @@ export function CampMap({
         compact: true,
         customAttribution: "© OpenStreetMap-Mitwirkende · OpenFreeMap"
       }), "bottom-left");
+      map.on("error", () => setFailed(true));
 
       map.on("load", () => {
+        loaded = true;
+        window.clearTimeout(fallbackTimer);
+        setFailed(false);
         if (tenant.map.aerialTiles?.length) {
           map.addSource("aerial", {
             type: "raster",
@@ -88,6 +97,7 @@ export function CampMap({
 
     return () => {
       cancelled = true;
+      window.clearTimeout(fallbackTimer);
       markersRef.current.forEach((marker) => marker.remove());
       mapRef.current?.remove();
       mapRef.current = null;
@@ -113,9 +123,26 @@ export function CampMap({
     { id: "sitePlan" as const, label: "Platzplan", icon: Layers3, available: Boolean(tenant.map.sitePlan) }
   ].filter((choice) => choice.available);
 
-  return <div className="relative mt-4 h-[56vh] min-h-[440px] overflow-hidden rounded-[2rem] border-4 border-white bg-[#dce8d0] shadow-soft">
+  if (failed) return <FallbackMap tenant={tenant} stations={stations} onSelect={onSelect} />;
+
+  return <div className="relative mt-4 h-[52vh] min-h-[360px] overflow-hidden rounded-[1.5rem] border-4 border-white bg-[#dce8d0] shadow-soft sm:min-h-[440px]">
     <div ref={containerRef} className="absolute inset-0" aria-label={`Interaktive Karte von ${tenant.name}`} />
     {!ready && <div className="absolute inset-0 grid place-items-center bg-[#dce8d0] text-sm font-bold text-[#18332b]/55">Karte wird geladen …</div>}
     {choices.length > 1 && <div className="glass absolute left-3 top-3 z-10 flex rounded-xl p-1 shadow-lg">{choices.map((choice) => <button key={choice.id} onClick={() => switchLayer(choice.id)} className={cn("flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold", layer === choice.id && "bg-[var(--primary)] text-white")}><choice.icon size={15} />{choice.label}</button>)}</div>}
+  </div>;
+}
+
+function FallbackMap({ tenant, stations, onSelect }: { tenant: Tenant; stations: Station[]; onSelect: (station: Station) => void }) {
+  return <div className="map-texture relative mt-4 h-[52vh] min-h-[360px] overflow-hidden rounded-[1.5rem] border-4 border-white bg-[#dce8d0] shadow-soft sm:min-h-[440px]" aria-label={`Fallback-Platzplan von ${tenant.name}`}>
+    <div className="absolute left-3 top-3 rounded-xl bg-white/90 px-3 py-2 text-xs font-bold text-[#18332b] shadow">Offline-Plan</div>
+    {stations.map((station) => <button
+      key={station.id}
+      onClick={() => onSelect(station)}
+      className="absolute grid h-11 w-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-4 border-white bg-[#195f4c] text-white shadow-lg"
+      style={{ left: `${station.position.x}%`, top: `${station.position.y}%` }}
+      aria-label={station.name}
+    >
+      <MapIcon size={18} />
+    </button>)}
   </div>;
 }

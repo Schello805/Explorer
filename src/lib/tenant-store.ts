@@ -116,6 +116,65 @@ export async function saveTenantConfiguration(tenantId: string, tenant: Tenant, 
   return tenants[index];
 }
 
+export async function createTenantInstance(input: { name: string; slug: string; ownerEmail: string }) {
+  const slug = input.slug.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+  if (slug.length < 2) throw new Error("Invalid slug");
+  const tenants = await listTenants();
+  if (tenants.some((tenant) => tenant.slug === slug || tenant.hosts.includes(`${slug}.localhost`))) {
+    throw new Error("Slug already exists");
+  }
+
+  const base = seedTenants[0];
+  const tenant: Tenant = normalizeTenant({
+    ...structuredClone(base),
+    id: crypto.randomUUID(),
+    slug,
+    hosts: [`${slug}.localhost`, `${slug}.app-domain.de`],
+    name: input.name,
+    tagline: "Meine digitale Entdeckerkarte.",
+    logoMark: input.name.trim().charAt(0).toUpperCase() || "C",
+    contact: { phone: "", email: input.ownerEmail, emergency: "112" },
+    stations: [],
+    media: [],
+    events: [],
+    tours: [],
+    rewards: [],
+    guestGuide: [],
+    feedback: [],
+    auditLog: [{
+      id: crypto.randomUUID(),
+      tenantId: "",
+      actorEmail: input.ownerEmail,
+      action: "create",
+      entityType: "tenant",
+      entityId: "",
+      createdAt: new Date().toISOString()
+    }]
+  });
+  tenant.auditLog[0] = { ...tenant.auditLog[0], tenantId: tenant.id, entityId: tenant.id };
+
+  if (process.env.DATABASE_URL) {
+    const sql = postgres(process.env.DATABASE_URL, { max: 1 });
+    try {
+      await sql.begin(async (transaction) => {
+        await transaction`SELECT set_config('app.tenant_id', ${tenant.id}, true)`;
+        await transaction`
+          INSERT INTO tenants (id, slug, name, hosts, configuration)
+          VALUES (${tenant.id}, ${tenant.slug}, ${tenant.name}, ${tenant.hosts}, ${transaction.json(tenant)})
+        `;
+      });
+    } finally {
+      await sql.end();
+    }
+    return tenant;
+  }
+
+  const localTenants = await readLocalTenants();
+  localTenants.push(tenant);
+  await writeLocalTenants(localTenants);
+  return tenant;
+}
+
 export async function saveStation(tenantId: string, station: Station, actorEmail: string) {
   if (station.tenantId !== tenantId) throw new Error("Cross-tenant write rejected");
   if (process.env.DATABASE_URL) {
