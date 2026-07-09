@@ -1,0 +1,35 @@
+name: Build, Test and Revision
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_APP_REVISION: ${{ github.ref_name }}.${{ github.run_number }}
+      NEXT_PUBLIC_GITHUB_URL: https://github.com/Schello805/Explorer
+      AUTH_SECRET: ci-only-secret-with-at-least-thirty-two-characters
+      ADMIN_EMAIL: admin@schellenberger.biz
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run verify
+
+      - name: Store revision metadata
+        run: |
+          printf '{"revision":"%s","commit":"%s","builtAt":"%s"}\n' \
+            "${NEXT_PUBLIC_APP_REVISION}" "${GITHUB_SHA}" "$(date -u +%FT%TZ)" > revision.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: explorer-${{ env.NEXT_PUBLIC_APP_REVISION }}
+          path: revision.json

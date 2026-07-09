@@ -1,0 +1,121 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { Layers3, Map as MapIcon, Satellite } from "lucide-react";
+import maplibregl from "maplibre-gl";
+import type { Station, Tenant } from "@/lib/types";
+import { cn } from "@/lib/utils";
+
+type Layer = "map" | "aerial" | "sitePlan";
+
+export function CampMap({
+  tenant,
+  stations,
+  selected,
+  onSelect
+}: {
+  tenant: Tenant;
+  stations: Station[];
+  selected: Station | null;
+  onSelect: (station: Station) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<import("maplibre-gl").Map | null>(null);
+  const markersRef = useRef<import("maplibre-gl").Marker[]>([]);
+  const [layer, setLayer] = useState<Layer>("map");
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+    let cancelled = false;
+
+    if (!cancelled && containerRef.current) {
+      const map = new maplibregl.Map({
+        container: containerRef.current,
+        style: tenant.map.styleUrl,
+        center: tenant.map.center,
+        zoom: tenant.map.zoom,
+        attributionControl: false
+      });
+      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
+      map.addControl(new maplibregl.GeolocateControl({
+        positionOptions: { enableHighAccuracy: true },
+        trackUserLocation: true
+      }), "bottom-right");
+      map.addControl(new maplibregl.AttributionControl({
+        compact: true,
+        customAttribution: "© OpenStreetMap-Mitwirkende · OpenFreeMap"
+      }), "bottom-left");
+
+      map.on("load", () => {
+        if (tenant.map.aerialTiles?.length) {
+          map.addSource("aerial", {
+            type: "raster",
+            tiles: tenant.map.aerialTiles,
+            tileSize: 256,
+            attribution: tenant.map.aerialAttribution
+          });
+          map.addLayer({ id: "aerial", source: "aerial", type: "raster", layout: { visibility: "none" } });
+        }
+        if (tenant.map.sitePlan) {
+          map.addSource("site-plan", {
+            type: "image",
+            url: tenant.map.sitePlan.imageUrl,
+            coordinates: tenant.map.sitePlan.coordinates
+          });
+          map.addLayer({
+            id: "site-plan",
+            source: "site-plan",
+            type: "raster",
+            paint: { "raster-opacity": 0.92 }
+          });
+        }
+
+        markersRef.current = stations.map((station) => {
+          const element = document.createElement("button");
+          element.className = "grid h-11 w-11 place-items-center rounded-full border-4 border-white bg-[#195f4c] text-white shadow-lg transition hover:scale-110";
+          element.setAttribute("aria-label", station.name);
+          element.innerHTML = '<svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5Z"/></svg>';
+          element.addEventListener("click", () => onSelect(station));
+          return new maplibregl.Marker({ element })
+            .setLngLat([station.longitude, station.latitude])
+            .addTo(map);
+        });
+        setReady(true);
+      });
+      mapRef.current = map;
+    }
+
+    return () => {
+      cancelled = true;
+      markersRef.current.forEach((marker) => marker.remove());
+      mapRef.current?.remove();
+      mapRef.current = null;
+    };
+  }, [tenant, stations, onSelect]);
+
+  useEffect(() => {
+    if (!selected || !mapRef.current) return;
+    mapRef.current.flyTo({ center: [selected.longitude, selected.latitude], zoom: Math.max(tenant.map.zoom, 17) });
+  }, [selected, tenant.map.zoom]);
+
+  function switchLayer(next: Layer) {
+    const map = mapRef.current;
+    if (!map) return;
+    if (map.getLayer("aerial")) map.setLayoutProperty("aerial", "visibility", next === "aerial" ? "visible" : "none");
+    if (map.getLayer("site-plan")) map.setLayoutProperty("site-plan", "visibility", next === "sitePlan" ? "visible" : "none");
+    setLayer(next);
+  }
+
+  const choices = [
+    { id: "map" as const, label: "Karte", icon: MapIcon, available: true },
+    { id: "aerial" as const, label: "Luftbild", icon: Satellite, available: Boolean(tenant.map.aerialTiles?.length) },
+    { id: "sitePlan" as const, label: "Platzplan", icon: Layers3, available: Boolean(tenant.map.sitePlan) }
+  ].filter((choice) => choice.available);
+
+  return <div className="relative mt-4 h-[56vh] min-h-[440px] overflow-hidden rounded-[2rem] border-4 border-white bg-[#dce8d0] shadow-soft">
+    <div ref={containerRef} className="absolute inset-0" aria-label={`Interaktive Karte von ${tenant.name}`} />
+    {!ready && <div className="absolute inset-0 grid place-items-center bg-[#dce8d0] text-sm font-bold text-[#18332b]/55">Karte wird geladen …</div>}
+    {choices.length > 1 && <div className="glass absolute left-3 top-3 z-10 flex rounded-xl p-1 shadow-lg">{choices.map((choice) => <button key={choice.id} onClick={() => switchLayer(choice.id)} className={cn("flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold", layer === choice.id && "bg-[var(--primary)] text-white")}><choice.icon size={15} />{choice.label}</button>)}</div>}
+  </div>;
+}

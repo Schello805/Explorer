@@ -1,0 +1,55 @@
+@import "tailwindcss";
+@import "maplibre-gl/dist/maplibre-gl.css";
+
+:root {
+  --primary: #195f4c;
+  --secondary: #f1a94b;
+  --surface: #f5f2e9;
+  --ink: #18332b;
+}
+
+* { box-sizing: border-box; }
+html {
+  max-width: 100%;
+  overflow-x: clip;
+  scroll-behavior: smooth;
+}
+body {
+  margin: 0;
+  max-width: 100%;
+  overflow-x: clip;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select, textarea { font: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 3px solid var(--secondary); outline-offset: 3px; }
+
+.font-display {
+  font-family: Georgia, "Times New Roman", serif;
+  letter-spacing: -0.035em;
+}
+.safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.map-texture {
+  background-color: #dce8d0;
+  background-image:
+    linear-gradient(28deg, transparent 44%, rgba(255,255,255,.64) 45%, rgba(255,255,255,.64) 48%, transparent 49%),
+    linear-gradient(118deg, transparent 44%, rgba(103,139,103,.2) 45%, rgba(103,139,103,.2) 49%, transparent 50%),
+    radial-gradient(circle at 25% 68%, #b5d6dd 0 9%, transparent 9.5%),
+    radial-gradient(circle at 72% 24%, rgba(80,130,70,.22) 0 13%, transparent 13.5%);
+  background-size: 130px 130px, 190px 190px, 100% 100%, 100% 100%;
+}
+.glass { background: rgba(255,255,255,.88); backdrop-filter: blur(16px); }
+.shadow-soft { box-shadow: 0 18px 55px rgba(38, 68, 55, .12); }
+@keyframes enter { from { opacity: 0; transform: translateY(8px); } }
+.animate-enter { animation: enter .35s ease-out both; }
+.maplibregl-map { font: inherit; }
+.maplibregl-ctrl-attrib { font-size: 10px; }
+.maplibregl-popup-content {
+  border-radius: 14px;
+  box-shadow: 0 14px 40px rgba(20, 50, 40, .2);
+  padding: 10px 14px;
+}

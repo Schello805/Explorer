@@ -1,0 +1,54 @@
+{
+  "name": "entdecker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mandantenfähige Entdeckerkarte für Campingplätze",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "verify": "npm run lint && npm test && npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Schello805/Explorer.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "SEE LICENSE IN LICENSE",
+  "overrides": {
+    "postcss": "8.5.16"
+  },
+  "bugs": {
+    "url": "https://github.com/Schello805/Explorer/issues"
+  },
+  "homepage": "https://github.com/Schello805/Explorer#readme",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "clsx": "^2.1.1",
+    "jose": "^6.2.3",
+    "lucide-react": "^1.23.0",
+    "maplibre-gl": "^5.24.0",
+    "next": "^16.2.10",
+    "postgres": "^3.4.9",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "read-excel-file": "^9.2.0",
+    "server-only": "^0.0.1",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.2",
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.10",
+    "tailwindcss": "^4.3.2",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
+  }
+}
