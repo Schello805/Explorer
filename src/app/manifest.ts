@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Entdecker · Campingplatz-App",
-    short_name: "Entdecker",
-    description: "Deine digitale Entdeckerkarte auf dem Campingplatz.",
+    name: "Platzguide · Campingplatz-App",
+    short_name: "Platzguide",
+    description: "Dein digitaler Platzguide auf dem Campingplatz.",
     start_url: "/",
     display: "standalone",
     background_color: "#f5f2e9",

@@ -7,7 +7,7 @@ import type { Station, Tenant } from "@/lib/types";
 import { cn, statusLabel } from "@/lib/utils";
 import { CampMap } from "@/components/camp-map";
 
-export function ExplorerApp({ tenant }: { tenant: Tenant }) {
+export function PlatzguideApp({ tenant }: { tenant: Tenant }) {
   const [view, setView] = useState<"map" | "list">("list");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
@@ -53,7 +53,7 @@ export function ExplorerApp({ tenant }: { tenant: Tenant }) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[var(--secondary)] font-display text-xl font-bold text-[#18332b]">{tenant.logoMark}</span>
-              <div><p className="text-[11px] font-bold uppercase tracking-[.18em] text-white/60">Entdeckerkarte</p><p className="font-display text-xl">{tenant.name}</p></div>
+              <div><p className="text-[11px] font-bold uppercase tracking-[.18em] text-white/60">Platzguide</p><p className="font-display text-xl">{tenant.name}</p></div>
             </div>
             <a href="/hinweise" aria-label="Wichtige Hinweise" className="rounded-full bg-white/10 p-3"><Info size={20} /></a>
           </div>
@@ -107,7 +107,7 @@ export function ExplorerApp({ tenant }: { tenant: Tenant }) {
         {tenant.features.tours && tenant.tours.filter((tour) => tour.active).length > 0 && <ModuleCard icon={<Route />} title="Rundgänge">
           {tenant.tours.filter((tour) => tour.active).map((tour) => <CompactItem key={tour.id} title={tour.title} text={`${tour.durationMinutes} Minuten · ${tour.stops.length} Stationen`} />)}
         </ModuleCard>}
-        {tenant.features.rewards && tenant.rewards.filter((reward) => reward.active).length > 0 && <ModuleCard icon={<Gift />} title="Entdecker-Pass">
+        {tenant.features.rewards && tenant.rewards.filter((reward) => reward.active).length > 0 && <ModuleCard icon={<Gift />} title="Platzguide-Pass">
           <p className="text-sm text-[#18332b]/60">{checkins.length} Check-ins gesammelt.</p>
           {tenant.rewards.filter((reward) => reward.active).map((reward) => <CompactItem key={reward.id} title={reward.title} text={`${reward.requiredCheckins} Check-ins · ${reward.description}`} />)}
         </ModuleCard>}

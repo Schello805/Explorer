@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-APP_NAME="${APP_NAME:-entdecker}"
-APP_USER="${APP_USER:-entdecker}"
-APP_DIR="${APP_DIR:-/opt/entdecker}"
+APP_NAME="${APP_NAME:-platzguide}"
+APP_USER="${APP_USER:-platzguide}"
+APP_DIR="${APP_DIR:-/opt/platzguide}"
 BRANCH="${BRANCH:-main}"
-BACKUP_DIR="${BACKUP_DIR:-/var/backups/entdecker}"
+BACKUP_DIR="${BACKUP_DIR:-/var/backups/platzguide}"
 RUN_VERIFY="${RUN_VERIFY:-true}"
 
 log() { printf '\033[1;34m[INFO]\033[0m %s\n' "$*"; }

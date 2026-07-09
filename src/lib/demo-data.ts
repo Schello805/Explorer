@@ -4,7 +4,7 @@ const categories = [
   { id: "service", name: "Service", icon: "Sparkles", color: "#256f5b" },
   { id: "sanitary", name: "Sanitär", icon: "Droplets", color: "#297aa3" },
   { id: "food", name: "Essen & Trinken", icon: "Utensils", color: "#c9653d" },
-  { id: "family", name: "Familie", icon: "TentTree", color: "#d49b2e" },
+  { id: "family", name: "Familie", icon: "Caravan", color: "#d49b2e" },
   { id: "nature", name: "Entdecken", icon: "Footprints", color: "#54733f" }
 ];
 
@@ -159,7 +159,7 @@ export const demoTenant: Tenant = {
     {
       id: "61111111-1111-4111-8111-111111111111",
       tenantId: "11111111-1111-4111-8111-111111111111",
-      title: "Sonnental-Entdecker",
+      title: "Sonnental-Platzguide",
       description: "Nach drei Check-ins gibt es an der Rezeption eine kleine Überraschung.",
       requiredCheckins: 3,
       active: true

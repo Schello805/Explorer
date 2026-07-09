@@ -14,6 +14,10 @@ Alle Werte aus `.env.example` werden serverseitig gesetzt. Verpflichtend sind
 ein zufälliges `AUTH_SECRET`, der bcrypt-Hash des Admin-Passworts,
 `DATABASE_URL`, GitHub-URL und Revisionsnummer.
 
+`ALLOW_PUBLIC_SIGNUP` bleibt in Produktion standardmäßig `false`. Erst nach
+E-Mail-Verifikation, Rate-Limit, Nutzungsbedingungen und Missbrauchsschutz darf
+öffentliche Selbstregistrierung aktiviert werden.
+
 ## Datenbank
 
 1. Eigene Application-DB-Rolle ohne `SUPERUSER` und ohne `BYPASSRLS` anlegen.
@@ -43,10 +47,10 @@ Nginx/PostgreSQL. Alle Schritte geben klare Statusmeldungen aus.
 ### Minimal mit externer Datenbank
 
 ```bash
-sudo APP_DIR=/opt/entdecker \
+sudo APP_DIR=/opt/platzguide \
   DOMAIN=example.org \
   ADMIN_PASSWORD='sehr-sicheres-passwort' \
-  DATABASE_URL='postgresql://user:pass@db-host:5432/explorer' \
+  DATABASE_URL='postgresql://user:pass@db-host:5432/platzguide' \
   bash scripts/install-ubuntu.sh
 ```
 
@@ -62,8 +66,8 @@ sudo INSTALL_POSTGRES=true \
 
 Wichtige Optionen:
 
-- `APP_DIR`: Zielordner, Standard `/opt/entdecker`
-- `APP_USER`: Systembenutzer, Standard `entdecker`
+- `APP_DIR`: Zielordner, Standard `/opt/platzguide`
+- `APP_USER`: Systembenutzer, Standard `platzguide`
 - `DOMAIN`: Nginx-Domain oder `_` für alle Hosts
 - `PORT`: interner Next.js-Port, Standard `3000`
 - `INSTALL_NGINX=false`: Nginx nicht installieren
@@ -73,8 +77,8 @@ Wichtige Optionen:
 Nach der Installation:
 
 ```bash
-systemctl status entdecker
-journalctl -u entdecker -f
+systemctl status platzguide
+journalctl -u platzguide -f
 ```
 
 ## Ubuntu-Updates
@@ -84,13 +88,13 @@ Git-Arbeitsbaum, lädt Updates per Fast-Forward, baut die App neu, aktualisiert
 `NEXT_PUBLIC_APP_REVISION` und startet den Service neu.
 
 ```bash
-sudo bash /opt/entdecker/scripts/update-ubuntu.sh
+sudo bash /opt/platzguide/scripts/update-ubuntu.sh
 ```
 
 Optionen:
 
-- `APP_DIR=/opt/entdecker`
-- `APP_NAME=entdecker`
+- `APP_DIR=/opt/platzguide`
+- `APP_NAME=platzguide`
 - `BRANCH=main`
 - `RUN_VERIFY=false` für nur `npm run build` statt vollständiger Prüfung
-- `BACKUP_DIR=/var/backups/entdecker`
+- `BACKUP_DIR=/var/backups/platzguide`

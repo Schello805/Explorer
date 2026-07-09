@@ -9,6 +9,9 @@ const tenantCreateSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  if (process.env.ALLOW_PUBLIC_SIGNUP !== "true") {
+    return NextResponse.json({ error: "Self-Service ist aktuell deaktiviert." }, { status: 403 });
+  }
   const parsed = tenantCreateSchema.safeParse(await request.json());
   if (!parsed.success) return NextResponse.json({ error: "Bitte Name, Subdomain und E-Mail prüfen." }, { status: 400 });
   try {

@@ -1,4 +1,4 @@
-# Entdecker
+# Platzguide
 
 Eine moderne, mandantenfähige Campingplatz-Web-App und PWA. Eine gemeinsame
 Codebasis versorgt beliebig viele Campingplätze; Branding, Inhalte und Daten
@@ -6,7 +6,7 @@ bleiben je Mandant getrennt.
 
 > **Lizenzhinweis:** Der Quellcode ist öffentlich einsehbar und für
 > nicht-kommerzielle Zwecke frei nutzbar. Wegen des Verbots kommerzieller
-> Nutzung ist Entdecker im formalen OSI-Sinn **Source Available**, nicht Open
+> Nutzung ist Platzguide im formalen OSI-Sinn **Source Available**, nicht Open
 > Source. Details stehen in `LICENSE`.
 
 ## MVP-Funktionen
@@ -24,7 +24,7 @@ bleiben je Mandant getrennt.
 - CSV-/XLSX-Import mit Vorschau und Zeilenvalidierung
 - Persistente Verwaltung von Kategorien, Medien, Rechtstexten, Branding,
   Kartenquellen, E-Mail, Tracking und Funktionsmodulen
-- Optionale Module: Veranstaltungen, Rundgänge, Entdecker-Pass, Feedback,
+- Optionale Module: Veranstaltungen, Rundgänge, Platzguide-Pass, Feedback,
   Check-ins, Statusanzeigen und digitale Gästemappe
 - Ein Plattform-Admin: `admin@schellenberger.biz`
 - Tenant-Kontext in jeder Anfrage und PostgreSQL-RLS als zweite Schutzschicht
@@ -45,7 +45,7 @@ Danach:
 - Besucher-App: `http://localhost:3000`
 - Beispiel-Subdomain: `http://sonnental.localhost:3000`
 - Admin: `http://localhost:3000/admin`
-- Lokales Entwicklungspasswort: `entdecker-admin`
+- Lokales Entwicklungspasswort: `platzguide-admin`
 
 Für Produktion muss `ADMIN_PASSWORD_HASH` gesetzt werden:
 
@@ -90,6 +90,9 @@ Umgebungsvariable gemappt werden.
 - Für kommerzielle Nutzung ist eine separate schriftliche Lizenz erforderlich.
 - Eigene Platzpläne können aktuell per URL referenziert werden; Upload und
   grafische Vierpunkt-Kalibrierung sind als nächster Ausbauschritt vorgesehen.
+- Öffentliche Selbstregistrierung ist standardmäßig deaktiviert
+  (`ALLOW_PUBLIC_SIGNUP=false`), bis E-Mail-Verifikation, Rate-Limits und
+  Nutzungsbedingungen produktiv eingerichtet sind.
 
 ## Qualität
 
@@ -106,7 +109,7 @@ Für eigene Ubuntu-/Debian-Server gibt es geprüfte Skripte:
 
 ```bash
 sudo bash scripts/install-ubuntu.sh
-sudo bash /opt/entdecker/scripts/update-ubuntu.sh
+sudo bash /opt/platzguide/scripts/update-ubuntu.sh
 ```
 
 Details und Optionen stehen in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).

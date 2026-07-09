@@ -2,13 +2,13 @@
 
 ## Gewählte Lösung
 
-Entdecker verwendet **MapLibre GL JS** als freie Karten-Engine. Sie ist
+Platzguide verwendet **MapLibre GL JS** als freie Karten-Engine. Sie ist
 anbieterunabhängig und kann Vektorkarten, Rasterkarten, WMS-Luftbilder und
 eigene georeferenzierte Platzpläne gemeinsam darstellen.
 
 Die Standardkonfiguration verwendet den öffentlichen **OpenFreeMap**-Stil
 `liberty`. Die zugrunde liegenden OpenStreetMap-Daten erfordern eine sichtbare
-Namensnennung. Entdecker blendet diese direkt in der Karte ein.
+Namensnennung. Platzguide blendet diese direkt in der Karte ein.
 
 ## Warum nicht Google Maps?
 

@@ -131,7 +131,7 @@ export async function createTenantInstance(input: { name: string; slug: string; 
     slug,
     hosts: [`${slug}.localhost`, `${slug}.app-domain.de`],
     name: input.name,
-    tagline: "Meine digitale Entdeckerkarte.",
+    tagline: "Mein digitaler Platzguide.",
     logoMark: input.name.trim().charAt(0).toUpperCase() || "C",
     contact: { phone: "", email: input.ownerEmail, emergency: "112" },
     stations: [],

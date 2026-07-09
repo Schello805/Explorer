@@ -15,14 +15,14 @@ export async function POST(request: Request) {
   }
 
   const hash = process.env.ADMIN_PASSWORD_HASH;
-  const developmentMatch = process.env.NODE_ENV !== "production" && parsed.data.password === "entdecker-admin";
+  const developmentMatch = process.env.NODE_ENV !== "production" && parsed.data.password === "platzguide-admin";
   const passwordMatches = hash ? await compare(parsed.data.password, hash) : developmentMatch;
   if (!passwordMatches) {
     return NextResponse.json({ error: "E-Mail oder Passwort ist nicht korrekt." }, { status: 401 });
   }
 
   const response = NextResponse.json({ ok: true });
-  response.cookies.set("explorer_session", await createAdminSession(parsed.data.email), {
+  response.cookies.set("platzguide_session", await createAdminSession(parsed.data.email), {
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",

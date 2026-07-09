@@ -5,7 +5,7 @@ import { getTenant } from "@/lib/tenant";
 export async function generateMetadata(): Promise<Metadata> {
   const tenant = await getTenant();
   return {
-    title: `${tenant.name} · Entdeckerkarte`,
+    title: `${tenant.name} · Platzguide`,
     description: tenant.tagline,
     manifest: "/manifest.webmanifest",
     appleWebApp: { capable: true, title: tenant.name, statusBarStyle: "default" }

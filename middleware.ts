@@ -7,7 +7,9 @@ export async function middleware(request: NextRequest) {
 
   if (request.nextUrl.pathname.startsWith("/admin") &&
       request.nextUrl.pathname !== "/admin/login") {
-    const session = await verifyAdminSession(request.cookies.get("explorer_session")?.value);
+    const session = await verifyAdminSession(
+      request.cookies.get("platzguide_session")?.value ?? request.cookies.get("explorer_session")?.value
+    );
     if (!session) return NextResponse.redirect(new URL("/admin/login", request.url));
   }
 

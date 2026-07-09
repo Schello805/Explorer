@@ -50,7 +50,9 @@ const tenantSchema = z.object({
 
 async function authorize() {
   const cookieStore = await cookies();
-  const session = await verifyAdminSession(cookieStore.get("explorer_session")?.value);
+  const session = await verifyAdminSession(
+    cookieStore.get("platzguide_session")?.value ?? cookieStore.get("explorer_session")?.value
+  );
   if (!session) return null;
   const requestHeaders = await headers();
   const host = requestHeaders.get("host") ?? "localhost";

@@ -1,4 +1,4 @@
-const CACHE = "entdecker-shell-v1";
+const CACHE = "platzguide-shell-v1";
 const SHELL = ["/", "/offline", "/manifest.webmanifest", "/icons/icon.svg"];
 
 self.addEventListener("install", (event) => {

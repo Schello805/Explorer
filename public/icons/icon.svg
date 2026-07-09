@@ -1,6 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Platzguide</title>
   <rect width="512" height="512" rx="112" fill="#195f4c"/>
-  <path d="M100 376 256 104l156 272H100Z" fill="#f1a94b"/>
-  <path d="m182 376 74-130 74 130H182Z" fill="#fffaf0"/>
-  <circle cx="385" cy="126" r="42" fill="#fffaf0"/>
+  <path d="M256 72c88 0 160 71 160 159 0 114-160 221-160 221S96 345 96 231C96 143 168 72 256 72Z" fill="#fffaf0"/>
+  <path d="M256 100c72 0 130 58 130 130 0 91-130 179-130 179S126 321 126 230c0-72 58-130 130-130Z" fill="#195f4c"/>
+  <path d="M176 293c46-42 108-42 160 0 23 18 43 46 58 80-50 54-110 96-138 116-29-21-92-66-143-123 17-30 38-55 63-73Z" fill="#174b3f"/>
+  <path d="M184 274h138c18 0 33-15 33-33v-30c0-28-23-51-51-51h-96c-31 0-56 25-56 56v26c0 18 14 32 32 32Z" fill="#fffaf0"/>
+  <path d="M199 190h68c15 0 27 12 27 27v24H174v-29c0-12 10-22 25-22Z" fill="#f5f2e9"/>
+  <path d="M309 190h20c12 0 22 10 22 22v30h-42v-52Z" fill="#f5f2e9"/>
+  <rect x="210" y="207" width="55" height="30" rx="9" fill="#195f4c"/>
+  <rect x="317" y="205" width="19" height="43" rx="9" fill="#195f4c"/>
+  <circle cx="207" cy="279" r="25" fill="#195f4c"/>
+  <circle cx="207" cy="279" r="10" fill="#fffaf0"/>
+  <path d="M355 254h32v20h-32zM383 263h22v14h-22z" fill="#fffaf0"/>
+  <path d="M185 348c51-34 94-42 142-30-45 15-82 42-112 82l-39-38c3-5 6-10 9-14Z" fill="#f1a94b"/>
+  <path d="M256 112l12 32 34 2-27 21 9 33-28-19-28 19 9-33-27-21 34-2 12-32Z" fill="#f1a94b"/>
 </svg>

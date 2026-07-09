@@ -17,7 +17,7 @@
 
 - [x] Veranstaltungskalender
 - [x] Rundgänge und GPS-Check-in-Grundlage
-- [x] Entdecker-Pass und Belohnungen
+- [x] Platzguide-Pass und Belohnungen
 - [ ] Web-Push-Mitteilungen
 - [x] Feedback- und Fehlermeldungen
 - [x] Digitale Gästemappe

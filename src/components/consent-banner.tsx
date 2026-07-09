@@ -7,7 +7,11 @@ export function ConsentBanner() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setVisible(!localStorage.getItem("explorer-consent")), 0);
+    const previousConsent = localStorage.getItem("explorer-consent");
+    if (previousConsent && !localStorage.getItem("platzguide-consent")) {
+      localStorage.setItem("platzguide-consent", previousConsent);
+    }
+    const timer = window.setTimeout(() => setVisible(!localStorage.getItem("platzguide-consent")), 0);
     const open = () => setVisible(true);
     document.querySelector("[data-open-consent]")?.addEventListener("click", open);
     return () => {
@@ -17,7 +21,7 @@ export function ConsentBanner() {
   }, []);
 
   function save(value: "essential" | "all") {
-    localStorage.setItem("explorer-consent", JSON.stringify({ value, savedAt: new Date().toISOString() }));
+    localStorage.setItem("platzguide-consent", JSON.stringify({ value, savedAt: new Date().toISOString() }));
     setVisible(false);
   }
 

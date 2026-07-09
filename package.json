@@ -1,8 +1,8 @@
 {
-  "name": "entdecker",
+  "name": "platzguide",
   "version": "0.1.0",
   "private": true,
-  "description": "Mandantenfähige Entdeckerkarte für Campingplätze",
+  "description": "Mandantenfähiger Platzguide für Campingplätze",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

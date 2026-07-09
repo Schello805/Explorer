@@ -1,6 +1,6 @@
 # Beiträge
 
-Danke für dein Interesse an Entdecker.
+Danke für dein Interesse an Platzguide.
 
 1. Issue mit Problem und gewünschtem Verhalten anlegen.
 2. Kleine, fokussierte Änderung erstellen.

@@ -1,5 +1,5 @@
 import { ConsentBanner } from "@/components/consent-banner";
-import { ExplorerApp } from "@/components/explorer-app";
+import { PlatzguideApp } from "@/components/platzguide-app";
 import { Footer } from "@/components/footer";
 import { PlatformLanding } from "@/components/platform-landing";
 import { PwaRegister } from "@/components/pwa-register";
@@ -14,11 +14,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const host = requestHeaders.get("x-tenant-host") ?? requestHeaders.get("host") ?? "localhost";
   const tenants = await listTenants();
   const queryTenant = params.camp ? tenants.find((candidate) => candidate.slug === params.camp) : undefined;
-  if (!queryTenant && isPlatformHost(host)) return <PlatformLanding />;
+  if (!queryTenant && isPlatformHost(host)) {
+    return <PlatformLanding allowSignup={process.env.ALLOW_PUBLIC_SIGNUP === "true"} />;
+  }
   const tenant = queryTenant ?? await getTenant();
   return <>
     <PwaRegister />
-    <ExplorerApp tenant={tenant} />
+    <PlatzguideApp tenant={tenant} />
     <Footer tenant={tenant} />
     <ConsentBanner />
   </>;

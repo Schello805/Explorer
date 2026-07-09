@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-APP_NAME="${APP_NAME:-entdecker}"
-APP_USER="${APP_USER:-entdecker}"
-APP_DIR="${APP_DIR:-/opt/entdecker}"
+APP_NAME="${APP_NAME:-platzguide}"
+APP_USER="${APP_USER:-platzguide}"
+APP_DIR="${APP_DIR:-/opt/platzguide}"
 REPO_URL="${REPO_URL:-https://github.com/Schello805/Explorer.git}"
 BRANCH="${BRANCH:-main}"
 NODE_MAJOR="${NODE_MAJOR:-22}"
@@ -11,8 +11,8 @@ PORT="${PORT:-3000}"
 DOMAIN="${DOMAIN:-_}"
 INSTALL_NGINX="${INSTALL_NGINX:-true}"
 INSTALL_POSTGRES="${INSTALL_POSTGRES:-false}"
-DB_NAME="${DB_NAME:-explorer}"
-DB_USER="${DB_USER:-explorer}"
+DB_NAME="${DB_NAME:-platzguide}"
+DB_USER="${DB_USER:-platzguide}"
 DB_PASSWORD="${DB_PASSWORD:-}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@schellenberger.biz}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"
@@ -164,7 +164,7 @@ write_systemd_service() {
   log "Erstelle systemd-Service ${APP_NAME}.service ..."
   cat > "/etc/systemd/system/${APP_NAME}.service" <<EOF_SERVICE
 [Unit]
-Description=Entdecker Campingplatz PWA
+Description=Platzguide Campingplatz PWA
 After=network.target
 
 [Service]
