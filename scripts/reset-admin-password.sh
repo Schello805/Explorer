@@ -7,6 +7,7 @@ APP_DIR="${APP_DIR:-/opt/platzguide}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"
 SHOW_PASSWORD="${SHOW_PASSWORD:-false}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-}"
+REBUILD_APP="${REBUILD_APP:-true}"
 
 log() { printf '\033[1;34m[INFO]\033[0m %s\n' "$*"; }
 ok() { printf '\033[1;32m[OK]\033[0m %s\n' "$*"; }
@@ -45,6 +46,12 @@ fi
 
 chown "${APP_USER}:${APP_USER}" "${APP_DIR}/.env.local"
 chmod 600 "${APP_DIR}/.env.local"
+
+if [[ "${REBUILD_APP}" == "true" ]]; then
+  log "Baue Anwendung neu, damit der neue Hash sicher übernommen wird ..."
+  sudo -u "${APP_USER}" bash -lc "cd '${APP_DIR}' && npm run build"
+  ok "Build mit neuem Admin-Hash abgeschlossen."
+fi
 
 if [[ -z "${ADMIN_EMAIL}" ]]; then
   ADMIN_EMAIL="$(grep -E '^ADMIN_EMAIL=' "${APP_DIR}/.env.local" | cut -d= -f2- || true)"

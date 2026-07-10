@@ -205,3 +205,7 @@ Mit sichtbarer Eingabe zur Kontrolle:
 ```bash
 sudo SHOW_PASSWORD=true bash /opt/platzguide/scripts/reset-admin-password.sh
 ```
+
+Das Script baut die App danach standardmäßig neu, damit der Hash im
+Produktionsserver sicher übernommen wird. Für reine Diagnose kann
+`REBUILD_APP=false` gesetzt werden.
