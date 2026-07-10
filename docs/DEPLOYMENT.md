@@ -167,6 +167,14 @@ Server-IP funktioniert dann direkt über Port `80`. Ein externer Reverse Proxy
 sollte deshalb auf `http://SERVER-IP:80` zeigen, nicht auf den internen
 Next.js-Port `3000`.
 
+Falls nach einer bestehenden Installation noch die Nginx-Welcome-Seite
+erscheint:
+
+```bash
+cd /opt/platzguide
+sudo bash scripts/repair-nginx.sh
+```
+
 ## Ubuntu-Updates
 
 Das Updatescript erstellt ein Backup von `.env.local` und `.data`, prüft den
