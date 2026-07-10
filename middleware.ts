@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminSession } from "@/lib/auth";
 
-const staleChunkRecoveryScript = `
+const staleAssetRecoveryScript = `
 (function () {
-  var key = "platzguide-stale-chunk-recovery";
+  var key = "platzguide-stale-asset-recovery";
   try {
     if (sessionStorage.getItem(key) === "done") return;
     sessionStorage.setItem(key, "done");
@@ -28,16 +28,31 @@ const staleChunkRecoveryScript = `
 `;
 
 const knownStaleChunks = new Set([
-  "/_next/static/chunks/08dj8jc9ilu6-.js"
+  "/_next/static/chunks/08dj8jc9ilu6-.js",
+  "/_next/static/chunks/11c89nsesuvoe.js"
+]);
+
+const knownStaleStyles = new Set([
+  "/_next/static/chunks/1yna4ah8qm5sj.css"
 ]);
 
 export async function middleware(request: NextRequest) {
   if (knownStaleChunks.has(request.nextUrl.pathname)) {
-    return new NextResponse(staleChunkRecoveryScript, {
+    return new NextResponse(staleAssetRecoveryScript, {
       headers: {
         "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
         "Content-Type": "application/javascript; charset=utf-8",
-        "X-Platzguide-Recovery": "stale-chunk"
+        "X-Platzguide-Recovery": "stale-asset"
+      }
+    });
+  }
+
+  if (knownStaleStyles.has(request.nextUrl.pathname)) {
+    return new NextResponse("/* Platzguide stale stylesheet ignored. */", {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        "Content-Type": "text/css; charset=utf-8",
+        "X-Platzguide-Recovery": "stale-asset"
       }
     });
   }
@@ -59,6 +74,8 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     "/_next/static/chunks/08dj8jc9ilu6-.js",
+    "/_next/static/chunks/11c89nsesuvoe.js",
+    "/_next/static/chunks/1yna4ah8qm5sj.css",
     "/((?!_next/static|_next/image|favicon.ico|icons).*)"
   ]
 };
