@@ -17,7 +17,6 @@ bleiben je Mandant getrennt.
 - Suche, Kategorien, Stationsdetails, Favoriten und externe Navigation
 - Individuelles Branding und Rechtstexte anhand der Domain/Subdomain
 - PWA-Manifest, Service Worker und Offline-Fallback
-- DSGVO-Einwilligung ohne vorangekreuzte optionale Dienste
 - Separater Adminbereich unter `/admin`
 - Stationseditor sowie Einstellungen für Branding, Module und Rechtstexte
 - Persistente Stationsänderungen mit PostgreSQL-Adapter und lokaler Entwicklungsablage
@@ -26,17 +25,13 @@ bleiben je Mandant getrennt.
   Kartenquellen, E-Mail, Tracking und Funktionsmodulen
 - Optionale Module: Veranstaltungen, Rundgänge, Platzguide-Pass, Feedback,
   Check-ins, Statusanzeigen und digitale Gästemappe
-- Rollenmodell für Plattform-Admin, Betreiber, Bearbeiter und Leser
-- Datenschutzfunktionen für Mandantenexport und protokollierte Löschanfragen
 - Healthcheck unter `/api/health` für Monitoring und Deployments
-- Self-Service mit Rate-Limit und starkem Betreiber-Passwort vorbereitet
 - E-Mail-Verifikation per Webhook oder lokaler Mail-Outbox vorbereitet
 - Mailprovider: Webhook, Resend, Brevo oder Mailgun
 - Captcha: Cloudflare Turnstile oder hCaptcha
 - Uploads mit Tenant-Pfad, Größenlimit und MIME-Prüfung
 - Platzplan-Upload mit Vierpunkt-Kalibrierung
 - Ein Plattform-Admin: `admin@schellenberger.biz`
-- Tenant-Kontext in jeder Anfrage und PostgreSQL-RLS als zweite Schutzschicht
 - Revisionsnummer im Footer, bei jedem GitHub-Actions-Lauf automatisch erhöht
 
 ## Schnellstart
@@ -65,28 +60,12 @@ Für Produktion muss `ADMIN_PASSWORD_HASH` gesetzt werden:
 node -e "require('bcryptjs').hash(process.argv[1], 12).then(console.log)" "DEIN-SEHR-SICHERES-PASSWORT"
 ```
 
-## Architektur
+## Dokumentation
 
-```text
-Browser
-  └─ Domain/Subdomain
-      └─ Next.js Middleware → Tenant-Kontext
-          ├─ Besucher-App
-          ├─ Admin-Authentifizierung
-          └─ Server-Datenzugriff → tenantId-Filter
-                                  → PostgreSQL Row-Level Security
-```
-
-Die Anwendung verwendet niemals vom Browser übermittelte `tenantId`-Werte als
-Vertrauensanker. Der Mandant wird serverseitig aus dem Hostnamen aufgelöst.
-Jede Datenoperation muss anschließend über eine tenantgebundene
-Transaktion laufen. PostgreSQL erzwingt die Isolation zusätzlich per RLS.
-
-Weitere Entscheidungen: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)  
-Karten und Luftbilder: [`docs/MAPS.md`](docs/MAPS.md)  
-Deployment: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)  
-Sicherheit: [`SECURITY.md`](SECURITY.md)  
-Geplanter Ausbau: [`ROADMAP.md`](ROADMAP.md)
+- Architektur: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- Karten und Luftbilder: [`docs/MAPS.md`](docs/MAPS.md)
+- Deployment: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+- Geplanter Ausbau: [`ROADMAP.md`](ROADMAP.md)
 
 ## Revisionen
 
@@ -98,20 +77,12 @@ Umgebungsvariable gemappt werden.
 
 ## Produktionshinweise
 
-- Rechtstexte, Kartenanbieter und Tracking müssen je Mandant geprüft werden.
 - Für kommerzielle Nutzung ist eine separate schriftliche Lizenz erforderlich.
-- Eigene Platzpläne können aktuell per URL referenziert werden; Upload und
-  grafische Vierpunkt-Kalibrierung sind als nächster Ausbauschritt vorgesehen.
-- Öffentliche Selbstregistrierung ist standardmäßig deaktiviert
-  (`ALLOW_PUBLIC_SIGNUP=false`), bis E-Mail-Verifikation, Rate-Limits und
-  Nutzungsbedingungen produktiv eingerichtet sind.
-- Ohne `MAIL_WEBHOOK_URL` schreibt Platzguide Bestätigungsmails in
-  `.data/mail-outbox.json`. Für Produktion muss ein Maildienst angebunden sein.
-- Für Uploads nutzt die App lokal `public/uploads/<tenantId>/`. Für große
-  Installationen sollte später S3-kompatibler Storage gesetzt werden.
-- Medien werden aktuell als geprüfte externe URLs gespeichert. Binär-Uploads
-  brauchen vor Produktion Storage-Signaturen, Größenlimits und optionalen
-  Virenscan.
+- Subdomains können per Wildcard-DNS automatisch funktionieren.
+- Für automatische echte DNS-Einträge ist später eine DNS-Provider-Anbindung
+  nötig.
+- Mail, Captcha, Upload-Limit und Self-Service werden per Server-Konfiguration
+  gesetzt; Details stehen in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 ## Qualität
 

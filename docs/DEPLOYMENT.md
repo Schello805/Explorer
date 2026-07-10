@@ -138,6 +138,18 @@ Wichtige Optionen:
 - `INSTALL_POSTGRES=true`: PostgreSQL lokal installieren
 - `ADMIN_PASSWORD`: erzeugt automatisch den bcrypt-Hash
 - `ADMIN_EMAIL`: Admin-Adresse, Standard `admin@schellenberger.biz`
+- `NEXT_PUBLIC_BASE_URL`: öffentliche Basis-URL, wird sonst aus `DOMAIN` abgeleitet
+- `ALLOW_PUBLIC_SIGNUP=true`: Self-Service-Registrierung aktivieren
+- `MAIL_PROVIDER`: `outbox`, `webhook`, `resend`, `brevo` oder `mailgun`
+- `MAIL_FROM`, `MAIL_FROM_NAME`, `MAIL_WEBHOOK_URL`
+- `RESEND_API_KEY`, `BREVO_API_KEY`, `MAILGUN_API_KEY`, `MAILGUN_DOMAIN`
+- `CAPTCHA_PROVIDER`: `disabled`, `turnstile` oder `hcaptcha`
+- `NEXT_PUBLIC_CAPTCHA_SITE_KEY`, `TURNSTILE_SECRET_KEY`, `HCAPTCHA_SECRET_KEY`
+- `UPLOAD_MAX_MB`: Upload-Größenlimit, Standard `10`
+
+Klassisches SMTP per Host/Port/User ist aktuell nicht direkt eingebaut. Für
+Mailversand nutzt Platzguide Transaktionsmail-Anbieter oder einen eigenen
+Webhook.
 
 Nach der Installation:
 
