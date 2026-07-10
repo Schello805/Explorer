@@ -18,7 +18,8 @@ const stationSchema = z.object({
   longitude: z.number().min(-180).max(180),
   position: z.object({ x: z.number(), y: z.number() }),
   image: z.string().max(2000),
-  featured: z.boolean().optional()
+  featured: z.boolean().optional(),
+  isTemplate: z.boolean().optional()
 });
 
 async function authorize() {

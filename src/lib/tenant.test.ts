@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { canManageTenant, canViewTenant } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { onlyTenantRecords, resolveTenant } from "@/lib/tenant-resolver";
-import { tenantDefaults } from "@/lib/tenant-defaults";
+import { createDefaultStationTemplates, tenantDefaults } from "@/lib/tenant-defaults";
 import type { Tenant } from "@/lib/types";
 
 function testTenant(input: Pick<Tenant, "id" | "slug" | "hosts" | "name">): Tenant {
@@ -60,5 +60,19 @@ describe("tenant isolation", () => {
   it("does not allow unverified tenant users as verified principals", () => {
     const session = { email: "owner@example.org", role: "tenant-owner" as const, tenantId: "tenant-a" };
     expect(canManageTenant(session, "tenant-a")).toBe(true);
+  });
+
+  it("creates standard stations as hidden templates for new tenants", () => {
+    const templates = createDefaultStationTemplates("tenant-a");
+    expect(templates.map((station) => station.name)).toEqual([
+      "Rezeption",
+      "Sanitärgebäude 1",
+      "Sanitärgebäude 2",
+      "Entsorgungsstation Abfall",
+      "Entsorgung Toilette",
+      "Spielplatz",
+      "Restaurant"
+    ]);
+    expect(templates.every((station) => station.tenantId === "tenant-a" && station.isTemplate)).toBe(true);
   });
 });

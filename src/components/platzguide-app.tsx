@@ -21,6 +21,7 @@ export function PlatzguideApp({ tenant }: { tenant: Tenant }) {
   const [feedbackSent, setFeedbackSent] = useState(false);
 
   const stations = useMemo(() => tenant.stations.filter((station) => {
+    if (station.isTemplate) return false;
     const matchesCategory = category === "all" || station.categoryId === category;
     const haystack = `${station.name} ${station.shortDescription}`.toLowerCase();
     return matchesCategory && haystack.includes(query.toLowerCase());

@@ -5,7 +5,7 @@ import net from "node:net";
 import path from "node:path";
 import postgres from "postgres";
 import { sendMail } from "@/lib/mail";
-import { tenantDefaults } from "@/lib/tenant-defaults";
+import { createDefaultStationTemplates, tenantDefaults } from "@/lib/tenant-defaults";
 import type { AuditEntry, FeedbackMessage, PrivacyRequest, Station, Tenant } from "@/lib/types";
 
 const dataDirectory = path.join(process.cwd(), ".data");
@@ -182,9 +182,10 @@ export async function createTenantInstance(input: { name: string; slug: string; 
 
   const verificationToken = crypto.randomUUID();
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
+  const tenantId = crypto.randomUUID();
   const tenant: Tenant = normalizeTenant({
     ...structuredClone(tenantDefaults),
-    id: crypto.randomUUID(),
+    id: tenantId,
     slug,
     hosts: [`${slug}.localhost`, `${slug}.app-domain.de`],
     name: input.name,
@@ -197,7 +198,7 @@ export async function createTenantInstance(input: { name: string; slug: string; 
       styleUrl: "https://tiles.openfreemap.org/styles/liberty",
       configured: false
     },
-    stations: [],
+    stations: createDefaultStationTemplates(tenantId),
     media: [],
     events: [],
     tours: [],

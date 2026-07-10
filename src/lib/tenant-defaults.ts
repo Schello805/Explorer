@@ -1,8 +1,9 @@
-import type { Category, Tenant } from "@/lib/types";
+import type { Category, Station, Tenant } from "@/lib/types";
 
 export const defaultCategories: Category[] = [
   { id: "service", name: "Service", icon: "Sparkles", color: "#256f5b" },
   { id: "sanitary", name: "Sanitär", icon: "Droplets", color: "#297aa3" },
+  { id: "disposal", name: "Entsorgung", icon: "Recycle", color: "#54733f" },
   { id: "food", name: "Essen & Trinken", icon: "Utensils", color: "#c9653d" },
   { id: "family", name: "Familie", icon: "Caravan", color: "#d49b2e" },
   { id: "nature", name: "Entdecken", icon: "Footprints", color: "#54733f" }
@@ -84,3 +85,77 @@ Optionale Speicherung für Statistik, Tracking, Push-Mitteilungen oder externe D
   feedback: [],
   privacyRequests: []
 };
+
+export function createDefaultStationTemplates(tenantId: string): Station[] {
+  return [
+    stationTemplate(tenantId, {
+      categoryId: "service",
+      name: "Rezeption",
+      shortDescription: "Ankunft, Fragen und Gästeservice.",
+      description: "Adresse, Öffnungszeiten und Hinweise der Rezeption ergänzen.",
+      position: { x: 50, y: 50 },
+      image: "linear-gradient(135deg, #f4c77a, #779a71)"
+    }),
+    stationTemplate(tenantId, {
+      categoryId: "sanitary",
+      name: "Sanitärgebäude 1",
+      shortDescription: "Duschen, WCs und Waschbereich.",
+      description: "Ausstattung, Barrierefreiheit und Öffnungszeiten ergänzen.",
+      position: { x: 38, y: 42 },
+      image: "linear-gradient(135deg, #b7dbe5, #4e8393)"
+    }),
+    stationTemplate(tenantId, {
+      categoryId: "sanitary",
+      name: "Sanitärgebäude 2",
+      shortDescription: "Weiteres Sanitärgebäude auf dem Platz.",
+      description: "Bei Bedarf löschen oder an die tatsächliche Lage anpassen.",
+      position: { x: 64, y: 44 },
+      image: "linear-gradient(135deg, #c9e6e8, #5d95a2)"
+    }),
+    stationTemplate(tenantId, {
+      categoryId: "disposal",
+      name: "Entsorgungsstation Abfall",
+      shortDescription: "Mülltrennung und Sammelstelle.",
+      description: "Container, Glas, Papier, Restmüll und Öffnungszeiten ergänzen.",
+      position: { x: 24, y: 70 },
+      image: "linear-gradient(135deg, #d8dfc7, #6b8358)"
+    }),
+    stationTemplate(tenantId, {
+      categoryId: "disposal",
+      name: "Entsorgung Toilette",
+      shortDescription: "Chemietoiletten- und Grauwasserentsorgung.",
+      description: "Hinweise zur Nutzung und Zufahrt ergänzen.",
+      position: { x: 30, y: 64 },
+      image: "linear-gradient(135deg, #d7e0d2, #557568)"
+    }),
+    stationTemplate(tenantId, {
+      categoryId: "family",
+      name: "Spielplatz",
+      shortDescription: "Spielbereich für Kinder.",
+      description: "Altersbereiche, Ausstattung und Sicherheitsregeln ergänzen.",
+      position: { x: 68, y: 32 },
+      image: "linear-gradient(135deg, #eccb6b, #6c9a5b)"
+    }),
+    stationTemplate(tenantId, {
+      categoryId: "food",
+      name: "Restaurant",
+      shortDescription: "Essen, Getränke oder Kiosk.",
+      description: "Angebot, Reservierung, Öffnungszeiten und Ruhetage ergänzen.",
+      position: { x: 58, y: 66 },
+      image: "linear-gradient(135deg, #efad66, #9d5747)"
+    })
+  ];
+}
+
+function stationTemplate(tenantId: string, input: Pick<Station, "categoryId" | "name" | "shortDescription" | "description" | "position" | "image">): Station {
+  return {
+    id: crypto.randomUUID(),
+    tenantId,
+    openingHours: "Bitte eintragen",
+    status: "closed",
+    latitude: 0,
+    longitude: 0,
+    isTemplate: true,
+    ...input
+  };
+}

@@ -116,6 +116,7 @@ export type Station = {
   position: { x: number; y: number };
   image: string;
   featured?: boolean;
+  isTemplate?: boolean;
 };
 
 export type Tenant = {

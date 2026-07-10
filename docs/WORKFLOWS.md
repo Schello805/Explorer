@@ -7,13 +7,14 @@
 3. Betreiber bestätigt die E-Mail-Adresse.
 4. Betreiber pflegt Branding, Kontakt, Rechtstexte und Module.
 5. Betreiber setzt den Kartenmittelpunkt oder lädt einen Platzplan hoch.
-6. Betreiber legt Kategorien und Stationen an.
+6. Betreiber prüft die Standardstationen, löscht unpassende Vorlagen und ergänzt echte Lage, Texte, Öffnungszeiten und Status.
 7. Plattform-Admin prüft DNS, SMTP, Captcha, Backups und Healthcheck.
 8. Mandant geht live, sobald Smoke-Test und Inhalte geprüft sind.
 
-Neue Mandanten starten bewusst ohne Demo-Stationen und ohne aktivierte Platzkarte.
-Die Besucher-App zeigt erst dann eine Karte, wenn der Betreiber Ort und Stationen
-konfiguriert hat.
+Neue Mandanten starten bewusst ohne Demo-Daten und ohne aktivierte Platzkarte.
+Im Adminbereich werden typische Standardstationen als nicht öffentliche Vorlagen
+angelegt: Rezeption, Sanitärgebäude, Entsorgung, Spielplatz und Restaurant. Die
+Besucher-App zeigt diese Stationen erst, wenn der Betreiber sie aktiv freigibt.
 
 ## Aufgaben Plattform-Admin
 
