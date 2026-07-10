@@ -1,16 +1,14 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
-CREATE TABLE tenants (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  slug text UNIQUE NOT NULL,
-  name text NOT NULL,
-  hosts text[] NOT NULL DEFAULT '{}',
-  configuration jsonb NOT NULL DEFAULT '{}',
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
+CREATE OR REPLACE FUNCTION current_tenant_id() RETURNS uuid
+LANGUAGE sql STABLE
+AS $$ SELECT nullif(current_setting('app.tenant_id', true), '')::uuid $$;
 
-CREATE TABLE stations (
+CREATE OR REPLACE FUNCTION current_platform_admin() RETURNS boolean
+LANGUAGE sql STABLE
+AS $$ SELECT current_setting('app.platform_admin', true) = 'true' $$;
+
+CREATE TABLE IF NOT EXISTS stations (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   category_id text NOT NULL,
@@ -25,41 +23,7 @@ CREATE TABLE stations (
   CONSTRAINT stations_status CHECK (status IN ('open', 'closed', 'limited', 'maintenance'))
 );
 
-CREATE TABLE tenant_users (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-  email text NOT NULL,
-  role text NOT NULL,
-  password_hash text,
-  email_verified_at timestamptz,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT tenant_users_role CHECK (role IN ('tenant-owner', 'tenant-editor', 'tenant-viewer')),
-  UNIQUE (tenant_id, email)
-);
-
-CREATE TABLE media_assets (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-  title text NOT NULL,
-  url text NOT NULL,
-  type text NOT NULL,
-  alt text NOT NULL DEFAULT '',
-  created_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT media_assets_type CHECK (type IN ('image', 'document', 'video'))
-);
-
-CREATE TABLE privacy_requests (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-  email text NOT NULL,
-  type text NOT NULL,
-  status text NOT NULL DEFAULT 'new',
-  created_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT privacy_requests_type CHECK (type IN ('export', 'delete')),
-  CONSTRAINT privacy_requests_status CHECK (status IN ('new', 'processing', 'done', 'rejected'))
-);
-
-CREATE TABLE audit_log (
+CREATE TABLE IF NOT EXISTS audit_log (
   id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   actor_email text NOT NULL,
@@ -83,45 +47,35 @@ ALTER TABLE privacy_requests FORCE ROW LEVEL SECURITY;
 ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_log FORCE ROW LEVEL SECURITY;
 
-CREATE FUNCTION current_tenant_id() RETURNS uuid
-LANGUAGE sql STABLE
-AS $$ SELECT nullif(current_setting('app.tenant_id', true), '')::uuid $$;
-
-CREATE FUNCTION current_platform_admin() RETURNS boolean
-LANGUAGE sql STABLE
-AS $$ SELECT current_setting('app.platform_admin', true) = 'true' $$;
-
+DROP POLICY IF EXISTS tenant_self ON tenants;
 CREATE POLICY tenant_self ON tenants
   USING (current_platform_admin() OR id = current_tenant_id())
   WITH CHECK (current_platform_admin() OR id = current_tenant_id());
 
+DROP POLICY IF EXISTS tenant_stations ON stations;
 CREATE POLICY tenant_stations ON stations
   USING (current_platform_admin() OR tenant_id = current_tenant_id())
   WITH CHECK (current_platform_admin() OR tenant_id = current_tenant_id());
 
+DROP POLICY IF EXISTS tenant_users_policy ON tenant_users;
 CREATE POLICY tenant_users_policy ON tenant_users
   USING (current_platform_admin() OR tenant_id = current_tenant_id())
   WITH CHECK (current_platform_admin() OR tenant_id = current_tenant_id());
 
+DROP POLICY IF EXISTS tenant_media_assets ON media_assets;
 CREATE POLICY tenant_media_assets ON media_assets
   USING (current_platform_admin() OR tenant_id = current_tenant_id())
   WITH CHECK (current_platform_admin() OR tenant_id = current_tenant_id());
 
+DROP POLICY IF EXISTS tenant_privacy_requests ON privacy_requests;
 CREATE POLICY tenant_privacy_requests ON privacy_requests
   USING (current_platform_admin() OR tenant_id = current_tenant_id())
   WITH CHECK (current_platform_admin() OR tenant_id = current_tenant_id());
 
+DROP POLICY IF EXISTS tenant_audit_log ON audit_log;
 CREATE POLICY tenant_audit_log ON audit_log
   USING (current_platform_admin() OR tenant_id = current_tenant_id())
   WITH CHECK (current_platform_admin() OR tenant_id = current_tenant_id());
 
-CREATE INDEX stations_tenant_id_idx ON stations(tenant_id);
-CREATE INDEX tenant_users_tenant_email_idx ON tenant_users(tenant_id, email);
-CREATE INDEX media_assets_tenant_created_idx ON media_assets(tenant_id, created_at DESC);
-CREATE INDEX privacy_requests_tenant_created_idx ON privacy_requests(tenant_id, created_at DESC);
-CREATE INDEX audit_log_tenant_created_idx ON audit_log(tenant_id, created_at DESC);
-
--- Every server transaction must begin with:
--- SELECT set_config('app.tenant_id', $1, true);
--- Never connect the application with a PostgreSQL superuser or a role
--- carrying BYPASSRLS, because those roles bypass these policies.
+CREATE INDEX IF NOT EXISTS stations_tenant_id_idx ON stations(tenant_id);
+CREATE INDEX IF NOT EXISTS audit_log_tenant_created_idx ON audit_log(tenant_id, created_at DESC);

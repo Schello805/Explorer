@@ -1,3 +1,9 @@
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+CREATE OR REPLACE FUNCTION current_tenant_id() RETURNS uuid
+LANGUAGE sql STABLE
+AS $$ SELECT nullif(current_setting('app.tenant_id', true), '')::uuid $$;
+
 CREATE TABLE IF NOT EXISTS tenant_users (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,

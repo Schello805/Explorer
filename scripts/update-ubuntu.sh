@@ -101,6 +101,25 @@ needs_rebuild() {
   [[ "${env_revision}" != "${current_revision}" ]]
 }
 
+database_url() {
+  grep -E '^DATABASE_URL=' "${APP_DIR}/.env.local" 2>/dev/null | cut -d= -f2- || true
+}
+
+run_migrations() {
+  local url
+  url="$(database_url)"
+  if [[ -z "${url}" ]]; then
+    warn "DATABASE_URL fehlt; PostgreSQL-Migration wird übersprungen."
+    return
+  fi
+  if [[ ! -f "${APP_DIR}/scripts/migrate-postgres.sh" ]]; then
+    warn "Migration-Script fehlt; überspringe PostgreSQL-Migration."
+    return
+  fi
+  log "Führe PostgreSQL-Migrationen aus ..."
+  DATABASE_URL="${url}" APP_DIR="${APP_DIR}" bash "${APP_DIR}/scripts/migrate-postgres.sh"
+}
+
 install_and_build() {
   log "Installiere Abhängigkeiten mit npm ci ..."
   sudo -u "${APP_USER}" bash -lc "cd '${APP_DIR}' && npm ci"
@@ -156,6 +175,7 @@ main() {
   check_clean_tree
   backup_runtime_files
   if fetch_update; then
+    run_migrations
     install_and_build
     write_revision
     restart_service
@@ -163,6 +183,7 @@ main() {
     ok "Update abgeschlossen."
   elif needs_rebuild; then
     warn "Code ist bereits aktuell, aber Build/Revision passt nicht. Baue neu ..."
+    run_migrations
     install_and_build
     write_revision
     restart_service

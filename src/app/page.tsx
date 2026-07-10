@@ -3,7 +3,9 @@ import { PlatzguideApp } from "@/components/platzguide-app";
 import { Footer } from "@/components/footer";
 import { PlatformLanding } from "@/components/platform-landing";
 import { PwaRegister } from "@/components/pwa-register";
+import { SystemError } from "@/components/system-error";
 import { headers } from "next/headers";
+import { unstable_rethrow } from "next/navigation";
 import { isPlatformHost } from "@/lib/tenant-resolver";
 import { getTenant } from "@/lib/tenant";
 import { listTenants } from "@/lib/tenant-store";
@@ -12,7 +14,14 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const params = await searchParams;
   const requestHeaders = await headers();
   const host = requestHeaders.get("x-tenant-host") ?? requestHeaders.get("host") ?? "localhost";
-  const tenants = await listTenants();
+  let tenants;
+  try {
+    tenants = await listTenants();
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error("Platzguide Startseite konnte Mandanten nicht laden.", error);
+    return <SystemError title="Datenbank nicht bereit" message="Die App konnte die Mandantendaten nicht laden. Bitte PostgreSQL-Verbindung und Migrationen prüfen." />;
+  }
   const queryTenant = params.camp ? tenants.find((candidate) => candidate.slug === params.camp) : undefined;
   if (!queryTenant && isPlatformHost(host)) {
     return <PlatformLanding

@@ -12,7 +12,8 @@ export async function GET() {
       tenants: tenants.length,
       latencyMs: Date.now() - startedAt
     });
-  } catch {
+  } catch (error) {
+    console.error("Healthcheck fehlgeschlagen.", error);
     return NextResponse.json({ ok: false, app: "platzguide" }, { status: 503 });
   }
 }

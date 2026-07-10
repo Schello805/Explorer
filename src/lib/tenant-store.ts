@@ -31,21 +31,24 @@ async function writeLocalTenants(tenants: Tenant[]) {
 async function readPostgresTenants(): Promise<Tenant[]> {
   const sql = postgres(process.env.DATABASE_URL!, { connect_timeout: 3, idle_timeout: 5, max: 5 });
   try {
-    const tenantRows = await sql<{ id: string; configuration: Tenant }[]>`
-      SELECT id, configuration FROM tenants ORDER BY created_at
-    `;
-    const stationRows = await sql<{ tenant_id: string; data: Station }[]>`
-      SELECT tenant_id, data FROM stations ORDER BY updated_at DESC
-    `;
-    const stationsByTenant = new Map<string, Station[]>();
-    for (const row of stationRows) {
-      stationsByTenant.set(row.tenant_id, [...(stationsByTenant.get(row.tenant_id) ?? []), row.data]);
-    }
-    return tenantRows.map((row) => normalizeTenant({
-      ...row.configuration,
-      id: row.id,
-      stations: stationsByTenant.get(row.id) ?? row.configuration.stations ?? []
-    }));
+    return await sql.begin(async (transaction) => {
+      await transaction`SELECT set_config('app.platform_admin', 'true', true)`;
+      const tenantRows = await transaction<{ id: string; configuration: Tenant }[]>`
+        SELECT id, configuration FROM tenants ORDER BY created_at
+      `;
+      const stationRows = await transaction<{ tenant_id: string; data: Station }[]>`
+        SELECT tenant_id, data FROM stations ORDER BY updated_at DESC
+      `;
+      const stationsByTenant = new Map<string, Station[]>();
+      for (const row of stationRows) {
+        stationsByTenant.set(row.tenant_id, [...(stationsByTenant.get(row.tenant_id) ?? []), row.data]);
+      }
+      return tenantRows.map((row) => normalizeTenant({
+        ...row.configuration,
+        id: row.id,
+        stations: stationsByTenant.get(row.id) ?? row.configuration.stations ?? []
+      }));
+    });
   } finally {
     await sql.end();
   }
