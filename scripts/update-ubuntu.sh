@@ -61,6 +61,27 @@ backup_runtime_files() {
   ok "Backup erstellt."
 }
 
+env_value() {
+  local key="$1"
+  grep -E "^${key}=" "${APP_DIR}/.env.local" 2>/dev/null | tail -n 1 | cut -d= -f2- || true
+}
+
+require_environment() {
+  local missing=()
+  [[ -f "${APP_DIR}/.env.local" ]] || fail ".env.local fehlt. Stelle sie aus /var/backups/platzguide wieder her."
+  [[ -n "$(env_value DATABASE_URL)" ]] || missing+=("DATABASE_URL")
+  [[ -n "$(env_value AUTH_SECRET)" ]] || missing+=("AUTH_SECRET")
+  [[ -n "$(env_value ADMIN_PASSWORD_HASH)" ]] || missing+=("ADMIN_PASSWORD_HASH")
+  if (( ${#missing[@]} > 0 )); then
+    printf '\033[1;31m[FEHLER]\033[0m Produktionsumgebung unvollständig: %s\n' "${missing[*]}" >&2
+    printf 'Wiederherstellung prüfen:\n' >&2
+    printf '  ls -lt %s\n' "${BACKUP_DIR}" >&2
+    printf '  cp %s/<letztes-backup>/.env.local %s/.env.local\n' "${BACKUP_DIR}" "${APP_DIR}" >&2
+    exit 1
+  fi
+  ok "Produktionsumgebung vollständig."
+}
+
 check_clean_tree() {
   if [[ -n "$(git -C "${APP_DIR}" status --porcelain)" ]]; then
     local stamp stash_output
@@ -68,7 +89,7 @@ check_clean_tree() {
     warn "Arbeitsbaum in ${APP_DIR} enthält lokale Änderungen."
     mkdir -p "${BACKUP_DIR}"
     git -C "${APP_DIR}" status --porcelain > "${BACKUP_DIR}/${APP_NAME}-local-changes-${stamp}.status"
-    stash_output="$(git -C "${APP_DIR}" stash push --include-untracked -m "platzguide-auto-update-${stamp}" 2>&1 || true)"
+    stash_output="$(git -C "${APP_DIR}" stash push --include-untracked -m "platzguide-auto-update-${stamp}" -- . ":(exclude).env.local" ":(exclude).data" ":(exclude)public/uploads" 2>&1 || true)"
     if [[ "${stash_output}" == *"No local changes to save"* ]]; then
       ok "Nur ignorierte Laufzeitdateien vorhanden; Git-Update kann fortfahren."
     else
@@ -101,13 +122,9 @@ needs_rebuild() {
   [[ "${env_revision}" != "${current_revision}" ]]
 }
 
-database_url() {
-  grep -E '^DATABASE_URL=' "${APP_DIR}/.env.local" 2>/dev/null | cut -d= -f2- || true
-}
-
 run_migrations() {
   local url
-  url="$(database_url)"
+  url="$(env_value DATABASE_URL)"
   if [[ -z "${url}" ]]; then
     warn "DATABASE_URL fehlt; PostgreSQL-Migration wird übersprungen."
     return
@@ -174,7 +191,9 @@ main() {
   trust_git_directory
   check_clean_tree
   backup_runtime_files
+  require_environment
   if fetch_update; then
+    require_environment
     run_migrations
     install_and_build
     write_revision

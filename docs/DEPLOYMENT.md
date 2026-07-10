@@ -201,3 +201,12 @@ sudo SHOW_PASSWORD=true bash /opt/platzguide/scripts/reset-admin-password.sh
 Das Script baut die App danach standardmäßig neu, damit der Hash im
 Produktionsserver sicher übernommen wird. Für reine Diagnose kann
 `REBUILD_APP=false` gesetzt werden.
+
+PostgreSQL-Verbindung reparieren, falls `/api/health` den Status `503` liefert
+und im Journal `DATABASE_URL fehlt` steht:
+
+```bash
+cd /opt/platzguide
+sudo bash scripts/repair-database-env.sh
+sudo systemctl restart platzguide
+```

@@ -3,7 +3,8 @@ import { SystemError } from "@/components/system-error";
 import { ADMIN_EMAIL } from "@/lib/auth";
 import { getTenant } from "@/lib/tenant";
 import { listTenants } from "@/lib/tenant-store";
-import { unstable_rethrow } from "next/navigation";
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
   let tenant;
@@ -12,7 +13,6 @@ export default async function AdminPage() {
     tenant = await getTenant();
     tenants = await listTenants();
   } catch (error) {
-    unstable_rethrow(error);
     console.error("Platzguide Admin konnte Mandanten nicht laden.", error);
     return <SystemError title="Admin-Daten nicht bereit" message="Der Adminbereich konnte die Mandanten nicht laden. Bitte PostgreSQL-Verbindung und Migrationen prüfen." />;
   }
