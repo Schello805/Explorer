@@ -38,6 +38,7 @@ export function CampMap({
   const [layer, setLayer] = useState<Layer>("map");
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [tilesVisible, setTilesVisible] = useState(false);
   const validStations = useMemo(() => stations.filter(hasCoordinates), [stations]);
   const center = useMemo<[number, number]>(() => hasLngLat(tenant.map.center) ? tenant.map.center : stationCenter(validStations) ?? [10.5605, 49.1643], [tenant.map.center, validStations]);
   const zoom = Number.isFinite(tenant.map.zoom) ? tenant.map.zoom : 16;
@@ -46,9 +47,11 @@ export function CampMap({
     if (!containerRef.current || mapRef.current) return;
     let cancelled = false;
     let loaded = false;
+    let visibleTiles = false;
     const fallbackTimer = window.setTimeout(() => {
       if (!loaded) setFailed(true);
     }, 7000);
+    let tileTimer = 0;
 
     if (!cancelled && containerRef.current) {
       const map = new maplibregl.Map({
@@ -70,11 +73,18 @@ export function CampMap({
       map.on("error", (event) => {
         console.warn("Kartenquelle konnte nicht vollständig geladen werden.", event.error);
       });
+      map.on("sourcedata", (event) => {
+        if (event.sourceId === "osm" && event.isSourceLoaded) {
+          visibleTiles = true;
+          setTilesVisible(true);
+        }
+      });
 
       map.on("load", () => {
         loaded = true;
         window.clearTimeout(fallbackTimer);
         setFailed(false);
+        map.resize();
         if (tenant.map.aerialTiles?.length) {
           map.addSource("aerial", {
             type: "raster",
@@ -110,13 +120,22 @@ export function CampMap({
             .addTo(map);
         });
         setReady(true);
+        tileTimer = window.setTimeout(() => {
+          const canvas = containerRef.current?.querySelector("canvas");
+          const hasCanvasSize = Boolean(canvas?.clientWidth && canvas?.clientHeight);
+          if (!hasCanvasSize || (!visibleTiles && getMapStyle(tenant.map.styleUrl) === rasterMapStyle)) {
+            setFailed(true);
+          }
+        }, 3500);
       });
+      requestAnimationFrame(() => map.resize());
       mapRef.current = map;
     }
 
     return () => {
       cancelled = true;
       window.clearTimeout(fallbackTimer);
+      window.clearTimeout(tileTimer);
       markersRef.current.forEach((marker) => marker.remove());
       mapRef.current?.remove();
       mapRef.current = null;
@@ -144,8 +163,17 @@ export function CampMap({
 
   if (failed) return <FallbackMap tenant={tenant} stations={stations} onSelect={onSelect} />;
 
-  return <div className="relative mt-4 h-[52vh] min-h-[360px] overflow-hidden rounded-[1.5rem] border-4 border-white bg-[#dce8d0] shadow-soft sm:min-h-[440px]">
+  return <div className="map-texture relative mt-4 h-[52vh] min-h-[360px] overflow-hidden rounded-[1.5rem] border-4 border-white bg-[#dce8d0] shadow-soft sm:min-h-[440px]">
     <div ref={containerRef} className="absolute inset-0" aria-label={`Interaktive Karte von ${tenant.name}`} />
+    {ready && !tilesVisible && validStations.map((station) => <button
+      key={`overlay-${station.id}`}
+      onClick={() => onSelect(station)}
+      className="pointer-events-auto absolute z-10 grid h-10 w-10 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-4 border-white bg-[#195f4c] text-white shadow-lg transition hover:scale-110"
+      style={projectStation(station, center)}
+      aria-label={station.name}
+    >
+      <MapIcon size={17} />
+    </button>)}
     {!ready && <div className="absolute inset-0 grid place-items-center bg-[#dce8d0] text-sm font-bold text-[#18332b]/55">Karte wird geladen …</div>}
     {choices.length > 1 && <div className="glass absolute left-3 top-3 z-10 flex rounded-xl p-1 shadow-lg">{choices.map((choice) => <button key={choice.id} onClick={() => switchLayer(choice.id)} className={cn("flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold", layer === choice.id && "bg-[var(--primary)] text-white")}><choice.icon size={15} />{choice.label}</button>)}</div>}
   </div>;
@@ -153,16 +181,28 @@ export function CampMap({
 
 function FallbackMap({ tenant, stations, onSelect }: { tenant: Tenant; stations: Station[]; onSelect: (station: Station) => void }) {
   return <div className="map-texture relative mt-4 h-[52vh] min-h-[360px] overflow-hidden rounded-[1.5rem] border-4 border-white bg-[#dce8d0] shadow-soft sm:min-h-[440px]" aria-label={`Fallback-Platzplan von ${tenant.name}`}>
-    <div className="absolute left-3 top-3 rounded-xl bg-white/90 px-3 py-2 text-xs font-bold text-[#18332b] shadow">Offline-Plan</div>
+    <div className="absolute left-3 top-3 z-10 rounded-xl bg-white/90 px-3 py-2 text-xs font-bold text-[#18332b] shadow">Offline-Plan</div>
+    <StaticTilePreview center={hasLngLat(tenant.map.center) ? tenant.map.center : stationCenter(stations.filter(hasCoordinates)) ?? [10.5605, 49.1643]} zoom={16} />
     {stations.map((station) => <button
       key={station.id}
       onClick={() => onSelect(station)}
-      className="absolute grid h-11 w-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-4 border-white bg-[#195f4c] text-white shadow-lg"
+      className="absolute z-10 grid h-11 w-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-4 border-white bg-[#195f4c] text-white shadow-lg"
       style={{ left: `${station.position.x}%`, top: `${station.position.y}%` }}
       aria-label={station.name}
     >
       <MapIcon size={18} />
     </button>)}
+  </div>;
+}
+
+function StaticTilePreview({ center, zoom }: { center: [number, number]; zoom: number }) {
+  const tiles = useMemo(() => staticTiles(center, zoom), [center, zoom]);
+  return <div className="absolute inset-0 opacity-90">
+    {tiles.map((tile) => <div
+      key={`${tile.x}-${tile.y}`}
+      className="absolute h-1/3 w-1/3 bg-cover bg-center"
+      style={{ left: `${tile.left}%`, top: `${tile.top}%`, backgroundImage: `url(https://tile.openstreetmap.org/${zoom}/${tile.x}/${tile.y}.png)` }}
+    />)}
   </div>;
 }
 
@@ -190,4 +230,31 @@ function stationCenter(stations: Station[]): [number, number] | null {
 
 function hasValidSitePlan(sitePlan: Tenant["map"]["sitePlan"]): sitePlan is NonNullable<Tenant["map"]["sitePlan"]> {
   return Boolean(sitePlan?.imageUrl && sitePlan.coordinates.every(hasLngLat));
+}
+
+function projectStation(station: Station, center: [number, number]) {
+  const longitudeDelta = station.longitude - center[0];
+  const latitudeDelta = center[1] - station.latitude;
+  return {
+    left: `${Math.min(94, Math.max(6, 50 + longitudeDelta * 12000))}%`,
+    top: `${Math.min(94, Math.max(6, 50 + latitudeDelta * 18000))}%`
+  };
+}
+
+function staticTiles(center: [number, number], zoom: number) {
+  const main = lonLatToTile(center[0], center[1], zoom);
+  return [-1, 0, 1].flatMap((dy) => [-1, 0, 1].map((dx) => ({
+    x: main.x + dx,
+    y: main.y + dy,
+    left: (dx + 1) * 33.333,
+    top: (dy + 1) * 33.333
+  })));
+}
+
+function lonLatToTile(longitude: number, latitude: number, zoom: number) {
+  const scale = 2 ** zoom;
+  const x = Math.floor((longitude + 180) / 360 * scale);
+  const radians = latitude * Math.PI / 180;
+  const y = Math.floor((1 - Math.log(Math.tan(radians) + 1 / Math.cos(radians)) / Math.PI) / 2 * scale);
+  return { x, y };
 }
