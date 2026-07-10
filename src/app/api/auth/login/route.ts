@@ -1,7 +1,9 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { NextResponse } from "next/server";
 import { compare } from "bcryptjs";
 import { z } from "zod";
-import { ADMIN_EMAIL, createAdminSession, createSession } from "@/lib/auth";
+import { createAdminSession, createSession } from "@/lib/auth";
 import { findTenantUser } from "@/lib/tenant-store";
 
 const credentials = z.object({
@@ -16,23 +18,25 @@ export async function POST(request: Request) {
   }
 
   const email = parsed.data.email.toLowerCase();
+  const adminConfig = await getAdminConfig();
   let token: string | null = null;
 
-  if (email === ADMIN_EMAIL.toLowerCase()) {
-    const hash = process.env.ADMIN_PASSWORD_HASH;
+  if (email === adminConfig.email.toLowerCase()) {
+    const hash = adminConfig.passwordHash;
     const developmentMatch = process.env.NODE_ENV !== "production" && parsed.data.password === "platzguide-admin";
     const passwordMatches = hash ? await compare(parsed.data.password, hash) : developmentMatch;
     if (passwordMatches) token = await createAdminSession(parsed.data.email);
     else console.warn("Admin login failed", {
       email,
-      expectedEmail: ADMIN_EMAIL.toLowerCase(),
+      expectedEmail: adminConfig.email.toLowerCase(),
       hasPasswordHash: Boolean(hash),
+      passwordHashSource: adminConfig.source,
       nodeEnv: process.env.NODE_ENV
     });
   } else {
     console.warn("Admin login skipped: email mismatch", {
       email,
-      expectedEmail: ADMIN_EMAIL.toLowerCase()
+      expectedEmail: adminConfig.email.toLowerCase()
     });
   }
 
@@ -61,4 +65,31 @@ export async function POST(request: Request) {
     maxAge: 60 * 60 * 8
   });
   return response;
+}
+
+async function getAdminConfig() {
+  const fileEnv = await readEnvLocal();
+  const passwordHash = fileEnv.ADMIN_PASSWORD_HASH || process.env.ADMIN_PASSWORD_HASH || "";
+  const email = fileEnv.ADMIN_EMAIL || process.env.ADMIN_EMAIL || "admin@schellenberger.biz";
+  return {
+    email,
+    passwordHash,
+    source: fileEnv.ADMIN_PASSWORD_HASH ? ".env.local" : process.env.ADMIN_PASSWORD_HASH ? "process.env" : "missing"
+  };
+}
+
+async function readEnvLocal() {
+  try {
+    const content = await readFile(path.join(process.cwd(), ".env.local"), "utf8");
+    return Object.fromEntries(content
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith("#") && line.includes("="))
+      .map((line) => {
+        const index = line.indexOf("=");
+        return [line.slice(0, index), line.slice(index + 1)];
+      })) as Record<string, string>;
+  } catch {
+    return {};
+  }
 }
