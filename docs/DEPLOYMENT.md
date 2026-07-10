@@ -69,6 +69,8 @@ sudo DATABASE_URL='postgresql://...' \
 Für automatische Backups kann das Backup-Skript per systemd timer oder Cron
 täglich ausgeführt werden. Restore sollte nach jedem Infrastrukturwechsel einmal
 in einer Testdatenbank geprüft werden.
+Das Backup-Skript setzt beim Dump den Plattform-RLS-Kontext, damit Tabellen mit
+`FORCE ROW LEVEL SECURITY` vollständig gesichert werden.
 
 ## Uploads und Platzpläne
 

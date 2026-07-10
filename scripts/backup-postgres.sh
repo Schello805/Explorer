@@ -15,6 +15,6 @@ command -v pg_dump >/dev/null 2>&1 || fail "pg_dump fehlt."
 mkdir -p "${BACKUP_DIR}"
 chmod 700 "${BACKUP_DIR}"
 target="${BACKUP_DIR}/${APP_NAME}-$(date +%Y%m%d-%H%M%S).dump"
-pg_dump --format=custom --no-owner --no-acl "${DATABASE_URL}" --file "${target}"
+PGOPTIONS="-c app.platform_admin=true" pg_dump --enable-row-security --format=custom --no-owner --no-acl "${DATABASE_URL}" --file "${target}"
 find "${BACKUP_DIR}" -name "${APP_NAME}-*.dump" -mtime "+${RETENTION_DAYS}" -delete
 ok "Backup erstellt: ${target}"
