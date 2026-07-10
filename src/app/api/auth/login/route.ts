@@ -23,6 +23,17 @@ export async function POST(request: Request) {
     const developmentMatch = process.env.NODE_ENV !== "production" && parsed.data.password === "platzguide-admin";
     const passwordMatches = hash ? await compare(parsed.data.password, hash) : developmentMatch;
     if (passwordMatches) token = await createAdminSession(parsed.data.email);
+    else console.warn("Admin login failed", {
+      email,
+      expectedEmail: ADMIN_EMAIL.toLowerCase(),
+      hasPasswordHash: Boolean(hash),
+      nodeEnv: process.env.NODE_ENV
+    });
+  } else {
+    console.warn("Admin login skipped: email mismatch", {
+      email,
+      expectedEmail: ADMIN_EMAIL.toLowerCase()
+    });
   }
 
   if (!token) {

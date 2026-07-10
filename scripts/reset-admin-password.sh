@@ -35,6 +35,7 @@ log "Erzeuge Passwort-Hash ..."
 password_hash="$(cd "${APP_DIR}" && node -e "require('bcryptjs').hash(process.argv[1], 12).then(console.log)" "${ADMIN_PASSWORD}")"
 cd "${APP_DIR}" && node -e "require('bcryptjs').compare(process.argv[1], process.argv[2]).then((ok) => process.exit(ok ? 0 : 1))" "${ADMIN_PASSWORD}" "${password_hash}" \
   || fail "Der erzeugte Passwort-Hash konnte nicht verifiziert werden."
+ok "Hash wurde lokal verifiziert."
 
 if grep -q '^ADMIN_PASSWORD_HASH=' "${APP_DIR}/.env.local"; then
   sed -i "s#^ADMIN_PASSWORD_HASH=.*#ADMIN_PASSWORD_HASH=${password_hash}#" "${APP_DIR}/.env.local"
@@ -45,24 +46,42 @@ fi
 chown "${APP_USER}:${APP_USER}" "${APP_DIR}/.env.local"
 chmod 600 "${APP_DIR}/.env.local"
 
-log "Starte Service neu ..."
-systemctl restart "${APP_NAME}.service"
-sleep 2
 if [[ -z "${ADMIN_EMAIL}" ]]; then
   ADMIN_EMAIL="$(grep -E '^ADMIN_EMAIL=' "${APP_DIR}/.env.local" | cut -d= -f2- || true)"
 fi
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@schellenberger.biz}"
 port="$(grep -E '^PORT=' "${APP_DIR}/.env.local" | cut -d= -f2- || true)"
 port="${port:-3000}"
-if ADMIN_EMAIL="${ADMIN_EMAIL}" ADMIN_PASSWORD="${ADMIN_PASSWORD}" LOGIN_URL="http://127.0.0.1:${port}/api/auth/login" node -e '
+
+log "Starte Service neu ..."
+systemctl restart "${APP_NAME}.service"
+for attempt in {1..20}; do
+  if curl -fsS "http://127.0.0.1:${port}/api/health" >/dev/null; then
+    ok "Service antwortet auf /api/health."
+    break
+  fi
+  sleep 1
+  [[ "${attempt}" -lt 20 ]] || fail "Service antwortet nach Neustart nicht."
+done
+
+log "Prüfe Login für ${ADMIN_EMAIL} ..."
+login_result="$(ADMIN_EMAIL="${ADMIN_EMAIL}" ADMIN_PASSWORD="${ADMIN_PASSWORD}" LOGIN_URL="http://127.0.0.1:${port}/api/auth/login" node -e '
   fetch(process.env.LOGIN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email: process.env.ADMIN_EMAIL, password: process.env.ADMIN_PASSWORD })
-  }).then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1));
-'; then
+  }).then(async (response) => {
+    console.log(JSON.stringify({ ok: response.ok, status: response.status, body: await response.text() }));
+    process.exit(response.ok ? 0 : 1);
+  }).catch((error) => {
+    console.log(JSON.stringify({ ok: false, status: 0, body: String(error && error.message || error) }));
+    process.exit(1);
+  });
+' 2>/dev/null)" && login_ok=true || login_ok=false
+if [[ "${login_ok}" == "true" ]]; then
   ok "Login-Test erfolgreich für ${ADMIN_EMAIL}."
 else
-  fail "Passwort wurde gespeichert, aber der Login-Test ist fehlgeschlagen. Prüfe journalctl -u ${APP_NAME} -n 100."
+  printf '%s\n' "${login_result}" >&2
+  fail "Passwort wurde gespeichert, aber der Login-Test ist fehlgeschlagen. Prüfe: journalctl -u ${APP_NAME} -n 100 --no-pager"
 fi
 ok "Admin-Passwort wurde aktualisiert."
