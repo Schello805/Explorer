@@ -1,7 +1,6 @@
-import { tenants } from "@/lib/demo-data";
 import type { Tenant } from "@/lib/types";
 
-export function resolveTenant(host: string, availableTenants: Tenant[] = tenants): Tenant {
+export function resolveTenant(host: string, availableTenants: Tenant[]): Tenant | undefined {
   const normalizedHost = host.split(":")[0].toLowerCase();
   const tenant = availableTenants.find((candidate) =>
     candidate.hosts.includes(normalizedHost)
@@ -9,8 +8,7 @@ export function resolveTenant(host: string, availableTenants: Tenant[] = tenants
   if (tenant) return tenant;
   const subdomain = normalizedHost.split(".")[0];
   return availableTenants.find((candidate) => candidate.slug === subdomain)
-    ?? availableTenants[0]
-    ?? tenants[0];
+    ?? availableTenants[0];
 }
 
 export function isPlatformHost(host: string): boolean {

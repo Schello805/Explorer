@@ -7,5 +7,7 @@ export const getTenant = cache(async () => {
   const requestHeaders = await headers();
   const host = requestHeaders.get("x-tenant-host") ?? requestHeaders.get("host") ?? "localhost";
   const availableTenants = await listTenants();
-  return resolveTenant(host, availableTenants);
+  const tenant = resolveTenant(host, availableTenants);
+  if (!tenant) throw new Error("Tenant not found");
+  return tenant;
 });

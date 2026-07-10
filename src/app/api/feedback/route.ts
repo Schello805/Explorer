@@ -15,6 +15,7 @@ export async function POST(request: Request) {
   const host = requestHeaders.get("host") ?? "localhost";
   const tenants = await listTenants();
   const tenant = resolveTenant(host, tenants);
+  if (!tenant) return NextResponse.json({ error: "Mandant nicht gefunden" }, { status: 404 });
   if (!tenant.features.feedback) return NextResponse.json({ error: "Feedback ist deaktiviert" }, { status: 403 });
   const parsed = feedbackSchema.safeParse(await request.json());
   if (!parsed.success) return NextResponse.json({ error: "Ungültige Meldung" }, { status: 400 });

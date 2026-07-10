@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, Code2, ShieldCheck, Smartphone } from "lucide-react";
 
@@ -68,8 +67,7 @@ export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey }
           <MiniFeature icon={<Code2 />} title="Source Available" text="Nicht-kommerziell frei." />
         </div>
         <div className="mt-6 flex flex-wrap gap-3">
-          <Link href="/?camp=sonnental" className="rounded-xl bg-[#195f4c] px-5 py-3 text-sm font-bold text-white">Demo öffnen</Link>
-          <a href="/admin" className="rounded-xl border border-[#18332b]/15 bg-white px-5 py-3 text-sm font-bold">Admin öffnen</a>
+          <a href="/admin" className="rounded-xl bg-[#195f4c] px-5 py-3 text-sm font-bold text-white">Admin öffnen</a>
         </div>
       </div>
 

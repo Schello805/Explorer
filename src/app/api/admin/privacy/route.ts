@@ -17,6 +17,7 @@ async function authorize() {
   const tenant = tenants.find((candidate) => candidate.hosts.includes(normalized))
     ?? tenants.find((candidate) => candidate.slug === normalized.split(".")[0])
     ?? resolveTenant(host, tenants);
+  if (!tenant) return null;
   return { session, tenant, tenants };
 }
 

@@ -1,18 +1,19 @@
 import type { Metadata, Viewport } from "next";
 import "@/app/globals.css";
 import { getTenant } from "@/lib/tenant";
+import { tenantDefaults } from "@/lib/tenant-defaults";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const tenant = await getTenant();
+  const tenant = await getTenant().catch(() => null);
   return {
-    title: `${tenant.name} · Platzguide`,
-    description: tenant.tagline,
+    title: tenant ? `${tenant.name} · Platzguide` : "Platzguide",
+    description: tenant?.tagline ?? "Mandantenfähige Campingplatz-App und PWA.",
     manifest: "/manifest.webmanifest",
     icons: {
       icon: "/icons/platzguide-logo.png",
       apple: "/icons/platzguide-logo.png"
     },
-    appleWebApp: { capable: true, title: tenant.name, statusBarStyle: "default" }
+    appleWebApp: { capable: true, title: tenant?.name ?? "Platzguide", statusBarStyle: "default" }
   };
 }
 
@@ -23,12 +24,13 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const tenant = await getTenant();
+  const tenant = await getTenant().catch(() => null);
+  const theme = tenant?.theme ?? tenantDefaults.theme;
   return (
     <html lang="de" style={{
-      "--primary": tenant.theme.primary,
-      "--secondary": tenant.theme.secondary,
-      "--surface": tenant.theme.surface
+      "--primary": theme.primary,
+      "--secondary": theme.secondary,
+      "--surface": theme.surface
     } as React.CSSProperties}>
       <body>
         <script dangerouslySetInnerHTML={{ __html: chunkRecoveryScript }} />

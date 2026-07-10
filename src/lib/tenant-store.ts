@@ -4,8 +4,8 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
 import postgres from "postgres";
-import { tenants as seedTenants } from "@/lib/demo-data";
 import { sendMail } from "@/lib/mail";
+import { tenantDefaults } from "@/lib/tenant-defaults";
 import type { AuditEntry, FeedbackMessage, PrivacyRequest, Station, Tenant } from "@/lib/types";
 
 const dataDirectory = path.join(process.cwd(), ".data");
@@ -16,8 +16,8 @@ async function readLocalTenants(): Promise<Tenant[]> {
     return (JSON.parse(await readFile(dataFile, "utf8")) as Tenant[]).map(normalizeTenant);
   } catch {
     await mkdir(dataDirectory, { recursive: true });
-    await writeFile(dataFile, JSON.stringify(seedTenants, null, 2));
-    return structuredClone(seedTenants);
+    await writeFile(dataFile, JSON.stringify([], null, 2));
+    return [];
   }
 }
 
@@ -55,25 +55,24 @@ async function readPostgresTenants(): Promise<Tenant[]> {
 }
 
 function normalizeTenant(tenant: Tenant): Tenant {
-  const seed = seedTenants.find((candidate) => candidate.id === tenant.id) ?? seedTenants[0];
   return {
-    ...seed,
+    ...tenantDefaults,
     ...tenant,
-    theme: { ...seed.theme, ...tenant.theme },
-    map: { ...seed.map, ...tenant.map },
-    contact: { ...seed.contact, ...tenant.contact },
-    legal: { ...seed.legal, ...tenant.legal },
-    tracking: { ...seed.tracking, ...tenant.tracking },
-    email: { ...seed.email, ...tenant.email },
+    theme: { ...tenantDefaults.theme, ...tenant.theme },
+    map: { ...tenantDefaults.map, ...tenant.map },
+    contact: { ...tenantDefaults.contact, ...tenant.contact },
+    legal: { ...tenantDefaults.legal, ...tenant.legal },
+    tracking: { ...tenantDefaults.tracking, ...tenant.tracking },
+    email: { ...tenantDefaults.email, ...tenant.email },
     integrations: {
-      mail: { ...seed.integrations.mail, ...tenant.integrations?.mail },
-      captcha: { ...seed.integrations.captcha, ...tenant.integrations?.captcha },
-      storage: { ...seed.integrations.storage, ...tenant.integrations?.storage },
-      database: { ...seed.integrations.database, ...tenant.integrations?.database },
-      backup: { ...seed.integrations.backup, ...tenant.integrations?.backup }
+      mail: { ...tenantDefaults.integrations.mail, ...tenant.integrations?.mail },
+      captcha: { ...tenantDefaults.integrations.captcha, ...tenant.integrations?.captcha },
+      storage: { ...tenantDefaults.integrations.storage, ...tenant.integrations?.storage },
+      database: { ...tenantDefaults.integrations.database, ...tenant.integrations?.database },
+      backup: { ...tenantDefaults.integrations.backup, ...tenant.integrations?.backup }
     },
-    features: { ...seed.features, ...tenant.features },
-    categories: tenant.categories ?? seed.categories,
+    features: { ...tenantDefaults.features, ...tenant.features },
+    categories: tenant.categories ?? tenantDefaults.categories,
     stations: tenant.stations ?? [],
     media: tenant.media ?? [],
     events: tenant.events ?? [],
@@ -181,11 +180,10 @@ export async function createTenantInstance(input: { name: string; slug: string; 
     throw new Error("Slug already exists");
   }
 
-  const base = seedTenants[0];
   const verificationToken = crypto.randomUUID();
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
   const tenant: Tenant = normalizeTenant({
-    ...structuredClone(base),
+    ...structuredClone(tenantDefaults),
     id: crypto.randomUUID(),
     slug,
     hosts: [`${slug}.localhost`, `${slug}.app-domain.de`],

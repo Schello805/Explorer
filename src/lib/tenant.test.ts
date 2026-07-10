@@ -2,10 +2,28 @@ import { describe, expect, it } from "vitest";
 import { canManageTenant, canViewTenant } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { onlyTenantRecords, resolveTenant } from "@/lib/tenant-resolver";
+import { tenantDefaults } from "@/lib/tenant-defaults";
+import type { Tenant } from "@/lib/types";
+
+function testTenant(input: Pick<Tenant, "id" | "slug" | "hosts" | "name">): Tenant {
+  return {
+    ...structuredClone(tenantDefaults),
+    ...input,
+    users: [],
+    auditLog: []
+  };
+}
 
 describe("tenant isolation", () => {
   it("resolves the tenant from its subdomain", () => {
-    expect(resolveTenant("sonnental.localhost:3000").slug).toBe("sonnental");
+    const tenants = [
+      testTenant({ id: "tenant-a", slug: "platz-a", hosts: ["platz-a.localhost"], name: "Platz A" })
+    ];
+    expect(resolveTenant("platz-a.localhost:3000", tenants)?.slug).toBe("platz-a");
+  });
+
+  it("does not invent a tenant when none exists", () => {
+    expect(resolveTenant("localhost:3000", [])).toBeUndefined();
   });
 
   it("never returns records from another tenant", () => {

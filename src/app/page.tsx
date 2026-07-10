@@ -5,8 +5,7 @@ import { PlatformLanding } from "@/components/platform-landing";
 import { PwaRegister } from "@/components/pwa-register";
 import { SystemError } from "@/components/system-error";
 import { headers } from "next/headers";
-import { isPlatformHost } from "@/lib/tenant-resolver";
-import { getTenant } from "@/lib/tenant";
+import { isPlatformHost, resolveTenant } from "@/lib/tenant-resolver";
 import { listTenants } from "@/lib/tenant-store";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +29,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       captchaSiteKey={process.env.NEXT_PUBLIC_CAPTCHA_SITE_KEY ?? ""}
     />;
   }
-  const tenant = queryTenant ?? await getTenant();
+  if (params.camp && !queryTenant) {
+    return <SystemError title="Campingplatz nicht gefunden" message="Für diesen Link ist kein Mandant angelegt. Bitte Subdomain oder Mandantenkürzel prüfen." />;
+  }
+  const tenant = queryTenant ?? resolveTenant(host, tenants);
+  if (!tenant) {
+    return <SystemError title="Campingplatz nicht gefunden" message="Für diese Domain ist noch kein Mandant eingerichtet." />;
+  }
   return <>
     <PwaRegister />
     <PlatzguideApp tenant={tenant} />
