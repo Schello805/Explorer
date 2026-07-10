@@ -160,7 +160,12 @@ journalctl -u platzguide -f
 ```
 
 Die App ist nach erfolgreichem Abschluss direkt startbereit. Das Skript prüft
-abschließend `systemd` und `/api/health`.
+abschließend `systemd`, die interne App und Nginx über `/api/health`.
+
+Bei `DOMAIN=_` richtet das Skript Nginx als Default-Site ein. Der Zugriff per
+Server-IP funktioniert dann direkt über Port `80`. Ein externer Reverse Proxy
+sollte deshalb auf `http://SERVER-IP:80` zeigen, nicht auf den internen
+Next.js-Port `3000`.
 
 ## Ubuntu-Updates
 

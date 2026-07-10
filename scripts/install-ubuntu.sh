@@ -73,6 +73,20 @@ detect_primary_ip() {
   hostname -I 2>/dev/null | awk '{print $1}'
 }
 
+public_url() {
+  if [[ "${DOMAIN}" == "_" ]]; then
+    local primary_ip
+    primary_ip="$(detect_primary_ip)"
+    if [[ -n "${primary_ip}" ]]; then
+      printf 'http://%s' "${primary_ip}"
+    else
+      printf 'http://127.0.0.1'
+    fi
+  else
+    printf 'http://%s' "${DOMAIN}"
+  fi
+}
+
 collect_admin_password() {
   if [[ -n "${ADMIN_PASSWORD}" ]]; then
     ok "Admin-Passwort wurde per ADMIN_PASSWORD übergeben."
@@ -185,17 +199,7 @@ write_env_file() {
     DATABASE_URL="${DATABASE_URL:-}"
   fi
   if [[ -z "${NEXT_PUBLIC_BASE_URL}" ]]; then
-    if [[ "${DOMAIN}" == "_" ]]; then
-      local primary_ip
-      primary_ip="$(detect_primary_ip)"
-      if [[ -n "${primary_ip}" ]]; then
-        NEXT_PUBLIC_BASE_URL="http://${primary_ip}"
-      else
-        NEXT_PUBLIC_BASE_URL="http://localhost:${PORT}"
-      fi
-    else
-      NEXT_PUBLIC_BASE_URL="http://${DOMAIN}"
-    fi
+    NEXT_PUBLIC_BASE_URL="$(public_url)"
   fi
 
   log "Schreibe Umgebung nach ${env_file} ..."
@@ -273,9 +277,15 @@ configure_nginx() {
   fi
   log "Installiere und konfiguriere Nginx ..."
   apt-get install -y nginx
+  rm -f /etc/nginx/sites-enabled/default
+  local listen_directive
+  listen_directive="listen 80;"
+  if [[ "${DOMAIN}" == "_" ]]; then
+    listen_directive="listen 80 default_server;"
+  fi
   cat > "/etc/nginx/sites-available/${APP_NAME}" <<EOF_NGINX
 server {
-  listen 80;
+  ${listen_directive}
   server_name ${DOMAIN};
 
   client_max_body_size 25m;
@@ -308,6 +318,13 @@ health_check() {
   else
     fail "App antwortet nicht auf Port ${PORT}. Prüfe: journalctl -u ${APP_NAME} -n 100"
   fi
+  if [[ "${INSTALL_NGINX}" == "true" ]]; then
+    if curl -fsS -H "Host: ${DOMAIN}" "http://127.0.0.1/api/health" >/dev/null; then
+      ok "App antwortet über Nginx auf http://127.0.0.1/api/health"
+    else
+      fail "App antwortet lokal, aber nicht über Nginx. Prüfe: nginx -T und systemctl status nginx"
+    fi
+  fi
 }
 
 main() {
@@ -328,7 +345,9 @@ main() {
   ok "Installation abgeschlossen."
   printf '\nZugriff:\n'
   printf '  Lokal:   http://127.0.0.1:%s\n' "${PORT}"
-  printf '  Nginx:   http://%s\n' "${DOMAIN}"
+  if [[ "${INSTALL_NGINX}" == "true" ]]; then
+    printf '  Nginx:   %s\n' "$(public_url)"
+  fi
   printf '\nNützliche Befehle:\n'
   printf '  Status:  systemctl status %s\n' "${APP_NAME}"
   printf '  Logs:    journalctl -u %s -f\n' "${APP_NAME}"
