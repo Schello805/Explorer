@@ -42,6 +42,11 @@ require_layout() {
   systemctl list-unit-files "${APP_NAME}.service" >/dev/null 2>&1 || fail "systemd-Service fehlt: ${APP_NAME}.service"
 }
 
+trust_git_directory() {
+  git config --global --add safe.directory "${APP_DIR}" 2>/dev/null || true
+  ok "Git-Verzeichnis ist als sicher markiert: ${APP_DIR}"
+}
+
 backup_runtime_files() {
   local stamp backup_path
   stamp="$(date +%Y%m%d-%H%M%S)"
@@ -127,6 +132,7 @@ health_check() {
 main() {
   require_root
   require_layout
+  trust_git_directory
   check_clean_tree
   backup_runtime_files
   if fetch_update; then

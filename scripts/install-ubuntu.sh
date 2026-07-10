@@ -153,9 +153,17 @@ create_app_user() {
   fi
 }
 
+trust_git_directory() {
+  if [[ -d "${APP_DIR}/.git" ]]; then
+    git config --global --add safe.directory "${APP_DIR}" 2>/dev/null || true
+    ok "Git-Verzeichnis ist als sicher markiert: ${APP_DIR}"
+  fi
+}
+
 clone_or_update_repo() {
   if [[ -d "${APP_DIR}/.git" ]]; then
     log "Repository existiert bereits. Aktualisiere ${APP_DIR} ..."
+    trust_git_directory
     git -C "${APP_DIR}" fetch origin "${BRANCH}"
     git -C "${APP_DIR}" checkout "${BRANCH}"
     git -C "${APP_DIR}" pull --ff-only origin "${BRANCH}"
@@ -165,6 +173,7 @@ clone_or_update_repo() {
     git clone --branch "${BRANCH}" "${REPO_URL}" "${APP_DIR}"
   fi
   chown -R "${APP_USER}:${APP_USER}" "${APP_DIR}"
+  trust_git_directory
   ok "Projekt liegt unter ${APP_DIR}."
 }
 
