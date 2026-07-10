@@ -1,16 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import Link from "next/link";
 import { ArrowRight, Caravan, Code2, ShieldCheck, Smartphone } from "lucide-react";
 
-export function PlatformLanding({ allowSignup }: { allowSignup: boolean }) {
+type CaptchaProvider = "turnstile" | "hcaptcha" | "disabled";
+
+export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey }: { allowSignup: boolean; captchaProvider: CaptchaProvider; captchaSiteKey: string }) {
   const [name, setName] = useState("Camping Sonnental");
   const [slug, setSlug] = useState("sonnental");
   const [ownerEmail, setOwnerEmail] = useState("admin@schellenberger.biz");
   const [ownerPassword, setOwnerPassword] = useState("");
   const [website, setWebsite] = useState("");
+  const [captchaToken, setCaptchaToken] = useState("");
   const [result, setResult] = useState<{ localUrl: string; subdomain: string } | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -26,13 +29,30 @@ export function PlatformLanding({ allowSignup }: { allowSignup: boolean }) {
     const response = await fetch("/api/tenants", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, slug, ownerEmail, ownerPassword, website })
+      body: JSON.stringify({ name, slug, ownerEmail, ownerPassword, captchaToken, website })
     });
     const payload = await response.json();
     setLoading(false);
     if (!response.ok) return setError(payload.error ?? "Instanz konnte nicht erstellt werden.");
     setResult(payload);
   }
+
+  useEffect(() => {
+    if (!allowSignup || captchaProvider === "disabled" || !captchaSiteKey) return;
+    const callbackHost = window as Window & { platzguideCaptchaSolved?: (token: string) => void };
+    callbackHost.platzguideCaptchaSolved = setCaptchaToken;
+    const script = document.createElement("script");
+    script.async = true;
+    script.defer = true;
+    script.src = captchaProvider === "turnstile"
+      ? "https://challenges.cloudflare.com/turnstile/v0/api.js"
+      : "https://js.hcaptcha.com/1/api.js";
+    document.head.appendChild(script);
+    return () => {
+      delete callbackHost.platzguideCaptchaSolved;
+      script.remove();
+    };
+  }, [allowSignup, captchaProvider, captchaSiteKey]);
 
   return <main className="min-h-screen bg-[#f5f2e9] text-[#18332b]">
     <section className="mx-auto grid min-h-screen w-[90%] content-center gap-6 py-8 lg:grid-cols-[1fr_.9fr] lg:items-center">
@@ -61,6 +81,11 @@ export function PlatformLanding({ allowSignup }: { allowSignup: boolean }) {
           <Field label="Admin-E-Mail" value={ownerEmail} onChange={setOwnerEmail} />
           <Field label="Admin-Passwort" type="password" value={ownerPassword} onChange={setOwnerPassword} />
           <label className="hidden">Website<input value={website} onChange={(event) => setWebsite(event.target.value)} tabIndex={-1} autoComplete="off" /></label>
+          {allowSignup && captchaProvider !== "disabled" && captchaSiteKey && <div className="overflow-hidden rounded-xl">
+            {captchaProvider === "turnstile"
+              ? <div className="cf-turnstile" data-sitekey={captchaSiteKey} data-callback="platzguideCaptchaSolved" />
+              : <div className="h-captcha" data-sitekey={captchaSiteKey} data-callback="platzguideCaptchaSolved" />}
+          </div>}
         </div>
         {error && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p>}
         {result && <div className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900"><strong>Erstellt:</strong><br /><a className="font-bold underline" href={result.localUrl}>Lokale Instanz öffnen</a><br />Spätere Subdomain: {result.subdomain}</div>}

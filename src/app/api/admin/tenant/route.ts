@@ -36,6 +36,13 @@ const tenantSchema = z.object({
   legal: z.object({ imprint: z.string().max(10000), privacy: z.string().max(20000), cookies: z.string().max(10000) }),
   tracking: z.object({ enabled: z.boolean(), provider: z.string().max(80), measurementId: z.string().max(120) }),
   email: z.object({ senderName: z.string().max(120), senderEmail: z.string().email(), replyTo: z.string().email() }),
+  integrations: z.object({
+    mail: z.object({ provider: z.enum(["webhook", "resend", "brevo", "mailgun", "outbox"]), fromEmail: z.string().email(), fromName: z.string().max(120) }),
+    captcha: z.object({ provider: z.enum(["turnstile", "hcaptcha", "disabled"]), siteKey: z.string().max(500), requiredForSignup: z.boolean() }),
+    storage: z.object({ provider: z.enum(["local", "s3", "external-url"]), maxUploadMb: z.number().min(1).max(100), allowedTypes: z.array(z.string().max(120)).min(1) }),
+    database: z.object({ provider: z.enum(["postgresql", "local-json"]), rlsRequired: z.boolean() }),
+    backup: z.object({ enabled: z.boolean(), schedule: z.string().max(80), retentionDays: z.number().min(1).max(365) })
+  }),
   features: z.record(z.string(), z.boolean()),
   categories: z.array(categorySchema).min(1),
   stations: z.array(z.unknown()),
@@ -45,7 +52,9 @@ const tenantSchema = z.object({
   rewards: z.array(z.unknown()),
   guestGuide: z.array(z.unknown()),
   feedback: z.array(z.unknown()),
-  auditLog: z.array(z.unknown())
+  auditLog: z.array(z.unknown()),
+  users: z.array(z.unknown()),
+  privacyRequests: z.array(z.unknown())
 });
 
 async function authorize() {

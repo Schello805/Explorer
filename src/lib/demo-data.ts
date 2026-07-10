@@ -33,6 +33,13 @@ export const demoTenant: Tenant = {
   },
   tracking: { enabled: false, provider: "none", measurementId: "" },
   email: { senderName: "Camping Sonnental", senderEmail: "noreply@camping-sonnental.de", replyTo: "hallo@camping-sonnental.de" },
+  integrations: {
+    mail: { provider: "outbox", fromEmail: "noreply@camping-sonnental.de", fromName: "Camping Sonnental" },
+    captcha: { provider: "disabled", siteKey: "", requiredForSignup: true },
+    storage: { provider: "local", maxUploadMb: 10, allowedTypes: ["image/png", "image/jpeg", "image/webp", "application/pdf"] },
+    database: { provider: "local-json", rlsRequired: true },
+    backup: { enabled: false, schedule: "daily", retentionDays: 14 }
+  },
   features: {
     tours: true,
     checkins: true,

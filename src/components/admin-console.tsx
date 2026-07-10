@@ -21,6 +21,7 @@ const navigation = [
   { id: "feedback", label: "Feedback", icon: MessageSquareWarning },
   { id: "legal", label: "Recht & Datenschutz", icon: FileText },
   { id: "modules", label: "Module", icon: Settings },
+  { id: "integrations", label: "Integrationen", icon: Settings },
   { id: "security", label: "Sicherheit", icon: ShieldCheck },
   { id: "profile", label: "Profil", icon: Users }
 ];
@@ -95,6 +96,7 @@ export function AdminConsole({ tenant, adminEmail }: { tenant: Tenant; adminEmai
         {section === "branding" && <Branding tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "legal" && <Legal tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "modules" && <Modules tenant={currentTenant} saving={saving} onSave={saveTenant} />}
+        {section === "integrations" && <Integrations tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "events" && <Events tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "tours" && <Tours tenant={currentTenant} stations={stations} saving={saving} onSave={saveTenant} />}
         {section === "rewards" && <Rewards tenant={currentTenant} saving={saving} onSave={saveTenant} />}
@@ -136,6 +138,21 @@ function TenantSettings({ tenant, saving, onSave }: { tenant: Tenant; saving: bo
   const [draft, setDraft] = useState(tenant);
   const hostText = draft.hosts.join(", ");
   const save = () => onSave({ ...draft, hosts: hostText.split(",").map((host) => host.trim()).filter(Boolean) });
+  async function uploadSitePlan(file: File) {
+    const formData = new FormData();
+    formData.set("file", file);
+    formData.set("purpose", "sitePlan");
+    const response = await fetch("/api/admin/uploads", { method: "POST", body: formData });
+    if (!response.ok) return alert("Der Platzplan konnte nicht hochgeladen werden.");
+    const payload = await response.json() as { sitePlan: NonNullable<Tenant["map"]["sitePlan"]> };
+    setDraft((current) => ({ ...current, map: { ...current.map, sitePlan: payload.sitePlan } }));
+  }
+  function updateSitePlanCorner(index: number, axis: 0 | 1, value: string) {
+    if (!draft.map.sitePlan) return;
+    const coordinates = draft.map.sitePlan.coordinates.map((point) => [...point] as [number, number]) as NonNullable<Tenant["map"]["sitePlan"]>["coordinates"];
+    coordinates[index][axis] = Number(value);
+    setDraft({ ...draft, map: { ...draft.map, sitePlan: { ...draft.map.sitePlan, coordinates } } });
+  }
   return <div className="space-y-6">
     <SettingsCard title="Campingplatz & Domain" description="Die Zuordnung erfolgt zentral über Domain oder Subdomain.">
       <Field label="Name" value={draft.name} onChange={(name) => setDraft({ ...draft, name })} />
@@ -157,7 +174,16 @@ function TenantSettings({ tenant, saving, onSave }: { tenant: Tenant; saving: bo
       <Field label="Luftbild-Tile/WMS-URL (optional)" value={draft.map.aerialTiles?.[0] ?? ""} onChange={(tile) => setDraft({ ...draft, map: { ...draft.map, aerialTiles: tile ? [tile] : undefined } })} />
       <Field label="Luftbild-Quellenangabe" value={draft.map.aerialAttribution ?? ""} onChange={(aerialAttribution) => setDraft({ ...draft, map: { ...draft.map, aerialAttribution } })} />
       <Field label="Platzplan-Bild-URL" value={draft.map.sitePlan?.imageUrl ?? ""} onChange={(imageUrl) => setDraft({ ...draft, map: { ...draft.map, sitePlan: imageUrl ? draft.map.sitePlan ?? { imageUrl, coordinates: [[draft.map.center[0] - 0.001, draft.map.center[1] + 0.001], [draft.map.center[0] + 0.001, draft.map.center[1] + 0.001], [draft.map.center[0] + 0.001, draft.map.center[1] - 0.001], [draft.map.center[0] - 0.001, draft.map.center[1] - 0.001]], attribution: "Eigener Lageplan" } : undefined } })} />
-      <p className="text-xs leading-5 text-black/45">Für exakte Wege abseits öffentlicher Straßen: eigenes Luftbild/Lageplan hinterlegen und später vier Eckpunkte kalibrieren.</p>
+      <label className="block text-sm font-bold">Platzplan hochladen<input type="file" accept="image/png,image/jpeg,image/webp,application/pdf" onChange={(event) => event.target.files?.[0] && uploadSitePlan(event.target.files[0])} className="mt-2 block w-full rounded-xl border border-dashed border-black/20 bg-[#fafaf8] p-4 text-sm font-normal" /></label>
+      {draft.map.sitePlan && <div className="rounded-xl border border-black/10 p-4">
+        <p className="text-sm font-bold">Vierpunkt-Kalibrierung</p>
+        <p className="mt-1 text-xs text-black/45">Reihenfolge: oben links, oben rechts, unten rechts, unten links. Werte sind Längengrad/Breitengrad.</p>
+        <div className="mt-3 grid gap-3 md:grid-cols-2">{draft.map.sitePlan.coordinates.map((point, index) => <div key={index} className="grid gap-2 sm:grid-cols-2">
+          <Field label={`P${index + 1} Längengrad`} value={String(point[0])} onChange={(value) => updateSitePlanCorner(index, 0, value)} />
+          <Field label={`P${index + 1} Breitengrad`} value={String(point[1])} onChange={(value) => updateSitePlanCorner(index, 1, value)} />
+        </div>)}</div>
+      </div>}
+      <p className="text-xs leading-5 text-black/45">Für exakte Wege abseits öffentlicher Straßen: eigenes Luftbild/Lageplan hinterlegen und über vier Eckpunkte georeferenzieren.</p>
       <Save saving={saving} onClick={save} />
     </SettingsCard>
   </div>;
@@ -165,6 +191,34 @@ function TenantSettings({ tenant, saving, onSave }: { tenant: Tenant; saving: bo
 function Branding({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) { const [draft, setDraft] = useState(tenant); return <SettingsCard title="Erscheinungsbild" description="Farben und Texte werden nur für diesen Mandanten ausgespielt."><Field label="Claim" value={draft.tagline} onChange={(tagline) => setDraft({ ...draft, tagline })} /><Field label="Logo-Kürzel" value={draft.logoMark} onChange={(logoMark) => setDraft({ ...draft, logoMark })} /><div className="grid gap-4 sm:grid-cols-3"><Color label="Primärfarbe" value={draft.theme.primary} onChange={(primary) => setDraft({ ...draft, theme: { ...draft.theme, primary } })} /><Color label="Akzentfarbe" value={draft.theme.secondary} onChange={(secondary) => setDraft({ ...draft, theme: { ...draft.theme, secondary } })} /><Color label="Hintergrund" value={draft.theme.surface} onChange={(surface) => setDraft({ ...draft, theme: { ...draft.theme, surface } })} /></div><Save saving={saving} onClick={() => onSave(draft)} /></SettingsCard>; }
 function Legal({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) { const [draft, setDraft] = useState(tenant); return <SettingsCard title="Rechtstexte" description="Jeder Campingplatz benötigt eigene, rechtlich geprüfte Angaben."><Area label="Impressum" value={draft.legal.imprint} onChange={(imprint) => setDraft({ ...draft, legal: { ...draft.legal, imprint } })} /><Area label="Datenschutz" value={draft.legal.privacy} onChange={(privacy) => setDraft({ ...draft, legal: { ...draft.legal, privacy } })} /><Area label="Cookie-Hinweise" value={draft.legal.cookies} onChange={(cookies) => setDraft({ ...draft, legal: { ...draft.legal, cookies } })} /><Save saving={saving} onClick={() => onSave(draft)} /></SettingsCard>; }
 function Modules({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) { const [draft, setDraft] = useState(tenant); const modules = [["Rundgänge", "tours"], ["Check-ins & QR-Code", "checkins"], ["Veranstaltungen", "events"], ["Feedback", "feedback"], ["Platzguide-Pass", "rewards"], ["Push-Mitteilungen", "push"], ["Belegungs-/Statusanzeigen", "occupancy"], ["Digitale Gästemappe", "guestGuide"]]; return <SettingsCard title="Funktionsmodule" description="Funktionen lassen sich je Campingplatz aktivieren.">{modules.map(([label, id]) => <label key={id} className="flex min-w-0 items-center justify-between gap-4 border-b border-black/5 py-4"><div className="min-w-0"><p className="break-words font-bold">{label}</p><p className="text-xs text-black/45">Für Besucher-App und Verwaltung freischalten</p></div><input type="checkbox" checked={draft.features[id] ?? false} onChange={(event) => setDraft({ ...draft, features: { ...draft.features, [id]: event.target.checked } })} className="h-5 w-5 shrink-0 accent-[#286551]" /></label>)}<Save saving={saving} onClick={() => onSave(draft)} /></SettingsCard>; }
+function Integrations({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) {
+  const [draft, setDraft] = useState(tenant);
+  return <div className="space-y-6">
+    <SettingsCard title="Maildienst" description="Geheime API-Schlüssel bleiben in Server-Umgebungsvariablen.">
+      <Select label="Provider" value={draft.integrations.mail.provider} options={["outbox", "webhook", "resend", "brevo", "mailgun"]} onChange={(provider) => setDraft({ ...draft, integrations: { ...draft.integrations, mail: { ...draft.integrations.mail, provider: provider as Tenant["integrations"]["mail"]["provider"] } } })} />
+      <Field label="Absender-E-Mail" value={draft.integrations.mail.fromEmail} onChange={(fromEmail) => setDraft({ ...draft, integrations: { ...draft.integrations, mail: { ...draft.integrations.mail, fromEmail } } })} />
+      <Field label="Absender-Name" value={draft.integrations.mail.fromName} onChange={(fromName) => setDraft({ ...draft, integrations: { ...draft.integrations, mail: { ...draft.integrations.mail, fromName } } })} />
+      <p className="rounded-xl bg-[#f7f7f4] p-3 text-xs leading-5 text-black/55">Server-Variablen: `MAIL_PROVIDER`, `MAIL_FROM`, `RESEND_API_KEY`, `BREVO_API_KEY`, `MAILGUN_API_KEY`, `MAIL_WEBHOOK_URL`.</p>
+    </SettingsCard>
+    <SettingsCard title="Captcha & Self-Service" description="Turnstile oder hCaptcha schützt öffentliche Registrierung.">
+      <Select label="Captcha-Provider" value={draft.integrations.captcha.provider} options={["disabled", "turnstile", "hcaptcha"]} onChange={(provider) => setDraft({ ...draft, integrations: { ...draft.integrations, captcha: { ...draft.integrations.captcha, provider: provider as Tenant["integrations"]["captcha"]["provider"] } } })} />
+      <Field label="Öffentlicher Site-Key" value={draft.integrations.captcha.siteKey} onChange={(siteKey) => setDraft({ ...draft, integrations: { ...draft.integrations, captcha: { ...draft.integrations.captcha, siteKey } } })} />
+      <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-3 text-sm font-bold">Für Registrierung erforderlich<input type="checkbox" checked={draft.integrations.captcha.requiredForSignup} onChange={(event) => setDraft({ ...draft, integrations: { ...draft.integrations, captcha: { ...draft.integrations.captcha, requiredForSignup: event.target.checked } } })} className="h-5 w-5 accent-[#286551]" /></label>
+      <p className="rounded-xl bg-[#f7f7f4] p-3 text-xs leading-5 text-black/55">Server-Variablen: `CAPTCHA_PROVIDER`, `NEXT_PUBLIC_CAPTCHA_SITE_KEY`, `TURNSTILE_SECRET_KEY` oder `HCAPTCHA_SECRET_KEY`.</p>
+    </SettingsCard>
+    <SettingsCard title="Storage, Datenbank & Backup" description="Betriebsparameter für Uploads, PostgreSQL und Sicherungen.">
+      <Select label="Storage" value={draft.integrations.storage.provider} options={["local", "s3", "external-url"]} onChange={(provider) => setDraft({ ...draft, integrations: { ...draft.integrations, storage: { ...draft.integrations.storage, provider: provider as Tenant["integrations"]["storage"]["provider"] } } })} />
+      <Field label="Max. Upload MB" value={String(draft.integrations.storage.maxUploadMb)} onChange={(maxUploadMb) => setDraft({ ...draft, integrations: { ...draft.integrations, storage: { ...draft.integrations.storage, maxUploadMb: Number(maxUploadMb) } } })} />
+      <Area label="Erlaubte MIME-Typen" value={draft.integrations.storage.allowedTypes.join("\n")} onChange={(value) => setDraft({ ...draft, integrations: { ...draft.integrations, storage: { ...draft.integrations.storage, allowedTypes: value.split("\n").map((item) => item.trim()).filter(Boolean) } } })} />
+      <Select label="Datenbank" value={draft.integrations.database.provider} options={["local-json", "postgresql"]} onChange={(provider) => setDraft({ ...draft, integrations: { ...draft.integrations, database: { ...draft.integrations.database, provider: provider as Tenant["integrations"]["database"]["provider"] } } })} />
+      <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-3 text-sm font-bold">RLS erzwingen<input type="checkbox" checked={draft.integrations.database.rlsRequired} onChange={(event) => setDraft({ ...draft, integrations: { ...draft.integrations, database: { ...draft.integrations.database, rlsRequired: event.target.checked } } })} className="h-5 w-5 accent-[#286551]" /></label>
+      <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-3 text-sm font-bold">Backups aktiv<input type="checkbox" checked={draft.integrations.backup.enabled} onChange={(event) => setDraft({ ...draft, integrations: { ...draft.integrations, backup: { ...draft.integrations.backup, enabled: event.target.checked } } })} className="h-5 w-5 accent-[#286551]" /></label>
+      <Field label="Backup-Zeitplan" value={draft.integrations.backup.schedule} onChange={(schedule) => setDraft({ ...draft, integrations: { ...draft.integrations, backup: { ...draft.integrations.backup, schedule } } })} />
+      <Field label="Aufbewahrung Tage" value={String(draft.integrations.backup.retentionDays)} onChange={(retentionDays) => setDraft({ ...draft, integrations: { ...draft.integrations, backup: { ...draft.integrations.backup, retentionDays: Number(retentionDays) } } })} />
+      <Save saving={saving} onClick={() => onSave(draft)} />
+    </SettingsCard>
+  </div>;
+}
 function Categories({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) {
   const [draft, setDraft] = useState(tenant);
   const update = (id: string, changes: Partial<Category>) => setDraft({ ...draft, categories: draft.categories.map((category) => category.id === id ? { ...category, ...changes } : category) });
@@ -183,8 +237,17 @@ function Media({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; on
   const [draft, setDraft] = useState(tenant);
   const add = () => setDraft({ ...draft, media: [{ id: crypto.randomUUID(), tenantId: draft.id, title: "Neues Medium", url: "/icons/icon-512.png", type: "image", alt: "", createdAt: new Date().toISOString() }, ...draft.media] });
   const update = (id: string, changes: Partial<MediaAsset>) => setDraft({ ...draft, media: draft.media.map((item) => item.id === id ? { ...item, ...changes } : item) });
+  async function uploadMedia(file: File) {
+    const formData = new FormData();
+    formData.set("file", file);
+    formData.set("purpose", "media");
+    const response = await fetch("/api/admin/uploads", { method: "POST", body: formData });
+    if (!response.ok) return alert("Upload fehlgeschlagen.");
+    const media = await response.json() as MediaAsset;
+    setDraft((current) => ({ ...current, media: [media, ...current.media] }));
+  }
   return <SettingsCard title="Medienbibliothek" description="Bilder, PDFs und spätere Uploads zentral verwalten.">
-    <div className="flex flex-wrap gap-2"><button onClick={add} className="rounded-xl border px-4 py-3 text-sm font-bold"><Plus size={16} className="mr-2 inline" />Medium hinzufügen</button><Save saving={saving} onClick={() => onSave(draft)} /></div>
+    <div className="flex flex-wrap gap-2"><button onClick={add} className="rounded-xl border px-4 py-3 text-sm font-bold"><Plus size={16} className="mr-2 inline" />Medium hinzufügen</button><label className="rounded-xl border px-4 py-3 text-sm font-bold">Datei hochladen<input type="file" accept="image/png,image/jpeg,image/webp,application/pdf" className="sr-only" onChange={(event) => event.target.files?.[0] && uploadMedia(event.target.files[0])} /></label><Save saving={saving} onClick={() => onSave(draft)} /></div>
     <div className="grid gap-3 lg:grid-cols-2">{draft.media.map((asset) => <div key={asset.id} className="rounded-xl border border-black/10 p-3"><Field label="Titel" value={asset.title} onChange={(title) => update(asset.id, { title })} /><Field label="URL" value={asset.url} onChange={(url) => update(asset.id, { url })} /><Field label="Alternativtext" value={asset.alt} onChange={(alt) => update(asset.id, { alt })} /><button onClick={() => setDraft({ ...draft, media: draft.media.filter((item) => item.id !== asset.id) })} className="mt-3 text-sm font-bold text-red-600">Entfernen</button></div>)}</div>
   </SettingsCard>;
 }
@@ -247,6 +310,7 @@ function SettingsCard({ title, description, children }: { title: string; descrip
 function ModuleListHeader({ onAdd, saving, onSave }: { onAdd: () => void; saving: boolean; onSave: () => void }) { return <div className="flex flex-wrap gap-2"><button onClick={onAdd} className="rounded-xl border px-4 py-3 text-sm font-bold"><Plus size={16} className="mr-2 inline" />Hinzufügen</button><Save saving={saving} onClick={onSave} /></div>; }
 function AdminItem({ active, onToggle, onRemove, children }: { active: boolean; onToggle: (active: boolean) => void; onRemove: () => void; children: React.ReactNode }) { return <div className="space-y-3 rounded-xl border border-black/10 p-4"><div className="flex items-center justify-between gap-3"><label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={active} onChange={(event) => onToggle(event.target.checked)} className="h-4 w-4 accent-[#286551]" /> Aktiv</label><button onClick={onRemove} className="text-sm font-bold text-red-600">Entfernen</button></div>{children}</div>; }
 function Field({ label, value, suffix, onChange }: { label: string; value: string; suffix?: string; onChange: (value: string) => void }) { return <label className="block min-w-0 text-sm font-bold">{label}<div className="mt-2 flex rounded-xl border border-black/10 bg-[#fafaf8]"><input value={value} onChange={(event) => onChange(event.target.value)} className="min-w-0 flex-1 bg-transparent px-4 py-3 outline-none" />{suffix && <span className="shrink-0 border-l border-black/10 px-3 py-3 text-black/40">{suffix}</span>}</div></label>; }
+function Select({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) { return <label className="block min-w-0 text-sm font-bold">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className="mt-2 w-full rounded-xl border border-black/10 bg-[#fafaf8] px-4 py-3 outline-none">{options.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>; }
 function Area({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) { return <label className="block min-w-0 text-sm font-bold">{label}<textarea value={value} onChange={(event) => onChange(event.target.value)} rows={4} className="mt-2 w-full rounded-xl border border-black/10 bg-[#fafaf8] px-4 py-3 font-normal leading-6 outline-none" /></label>; }
 function Color({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) { return <label className="min-w-0 text-sm font-bold">{label}<div className="mt-2 flex items-center gap-2 rounded-xl border border-black/10 p-2"><input type="color" value={value} onChange={(event) => onChange(event.target.value)} className="h-9 w-10 shrink-0 border-0 bg-transparent" /><input value={value} onChange={(event) => onChange(event.target.value)} className="min-w-0 flex-1 bg-transparent outline-none" /></div></label>; }
 function Save({ saving, onClick }: { saving: boolean; onClick: () => void }) { return <button onClick={onClick} disabled={saving} className="rounded-xl bg-[#173c32] px-5 py-3 text-sm font-bold text-white disabled:opacity-60">{saving ? "Speichert …" : "Änderungen speichern"}</button>; }

@@ -31,6 +31,10 @@ bleiben je Mandant getrennt.
 - Healthcheck unter `/api/health` für Monitoring und Deployments
 - Self-Service mit Rate-Limit und starkem Betreiber-Passwort vorbereitet
 - E-Mail-Verifikation per Webhook oder lokaler Mail-Outbox vorbereitet
+- Mailprovider: Webhook, Resend, Brevo oder Mailgun
+- Captcha: Cloudflare Turnstile oder hCaptcha
+- Uploads mit Tenant-Pfad, Größenlimit und MIME-Prüfung
+- Platzplan-Upload mit Vierpunkt-Kalibrierung
 - Ein Plattform-Admin: `admin@schellenberger.biz`
 - Tenant-Kontext in jeder Anfrage und PostgreSQL-RLS als zweite Schutzschicht
 - Revisionsnummer im Footer, bei jedem GitHub-Actions-Lauf automatisch erhöht
@@ -103,6 +107,8 @@ Umgebungsvariable gemappt werden.
   Nutzungsbedingungen produktiv eingerichtet sind.
 - Ohne `MAIL_WEBHOOK_URL` schreibt Platzguide Bestätigungsmails in
   `.data/mail-outbox.json`. Für Produktion muss ein Maildienst angebunden sein.
+- Für Uploads nutzt die App lokal `public/uploads/<tenantId>/`. Für große
+  Installationen sollte später S3-kompatibler Storage gesetzt werden.
 - Medien werden aktuell als geprüfte externe URLs gespeichert. Binär-Uploads
   brauchen vor Produktion Storage-Signaturen, Größenlimits und optionalen
   Virenscan.

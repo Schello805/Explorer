@@ -22,6 +22,20 @@ Für Betreiber-Registrierungen muss `MAIL_WEBHOOK_URL` auf einen transaktionalen
 Maildienst zeigen. Ohne diesen Wert werden E-Mails nur lokal in
 `.data/mail-outbox.json` abgelegt.
 
+Unterstützte Mailprovider:
+
+- `MAIL_PROVIDER=resend` mit `RESEND_API_KEY`
+- `MAIL_PROVIDER=brevo` mit `BREVO_API_KEY`
+- `MAIL_PROVIDER=mailgun` mit `MAILGUN_API_KEY` und `MAILGUN_DOMAIN`
+- `MAIL_PROVIDER=webhook` mit `MAIL_WEBHOOK_URL`
+
+Öffentliche Registrierung sollte zusätzlich per Captcha geschützt werden:
+
+- `CAPTCHA_PROVIDER=turnstile`
+- `CAPTCHA_PROVIDER=hcaptcha`
+- `NEXT_PUBLIC_CAPTCHA_SITE_KEY`
+- `TURNSTILE_SECRET_KEY` oder `HCAPTCHA_SECRET_KEY`
+
 Monitoring kann `/api/health` abfragen. Der Endpunkt liefert App-Name,
 Revision, Mandantenanzahl und Latenz oder Status `503`, wenn der Datenzugriff
 fehlschlägt.
@@ -36,6 +50,38 @@ fehlschlägt.
 
 Die Tabellen `tenant_users`, `media_assets`, `privacy_requests`, `stations`
 und `audit_log` sind tenantgebunden und per RLS geschützt.
+
+Migration und RLS-Test:
+
+```bash
+sudo DATABASE_URL='postgresql://...' APP_DIR=/opt/platzguide \
+  bash /opt/platzguide/scripts/migrate-postgres.sh
+
+sudo DATABASE_URL='postgresql://...' \
+  bash /opt/platzguide/scripts/test-postgres-rls.sh
+```
+
+## Backups und Restore
+
+```bash
+sudo DATABASE_URL='postgresql://...' \
+  BACKUP_DIR=/var/backups/platzguide \
+  bash /opt/platzguide/scripts/backup-postgres.sh
+
+sudo DATABASE_URL='postgresql://...' \
+  bash /opt/platzguide/scripts/restore-postgres.sh /var/backups/platzguide/platzguide-YYYYmmdd-HHMMSS.dump
+```
+
+Für automatische Backups kann das Backup-Skript per systemd timer oder Cron
+täglich ausgeführt werden. Restore sollte nach jedem Infrastrukturwechsel einmal
+in einer Testdatenbank geprüft werden.
+
+## Uploads und Platzpläne
+
+Lokale Uploads landen unter `public/uploads/<tenantId>/`. Erlaubte MIME-Typen
+und maximale Dateigröße sind pro Mandant im Adminpanel unter `Integrationen`
+verwaltbar. Platzpläne können im Bereich `Campingplätze` hochgeladen und über
+vier Eckpunkte georeferenziert werden.
 
 ## Domains
 

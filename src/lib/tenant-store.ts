@@ -51,6 +51,13 @@ function normalizeTenant(tenant: Tenant): Tenant {
     legal: { ...seed.legal, ...tenant.legal },
     tracking: { ...seed.tracking, ...tenant.tracking },
     email: { ...seed.email, ...tenant.email },
+    integrations: {
+      mail: { ...seed.integrations.mail, ...tenant.integrations?.mail },
+      captcha: { ...seed.integrations.captcha, ...tenant.integrations?.captcha },
+      storage: { ...seed.integrations.storage, ...tenant.integrations?.storage },
+      database: { ...seed.integrations.database, ...tenant.integrations?.database },
+      backup: { ...seed.integrations.backup, ...tenant.integrations?.backup }
+    },
     features: { ...seed.features, ...tenant.features },
     categories: tenant.categories ?? seed.categories,
     stations: tenant.stations ?? [],
