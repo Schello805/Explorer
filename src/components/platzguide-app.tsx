@@ -9,6 +9,11 @@ import { cn, statusLabel } from "@/lib/utils";
 import { CampMap } from "@/components/camp-map";
 
 const platformLogo = "/icons/platzguide-logo.png";
+const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", {
+  dateStyle: "short",
+  timeStyle: "short",
+  timeZone: "Europe/Berlin"
+});
 
 export function PlatzguideApp({ tenant }: { tenant: Tenant }) {
   const [view, setView] = useState<"map" | "list">("list");
@@ -107,7 +112,7 @@ export function PlatzguideApp({ tenant }: { tenant: Tenant }) {
 
       <section className="mx-auto grid w-[90%] gap-4 py-2 md:grid-cols-2">
         {tenant.features.events && tenant.events.filter((event) => event.active).length > 0 && <ModuleCard icon={<CalendarDays />} title="Veranstaltungen">
-          {tenant.events.filter((event) => event.active).map((event) => <CompactItem key={event.id} title={event.title} text={`${new Date(event.startsAt).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })} · ${event.location}`} />)}
+          {tenant.events.filter((event) => event.active).map((event) => <CompactItem key={event.id} title={event.title} text={`${dateTimeFormatter.format(new Date(event.startsAt))} · ${event.location}`} />)}
         </ModuleCard>}
         {tenant.features.tours && tenant.tours.filter((tour) => tour.active).length > 0 && <ModuleCard icon={<Route />} title="Rundgänge">
           {tenant.tours.filter((tour) => tour.active).map((tour) => <CompactItem key={tour.id} title={tour.title} text={`${tour.durationMinutes} Minuten · ${tour.stops.length} Stationen`} />)}

@@ -3,7 +3,21 @@
 import { useEffect, useRef, useState } from "react";
 import { Crosshair, LocateFixed, MapPin } from "lucide-react";
 import maplibregl from "maplibre-gl";
+import type { StyleSpecification } from "maplibre-gl";
 import type { Tenant } from "@/lib/types";
+
+const rasterMapStyle: StyleSpecification = {
+  version: 8,
+  sources: {
+    osm: {
+      type: "raster",
+      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+      tileSize: 256,
+      attribution: "© OpenStreetMap-Mitwirkende"
+    }
+  },
+  layers: [{ id: "osm", type: "raster", source: "osm" }]
+};
 
 export function StationLocationPicker({ mapConfig, longitude, latitude, onChange }: {
   mapConfig: Tenant["map"];
@@ -27,7 +41,7 @@ export function StationLocationPicker({ mapConfig, longitude, latitude, onChange
     if (!cancelled && containerRef.current) {
       const map = new maplibregl.Map({
         container: containerRef.current,
-        style: mapConfig.styleUrl,
+        style: getMapStyle(mapConfig.styleUrl),
         center: initialPositionRef.current,
         zoom: Math.max(mapConfig.zoom, 17),
         attributionControl: false
@@ -86,4 +100,9 @@ export function StationLocationPicker({ mapConfig, longitude, latitude, onChange
     </div>
     <p className="mt-2 flex items-start gap-2 text-xs font-normal leading-5 text-black/45"><MapPin size={14} className="mt-0.5 shrink-0" /> GPS funktioniert am besten direkt an der Station und auf einem Smartphone.</p>
   </section>;
+}
+
+function getMapStyle(styleUrl: string) {
+  if (!styleUrl || styleUrl.includes("openfreemap.org")) return rasterMapStyle;
+  return styleUrl;
 }

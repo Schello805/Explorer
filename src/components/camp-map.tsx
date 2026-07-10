@@ -1,12 +1,25 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Layers3, Map as MapIcon, Satellite } from "lucide-react";
 import maplibregl from "maplibre-gl";
+import type { StyleSpecification } from "maplibre-gl";
 import type { Station, Tenant } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type Layer = "map" | "aerial" | "sitePlan";
+const rasterMapStyle: StyleSpecification = {
+  version: 8,
+  sources: {
+    osm: {
+      type: "raster",
+      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+      tileSize: 256,
+      attribution: "© OpenStreetMap-Mitwirkende"
+    }
+  },
+  layers: [{ id: "osm", type: "raster", source: "osm" }]
+};
 
 export function CampMap({
   tenant,
@@ -25,6 +38,9 @@ export function CampMap({
   const [layer, setLayer] = useState<Layer>("map");
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
+  const validStations = useMemo(() => stations.filter(hasCoordinates), [stations]);
+  const center = useMemo<[number, number]>(() => hasLngLat(tenant.map.center) ? tenant.map.center : stationCenter(validStations) ?? [10.5605, 49.1643], [tenant.map.center, validStations]);
+  const zoom = Number.isFinite(tenant.map.zoom) ? tenant.map.zoom : 16;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -37,9 +53,9 @@ export function CampMap({
     if (!cancelled && containerRef.current) {
       const map = new maplibregl.Map({
         container: containerRef.current,
-        style: tenant.map.styleUrl,
-        center: tenant.map.center,
-        zoom: tenant.map.zoom,
+        style: getMapStyle(tenant.map.styleUrl),
+        center,
+        zoom,
         attributionControl: false
       });
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
@@ -51,7 +67,9 @@ export function CampMap({
         compact: true,
         customAttribution: "© OpenStreetMap-Mitwirkende · OpenFreeMap"
       }), "bottom-left");
-      map.on("error", () => setFailed(true));
+      map.on("error", (event) => {
+        console.warn("Kartenquelle konnte nicht vollständig geladen werden.", event.error);
+      });
 
       map.on("load", () => {
         loaded = true;
@@ -66,11 +84,12 @@ export function CampMap({
           });
           map.addLayer({ id: "aerial", source: "aerial", type: "raster", layout: { visibility: "none" } });
         }
-        if (tenant.map.sitePlan) {
+        const sitePlan = tenant.map.sitePlan;
+        if (hasValidSitePlan(sitePlan)) {
           map.addSource("site-plan", {
             type: "image",
-            url: tenant.map.sitePlan.imageUrl,
-            coordinates: tenant.map.sitePlan.coordinates
+            url: sitePlan.imageUrl,
+            coordinates: sitePlan.coordinates
           });
           map.addLayer({
             id: "site-plan",
@@ -80,7 +99,7 @@ export function CampMap({
           });
         }
 
-        markersRef.current = stations.map((station) => {
+        markersRef.current = validStations.map((station) => {
           const element = document.createElement("button");
           element.className = "grid h-11 w-11 place-items-center rounded-full border-4 border-white bg-[#195f4c] text-white shadow-lg transition hover:scale-110";
           element.setAttribute("aria-label", station.name);
@@ -102,12 +121,12 @@ export function CampMap({
       mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, [tenant, stations, onSelect]);
+  }, [tenant, validStations, onSelect, center, zoom]);
 
   useEffect(() => {
-    if (!selected || !mapRef.current) return;
-    mapRef.current.flyTo({ center: [selected.longitude, selected.latitude], zoom: Math.max(tenant.map.zoom, 17) });
-  }, [selected, tenant.map.zoom]);
+    if (!selected || !mapRef.current || !hasCoordinates(selected)) return;
+    mapRef.current.flyTo({ center: [selected.longitude, selected.latitude], zoom: Math.max(zoom, 17) });
+  }, [selected, zoom]);
 
   function switchLayer(next: Layer) {
     const map = mapRef.current;
@@ -120,7 +139,7 @@ export function CampMap({
   const choices = [
     { id: "map" as const, label: "Karte", icon: MapIcon, available: true },
     { id: "aerial" as const, label: "Luftbild", icon: Satellite, available: Boolean(tenant.map.aerialTiles?.length) },
-    { id: "sitePlan" as const, label: "Platzplan", icon: Layers3, available: Boolean(tenant.map.sitePlan) }
+    { id: "sitePlan" as const, label: "Platzplan", icon: Layers3, available: hasValidSitePlan(tenant.map.sitePlan) }
   ].filter((choice) => choice.available);
 
   if (failed) return <FallbackMap tenant={tenant} stations={stations} onSelect={onSelect} />;
@@ -145,4 +164,30 @@ function FallbackMap({ tenant, stations, onSelect }: { tenant: Tenant; stations:
       <MapIcon size={18} />
     </button>)}
   </div>;
+}
+
+function getMapStyle(styleUrl: string) {
+  if (!styleUrl || styleUrl.includes("openfreemap.org")) return rasterMapStyle;
+  return styleUrl;
+}
+
+function hasCoordinates(station: Station) {
+  return Number.isFinite(station.longitude) && Number.isFinite(station.latitude);
+}
+
+function hasLngLat(value: unknown): value is [number, number] {
+  return Array.isArray(value) && value.length === 2 && Number.isFinite(value[0]) && Number.isFinite(value[1]);
+}
+
+function stationCenter(stations: Station[]): [number, number] | null {
+  if (!stations.length) return null;
+  const totals = stations.reduce((sum, station) => ({
+    longitude: sum.longitude + station.longitude,
+    latitude: sum.latitude + station.latitude
+  }), { longitude: 0, latitude: 0 });
+  return [totals.longitude / stations.length, totals.latitude / stations.length];
+}
+
+function hasValidSitePlan(sitePlan: Tenant["map"]["sitePlan"]): sitePlan is NonNullable<Tenant["map"]["sitePlan"]> {
+  return Boolean(sitePlan?.imageUrl && sitePlan.coordinates.every(hasLngLat));
 }
