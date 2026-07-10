@@ -282,9 +282,12 @@ function Feedback({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean;
   const [draft, setDraft] = useState(tenant);
   return <SettingsCard title="Feedback & Fehlermeldungen" description="Eingänge prüfen und Status setzen.">
     {draft.feedback.length === 0 && <p className="rounded-xl bg-[#f7f7f4] p-4 text-sm text-black/55">Noch keine Meldungen vorhanden.</p>}
-    {draft.feedback.map((message) => <div key={message.id} className="rounded-xl border border-black/10 p-4"><p className="text-xs text-black/45">{new Date(message.createdAt).toLocaleString("de-DE")}</p><p className="mt-2">{message.message}</p><select value={message.status} onChange={(event) => setDraft({ ...draft, feedback: draft.feedback.map((item) => item.id === message.id ? { ...item, status: event.target.value as typeof message.status } : item) })} className="mt-3 rounded-xl border p-3"><option value="new">Neu</option><option value="reviewed">Geprüft</option><option value="resolved">Erledigt</option></select></div>)}
+    {draft.feedback.map((message) => <div key={message.id} className="rounded-xl border border-black/10 p-4"><p className="text-xs text-black/45">{formatStableDate(message.createdAt)}</p><p className="mt-2">{message.message}</p><select value={message.status} onChange={(event) => setDraft({ ...draft, feedback: draft.feedback.map((item) => item.id === message.id ? { ...item, status: event.target.value as typeof message.status } : item) })} className="mt-3 rounded-xl border p-3"><option value="new">Neu</option><option value="reviewed">Geprüft</option><option value="resolved">Erledigt</option></select></div>)}
     <Save saving={saving} onClick={() => onSave(draft)} />
   </SettingsCard>;
+}
+function formatStableDate(value: string) {
+  return value.slice(0, 16).replace("T", " ");
 }
 function Profile({ tenant, adminEmail }: { tenant: Tenant; adminEmail: string }) {
   async function requestDeletion() {

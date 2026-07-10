@@ -9,11 +9,6 @@ import { cn, statusLabel } from "@/lib/utils";
 import { CampMap } from "@/components/camp-map";
 
 const platformLogo = "/icons/platzguide-logo.png";
-const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", {
-  dateStyle: "short",
-  timeStyle: "short",
-  timeZone: "Europe/Berlin"
-});
 
 export function PlatzguideApp({ tenant }: { tenant: Tenant }) {
   const [view, setView] = useState<"map" | "list">("list");
@@ -112,7 +107,7 @@ export function PlatzguideApp({ tenant }: { tenant: Tenant }) {
 
       <section className="mx-auto grid w-[90%] gap-4 py-2 md:grid-cols-2">
         {tenant.features.events && tenant.events.filter((event) => event.active).length > 0 && <ModuleCard icon={<CalendarDays />} title="Veranstaltungen">
-          {tenant.events.filter((event) => event.active).map((event) => <CompactItem key={event.id} title={event.title} text={`${dateTimeFormatter.format(new Date(event.startsAt))} · ${event.location}`} />)}
+          {tenant.events.filter((event) => event.active).map((event) => <CompactItem key={event.id} title={event.title} text={`${formatStableDate(event.startsAt)} · ${event.location}`} />)}
         </ModuleCard>}
         {tenant.features.tours && tenant.tours.filter((tour) => tour.active).length > 0 && <ModuleCard icon={<Route />} title="Rundgänge">
           {tenant.tours.filter((tour) => tour.active).map((tour) => <CompactItem key={tour.id} title={tour.title} text={`${tour.durationMinutes} Minuten · ${tour.stops.length} Stationen`} />)}
@@ -136,6 +131,10 @@ export function PlatzguideApp({ tenant }: { tenant: Tenant }) {
       {selected && <StationSheet station={selected} favorite={favorites.includes(selected.id)} checkedIn={checkins.includes(selected.id)} checkinsEnabled={tenant.features.checkins} onCheckin={() => toggleCheckin(selected.id)} onFavorite={() => toggleFavorite(selected.id)} onClose={() => setSelected(null)} />}
     </main>
   );
+}
+
+function formatStableDate(value: string) {
+  return value.slice(0, 16).replace("T", " ");
 }
 
 function Filter({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
