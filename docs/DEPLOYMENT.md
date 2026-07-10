@@ -199,3 +199,9 @@ Admin-Passwort zurücksetzen:
 ```bash
 sudo bash /opt/platzguide/scripts/reset-admin-password.sh
 ```
+
+Mit sichtbarer Eingabe zur Kontrolle:
+
+```bash
+sudo SHOW_PASSWORD=true bash /opt/platzguide/scripts/reset-admin-password.sh
+```
