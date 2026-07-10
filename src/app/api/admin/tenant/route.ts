@@ -1,7 +1,7 @@
 import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { ADMIN_EMAIL, canManageTenant, verifyAdminSession } from "@/lib/auth";
+import { canManageTenant, verifyAdminSession } from "@/lib/auth";
 import { resolveTenant } from "@/lib/tenant-resolver";
 import { listTenants, saveTenantConfiguration } from "@/lib/tenant-store";
 
@@ -37,10 +37,18 @@ const tenantSchema = z.object({
   tracking: z.object({ enabled: z.boolean(), provider: z.string().max(80), measurementId: z.string().max(120) }),
   email: z.object({ senderName: z.string().max(120), senderEmail: z.string().email(), replyTo: z.string().email() }),
   integrations: z.object({
-    mail: z.object({ provider: z.enum(["webhook", "resend", "brevo", "mailgun", "outbox"]), fromEmail: z.string().email(), fromName: z.string().max(120) }),
+    mail: z.object({
+      provider: z.literal("smtp"),
+      fromEmail: z.string().email(),
+      fromName: z.string().max(120),
+      smtpHost: z.string().max(255),
+      smtpPort: z.number().min(1).max(65535),
+      smtpSecure: z.boolean(),
+      smtpUser: z.string().max(255)
+    }),
     captcha: z.object({ provider: z.enum(["turnstile", "hcaptcha", "disabled"]), siteKey: z.string().max(500), requiredForSignup: z.boolean() }),
     storage: z.object({ provider: z.enum(["local", "s3", "external-url"]), maxUploadMb: z.number().min(1).max(100), allowedTypes: z.array(z.string().max(120)).min(1) }),
-    database: z.object({ provider: z.enum(["postgresql", "local-json"]), rlsRequired: z.boolean() }),
+    database: z.object({ provider: z.literal("postgresql"), rlsRequired: z.boolean() }),
     backup: z.object({ enabled: z.boolean(), schedule: z.string().max(80), retentionDays: z.number().min(1).max(365) })
   }),
   features: z.record(z.string(), z.boolean()),
@@ -70,15 +78,18 @@ async function authorize() {
   const tenant = tenants.find((candidate) => candidate.hosts.includes(normalized))
     ?? tenants.find((candidate) => candidate.slug === normalized.split(".")[0])
     ?? resolveTenant(host, tenants);
-  return canManageTenant(session, tenant.id) ? tenant : null;
+  return canManageTenant(session, tenant.id) ? { session, tenant, tenants } : null;
 }
 
 export async function POST(request: Request) {
-  const currentTenant = await authorize();
-  if (!currentTenant) return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  const authorization = await authorize();
+  if (!authorization) return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   const parsed = tenantSchema.safeParse(await request.json());
   if (!parsed.success) return NextResponse.json({ error: "Ungültige Mandantendaten", details: parsed.error.flatten() }, { status: 400 });
-  if (parsed.data.id !== currentTenant.id) return NextResponse.json({ error: "Mandantenzugriff verweigert" }, { status: 403 });
-  const tenant = await saveTenantConfiguration(currentTenant.id, parsed.data as typeof currentTenant, ADMIN_EMAIL);
+  const targetTenant = authorization.tenants.find((tenant) => tenant.id === parsed.data.id);
+  if (!targetTenant || !canManageTenant(authorization.session, targetTenant.id)) {
+    return NextResponse.json({ error: "Mandantenzugriff verweigert" }, { status: 403 });
+  }
+  const tenant = await saveTenantConfiguration(targetTenant.id, parsed.data as typeof targetTenant, authorization.session.email);
   return NextResponse.json(tenant);
 }

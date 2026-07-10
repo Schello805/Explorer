@@ -29,9 +29,10 @@ const navigation = [
   { id: "profile", label: "Profil", icon: Users }
 ];
 
-export function AdminConsole({ tenant, adminEmail }: { tenant: Tenant; adminEmail: string }) {
+export function AdminConsole({ tenant, tenants, adminEmail }: { tenant: Tenant; tenants: Tenant[]; adminEmail: string }) {
   const [section, setSection] = useState("overview");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [availableTenants, setAvailableTenants] = useState(tenants);
   const [currentTenant, setCurrentTenant] = useState(tenant);
   const [stations, setStations] = useState(tenant.stations);
   const [editing, setEditing] = useState<Station | null>(null);
@@ -39,7 +40,7 @@ export function AdminConsole({ tenant, adminEmail }: { tenant: Tenant; adminEmai
 
   async function removeStation(id: string) {
     if (!confirm("Station wirklich löschen?")) return;
-    const response = await fetch(`/api/admin/stations?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    const response = await fetch(`/api/admin/stations?id=${encodeURIComponent(id)}&tenantId=${encodeURIComponent(currentTenant.id)}`, { method: "DELETE" });
     if (!response.ok) return alert("Die Station konnte nicht gelöscht werden.");
     setStations((items) => items.filter((item) => item.id !== id));
   }
@@ -73,6 +74,7 @@ export function AdminConsole({ tenant, adminEmail }: { tenant: Tenant; adminEmai
     const saved = await response.json() as Tenant;
     setCurrentTenant(saved);
     setStations(saved.stations);
+    setAvailableTenants((items) => items.map((item) => item.id === saved.id ? saved : item));
   }
 
   async function importStations(importedStations: Station[]) {
@@ -88,23 +90,23 @@ export function AdminConsole({ tenant, adminEmail }: { tenant: Tenant; adminEmai
     </aside>
 
     <main className="min-w-0 overflow-x-hidden lg:ml-60">
-      <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-black/5 bg-[#f2f3ef]/90 px-[5%] backdrop-blur-xl">
-        <button aria-label="Menü öffnen" className="shrink-0 lg:hidden" onClick={() => setMenuOpen(true)}><Menu /></button><div className="hidden min-w-0 sm:block"><p className="text-xs font-bold uppercase tracking-widest text-[#1b302a]/40">Plattformverwaltung</p><h1 className="truncate font-display text-2xl">{navigation.find((item) => item.id === section)?.label}</h1></div><div className="flex shrink-0 items-center gap-2"><a href="/" target="_blank" className="rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm font-bold"><Globe2 size={16} className="sm:mr-2 sm:inline" /><span className="hidden sm:inline">Besucheransicht</span></a><button aria-label="Benachrichtigungen" className="rounded-xl border border-black/10 bg-white p-2.5"><Bell size={18} /></button></div>
+      <header className="sticky top-0 z-20 flex min-h-16 flex-wrap items-center justify-between gap-3 border-b border-black/5 bg-[#f2f3ef]/90 px-[5%] py-2 backdrop-blur-xl">
+        <button aria-label="Menü öffnen" className="shrink-0 lg:hidden" onClick={() => setMenuOpen(true)}><Menu /></button><div className="hidden min-w-0 sm:block"><p className="text-xs font-bold uppercase tracking-widest text-[#1b302a]/40">Plattformverwaltung</p><h1 className="truncate font-display text-2xl">{navigation.find((item) => item.id === section)?.label}</h1></div><div className="flex min-w-0 flex-1 justify-end gap-2"><select aria-label="Mandant wählen" value={currentTenant.id} onChange={(event) => { const nextTenant = availableTenants.find((item) => item.id === event.target.value); if (!nextTenant) return; setCurrentTenant(nextTenant); setStations(nextTenant.stations); setEditing(null); }} className="min-w-0 max-w-[46vw] rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm font-bold"><option value="" disabled>Mandant wählen</option>{availableTenants.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><a href="/" target="_blank" className="rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm font-bold"><Globe2 size={16} className="sm:mr-2 sm:inline" /><span className="hidden sm:inline">Besucheransicht</span></a><button aria-label="Benachrichtigungen" className="rounded-xl border border-black/10 bg-white p-2.5"><Bell size={18} /></button></div>
       </header>
       <div className="mx-auto min-w-0 w-[90%] py-5">
-        {section === "overview" && <Overview tenant={currentTenant} stationCount={stations.length} onNavigate={setSection} />}
-        {section === "stations" && <Stations tenant={currentTenant} stations={stations} onEdit={setEditing} onRemove={removeStation} onCreate={() => setEditing(blankStation(currentTenant.id))} onImport={importStations} />}
-        {section === "categories" && <Categories tenant={currentTenant} saving={saving} onSave={saveTenant} />}
-        {section === "tenants" && <TenantSettings tenant={currentTenant} saving={saving} onSave={saveTenant} />}
-        {section === "branding" && <Branding tenant={currentTenant} saving={saving} onSave={saveTenant} />}
-        {section === "legal" && <Legal tenant={currentTenant} saving={saving} onSave={saveTenant} />}
-        {section === "modules" && <Modules tenant={currentTenant} saving={saving} onSave={saveTenant} />}
-        {section === "integrations" && <Integrations tenant={currentTenant} saving={saving} onSave={saveTenant} />}
-        {section === "events" && <Events tenant={currentTenant} saving={saving} onSave={saveTenant} />}
-        {section === "tours" && <Tours tenant={currentTenant} stations={stations} saving={saving} onSave={saveTenant} />}
-        {section === "rewards" && <Rewards tenant={currentTenant} saving={saving} onSave={saveTenant} />}
-        {section === "guide" && <GuestGuide tenant={currentTenant} saving={saving} onSave={saveTenant} />}
-        {section === "feedback" && <Feedback tenant={currentTenant} saving={saving} onSave={saveTenant} />}
+        {section === "overview" && <Overview key={currentTenant.id} tenant={currentTenant} stationCount={stations.length} onNavigate={setSection} />}
+        {section === "stations" && <Stations key={currentTenant.id} tenant={currentTenant} stations={stations} onEdit={setEditing} onRemove={removeStation} onCreate={() => setEditing(blankStation(currentTenant.id))} onImport={importStations} />}
+        {section === "categories" && <Categories key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
+        {section === "tenants" && <TenantSettings key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
+        {section === "branding" && <Branding key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
+        {section === "legal" && <Legal key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
+        {section === "modules" && <Modules key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
+        {section === "integrations" && <Integrations key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
+        {section === "events" && <Events key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
+        {section === "tours" && <Tours key={currentTenant.id} tenant={currentTenant} stations={stations} saving={saving} onSave={saveTenant} />}
+        {section === "rewards" && <Rewards key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
+        {section === "guide" && <GuestGuide key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
+        {section === "feedback" && <Feedback key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "profile" && <Profile tenant={currentTenant} adminEmail={adminEmail} />}
         {section === "security" && <Security />}
         {section === "media" && <Media tenant={currentTenant} saving={saving} onSave={saveTenant} />}
@@ -145,6 +147,7 @@ function TenantSettings({ tenant, saving, onSave }: { tenant: Tenant; saving: bo
     const formData = new FormData();
     formData.set("file", file);
     formData.set("purpose", "sitePlan");
+    formData.set("tenantId", draft.id);
     const response = await fetch("/api/admin/uploads", { method: "POST", body: formData });
     if (!response.ok) return alert("Der Platzplan konnte nicht hochgeladen werden.");
     const payload = await response.json() as { sitePlan: NonNullable<Tenant["map"]["sitePlan"]> };
@@ -161,6 +164,12 @@ function TenantSettings({ tenant, saving, onSave }: { tenant: Tenant; saving: bo
       <Field label="Name" value={draft.name} onChange={(name) => setDraft({ ...draft, name })} />
       <Field label="Subdomain" value={draft.slug} suffix=".app-domain.de" onChange={(slug) => setDraft({ ...draft, slug })} />
       <Field label="Domains" value={hostText} onChange={(hosts) => setDraft({ ...draft, hosts: hosts.split(",").map((host) => host.trim()).filter(Boolean) })} />
+      <div className="rounded-xl bg-[#f7f7f4] p-4 text-sm leading-6 text-black/65">
+        <p className="font-bold text-[#1b302a]">DNS-Anleitung</p>
+        <p>Für eine Subdomain: <code>{draft.slug}.deine-domain.de</code> als CNAME auf die Hauptdomain setzen oder als A-Record auf die Server-IP zeigen lassen.</p>
+        <p>Für viele Mandanten: Wildcard <code>*.deine-domain.de</code> auf die Plattform zeigen lassen. Danach die Domain hier bei „Domains“ eintragen.</p>
+        <p>Reverse Proxy: Ziel ist der öffentliche Nginx der App, üblicherweise <code>http://SERVER-IP:80</code>.</p>
+      </div>
       <Field label="Kontakt-Telefon" value={draft.contact.phone} onChange={(phone) => setDraft({ ...draft, contact: { ...draft.contact, phone } })} />
       <Field label="Kontakt-E-Mail" value={draft.contact.email} onChange={(email) => setDraft({ ...draft, contact: { ...draft.contact, email } })} />
       <Field label="Notfallkontakt" value={draft.contact.emergency} onChange={(emergency) => setDraft({ ...draft, contact: { ...draft.contact, emergency } })} />
@@ -193,15 +202,19 @@ function TenantSettings({ tenant, saving, onSave }: { tenant: Tenant; saving: bo
 }
 function Branding({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) { const [draft, setDraft] = useState(tenant); return <SettingsCard title="Erscheinungsbild" description="Farben und Texte werden nur für diesen Mandanten ausgespielt."><Field label="Claim" value={draft.tagline} onChange={(tagline) => setDraft({ ...draft, tagline })} /><Field label="Logo-Kürzel" value={draft.logoMark} onChange={(logoMark) => setDraft({ ...draft, logoMark })} /><div className="grid gap-4 sm:grid-cols-3"><Color label="Primärfarbe" value={draft.theme.primary} onChange={(primary) => setDraft({ ...draft, theme: { ...draft.theme, primary } })} /><Color label="Akzentfarbe" value={draft.theme.secondary} onChange={(secondary) => setDraft({ ...draft, theme: { ...draft.theme, secondary } })} /><Color label="Hintergrund" value={draft.theme.surface} onChange={(surface) => setDraft({ ...draft, theme: { ...draft.theme, surface } })} /></div><Save saving={saving} onClick={() => onSave(draft)} /></SettingsCard>; }
 function Legal({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) { const [draft, setDraft] = useState(tenant); return <SettingsCard title="Rechtstexte" description="Jeder Campingplatz benötigt eigene, rechtlich geprüfte Angaben."><Area label="Impressum" value={draft.legal.imprint} onChange={(imprint) => setDraft({ ...draft, legal: { ...draft.legal, imprint } })} /><Area label="Datenschutz" value={draft.legal.privacy} onChange={(privacy) => setDraft({ ...draft, legal: { ...draft.legal, privacy } })} /><Area label="Cookie-Hinweise" value={draft.legal.cookies} onChange={(cookies) => setDraft({ ...draft, legal: { ...draft.legal, cookies } })} /><Save saving={saving} onClick={() => onSave(draft)} /></SettingsCard>; }
-function Modules({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) { const [draft, setDraft] = useState(tenant); const modules = [["Rundgänge", "tours"], ["Check-ins & QR-Code", "checkins"], ["Veranstaltungen", "events"], ["Feedback", "feedback"], ["Platzguide-Pass", "rewards"], ["Push-Mitteilungen", "push"], ["Belegungs-/Statusanzeigen", "occupancy"], ["Digitale Gästemappe", "guestGuide"]]; return <SettingsCard title="Funktionsmodule" description="Funktionen lassen sich je Campingplatz aktivieren.">{modules.map(([label, id]) => <label key={id} className="flex min-w-0 items-center justify-between gap-4 border-b border-black/5 py-4"><div className="min-w-0"><p className="break-words font-bold">{label}</p><p className="text-xs text-black/45">Für Besucher-App und Verwaltung freischalten</p></div><input type="checkbox" checked={draft.features[id] ?? false} onChange={(event) => setDraft({ ...draft, features: { ...draft.features, [id]: event.target.checked } })} className="h-5 w-5 shrink-0 accent-[#286551]" /></label>)}<Save saving={saving} onClick={() => onSave(draft)} /></SettingsCard>; }
+function Modules({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) { const [draft, setDraft] = useState(tenant); const modules = [["Rundgänge", "tours", "Für Besucher-App und Verwaltung freischalten"], ["Check-ins & QR-Code", "checkins", "Für Besucher-App und Verwaltung freischalten"], ["Veranstaltungen", "events", "Für Besucher-App und Verwaltung freischalten"], ["Feedback", "feedback", "Für Besucher-App und Verwaltung freischalten"], ["Platzguide-Pass", "rewards", "Für Besucher-App und Verwaltung freischalten"], ["Push-Mitteilungen", "push", "Vorbereitet, aber erst mit VAPID/Push-Service wirklich aktiv"], ["Belegungs-/Statusanzeigen", "occupancy", "Für Besucher-App und Verwaltung freischalten"], ["Digitale Gästemappe", "guestGuide", "Mandantengebundene Inhalte für Gäste"]]; return <SettingsCard title="Funktionsmodule" description="Funktionen lassen sich je Campingplatz aktivieren.">{modules.map(([label, id, note]) => <label key={id} className="flex min-w-0 items-center justify-between gap-4 border-b border-black/5 py-4"><div className="min-w-0"><p className="break-words font-bold">{label}</p><p className="text-xs text-black/45">{note}</p></div><input type="checkbox" checked={draft.features[id] ?? false} onChange={(event) => setDraft({ ...draft, features: { ...draft.features, [id]: event.target.checked } })} className="h-5 w-5 shrink-0 accent-[#286551]" /></label>)}<Save saving={saving} onClick={() => onSave(draft)} /></SettingsCard>; }
 function Integrations({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) {
   const [draft, setDraft] = useState(tenant);
   return <div className="space-y-6">
-    <SettingsCard title="Maildienst" description="Geheime API-Schlüssel bleiben in Server-Umgebungsvariablen.">
-      <Select label="Provider" value={draft.integrations.mail.provider} options={["outbox", "webhook", "resend", "brevo", "mailgun"]} onChange={(provider) => setDraft({ ...draft, integrations: { ...draft.integrations, mail: { ...draft.integrations.mail, provider: provider as Tenant["integrations"]["mail"]["provider"] } } })} />
+    <SettingsCard title="Maildienst" description="Platzguide nutzt ausschließlich klassisches SMTP. Das Passwort bleibt als Server-Variable gespeichert.">
+      <Select label="Provider" value={draft.integrations.mail.provider} options={["smtp"]} onChange={() => setDraft({ ...draft, integrations: { ...draft.integrations, mail: { ...draft.integrations.mail, provider: "smtp" } } })} />
       <Field label="Absender-E-Mail" value={draft.integrations.mail.fromEmail} onChange={(fromEmail) => setDraft({ ...draft, integrations: { ...draft.integrations, mail: { ...draft.integrations.mail, fromEmail } } })} />
       <Field label="Absender-Name" value={draft.integrations.mail.fromName} onChange={(fromName) => setDraft({ ...draft, integrations: { ...draft.integrations, mail: { ...draft.integrations.mail, fromName } } })} />
-      <p className="rounded-xl bg-[#f7f7f4] p-3 text-xs leading-5 text-black/55">Server-Variablen: `MAIL_PROVIDER`, `MAIL_FROM`, `RESEND_API_KEY`, `BREVO_API_KEY`, `MAILGUN_API_KEY`, `MAIL_WEBHOOK_URL`.</p>
+      <Field label="SMTP-Host" value={draft.integrations.mail.smtpHost} onChange={(smtpHost) => setDraft({ ...draft, integrations: { ...draft.integrations, mail: { ...draft.integrations.mail, smtpHost } } })} />
+      <Field label="SMTP-Port" value={String(draft.integrations.mail.smtpPort)} onChange={(smtpPort) => setDraft({ ...draft, integrations: { ...draft.integrations, mail: { ...draft.integrations.mail, smtpPort: Number(smtpPort) || 587 } } })} />
+      <Field label="SMTP-Benutzer" value={draft.integrations.mail.smtpUser} onChange={(smtpUser) => setDraft({ ...draft, integrations: { ...draft.integrations, mail: { ...draft.integrations.mail, smtpUser } } })} />
+      <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-3 text-sm font-bold">TLS/SSL direkt verwenden<input type="checkbox" checked={draft.integrations.mail.smtpSecure} onChange={(event) => setDraft({ ...draft, integrations: { ...draft.integrations, mail: { ...draft.integrations.mail, smtpSecure: event.target.checked } } })} className="h-5 w-5 accent-[#286551]" /></label>
+      <p className="rounded-xl bg-[#f7f7f4] p-3 text-xs leading-5 text-black/55">Server-Variablen: <code>SMTP_HOST</code>, <code>SMTP_PORT</code>, <code>SMTP_SECURE</code>, <code>SMTP_USER</code>, <code>SMTP_PASSWORD</code>, <code>MAIL_FROM</code>, <code>MAIL_FROM_NAME</code>.</p>
     </SettingsCard>
     <SettingsCard title="Captcha & Self-Service" description="Turnstile oder hCaptcha schützt öffentliche Registrierung.">
       <Select label="Captcha-Provider" value={draft.integrations.captcha.provider} options={["disabled", "turnstile", "hcaptcha"]} onChange={(provider) => setDraft({ ...draft, integrations: { ...draft.integrations, captcha: { ...draft.integrations.captcha, provider: provider as Tenant["integrations"]["captcha"]["provider"] } } })} />
@@ -213,7 +226,7 @@ function Integrations({ tenant, saving, onSave }: { tenant: Tenant; saving: bool
       <Select label="Storage" value={draft.integrations.storage.provider} options={["local", "s3", "external-url"]} onChange={(provider) => setDraft({ ...draft, integrations: { ...draft.integrations, storage: { ...draft.integrations.storage, provider: provider as Tenant["integrations"]["storage"]["provider"] } } })} />
       <Field label="Max. Upload MB" value={String(draft.integrations.storage.maxUploadMb)} onChange={(maxUploadMb) => setDraft({ ...draft, integrations: { ...draft.integrations, storage: { ...draft.integrations.storage, maxUploadMb: Number(maxUploadMb) } } })} />
       <Area label="Erlaubte MIME-Typen" value={draft.integrations.storage.allowedTypes.join("\n")} onChange={(value) => setDraft({ ...draft, integrations: { ...draft.integrations, storage: { ...draft.integrations.storage, allowedTypes: value.split("\n").map((item) => item.trim()).filter(Boolean) } } })} />
-      <Select label="Datenbank" value={draft.integrations.database.provider} options={["local-json", "postgresql"]} onChange={(provider) => setDraft({ ...draft, integrations: { ...draft.integrations, database: { ...draft.integrations.database, provider: provider as Tenant["integrations"]["database"]["provider"] } } })} />
+      <Select label="Datenbank" value={draft.integrations.database.provider} options={["postgresql"]} onChange={() => setDraft({ ...draft, integrations: { ...draft.integrations, database: { ...draft.integrations.database, provider: "postgresql" } } })} />
       <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-3 text-sm font-bold">RLS erzwingen<input type="checkbox" checked={draft.integrations.database.rlsRequired} onChange={(event) => setDraft({ ...draft, integrations: { ...draft.integrations, database: { ...draft.integrations.database, rlsRequired: event.target.checked } } })} className="h-5 w-5 accent-[#286551]" /></label>
       <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-3 text-sm font-bold">Backups aktiv<input type="checkbox" checked={draft.integrations.backup.enabled} onChange={(event) => setDraft({ ...draft, integrations: { ...draft.integrations, backup: { ...draft.integrations.backup, enabled: event.target.checked } } })} className="h-5 w-5 accent-[#286551]" /></label>
       <Field label="Backup-Zeitplan" value={draft.integrations.backup.schedule} onChange={(schedule) => setDraft({ ...draft, integrations: { ...draft.integrations, backup: { ...draft.integrations.backup, schedule } } })} />
@@ -244,6 +257,7 @@ function Media({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; on
     const formData = new FormData();
     formData.set("file", file);
     formData.set("purpose", "media");
+    formData.set("tenantId", draft.id);
     const response = await fetch("/api/admin/uploads", { method: "POST", body: formData });
     if (!response.ok) return alert("Upload fehlgeschlagen.");
     const media = await response.json() as MediaAsset;

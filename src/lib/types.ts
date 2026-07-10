@@ -143,10 +143,10 @@ export type Tenant = {
   tracking: { enabled: boolean; provider: string; measurementId: string };
   email: { senderName: string; senderEmail: string; replyTo: string };
   integrations: {
-    mail: { provider: "webhook" | "resend" | "brevo" | "mailgun" | "outbox"; fromEmail: string; fromName: string };
+    mail: { provider: "smtp"; fromEmail: string; fromName: string; smtpHost: string; smtpPort: number; smtpSecure: boolean; smtpUser: string };
     captcha: { provider: "turnstile" | "hcaptcha" | "disabled"; siteKey: string; requiredForSignup: boolean };
     storage: { provider: "local" | "s3" | "external-url"; maxUploadMb: number; allowedTypes: string[] };
-    database: { provider: "postgresql" | "local-json"; rlsRequired: boolean };
+    database: { provider: "postgresql"; rlsRequired: boolean };
     backup: { enabled: boolean; schedule: string; retentionDays: number };
   };
   features: Record<string, boolean>;

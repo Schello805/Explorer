@@ -26,8 +26,8 @@ bleiben je Mandant getrennt.
 - Optionale Module: Veranstaltungen, Rundgänge, Platzguide-Pass, Feedback,
   Check-ins, Statusanzeigen und digitale Gästemappe
 - Healthcheck unter `/api/health` für Monitoring und Deployments
-- E-Mail-Verifikation per Webhook oder Mailprovider vorbereitet
-- Mailprovider: Webhook, Resend, Brevo oder Mailgun
+- E-Mail-Verifikation per SMTP vorbereitet
+- Mailprovider: klassisches SMTP
 - Captcha: Cloudflare Turnstile oder hCaptcha
 - Uploads mit Tenant-Pfad, Größenlimit und MIME-Prüfung
 - Platzplan-Upload mit Vierpunkt-Kalibrierung
@@ -69,7 +69,7 @@ Umgebungsvariable gemappt werden.
 - Subdomains können per Wildcard-DNS automatisch funktionieren.
 - Für automatische echte DNS-Einträge ist später eine DNS-Provider-Anbindung
   nötig.
-- Mail, Captcha, Upload-Limit und Self-Service werden per Server-Konfiguration
+- SMTP, Captcha, Upload-Limit und Self-Service werden per Server-Konfiguration
   gesetzt; Details stehen in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 ## Mitwirken

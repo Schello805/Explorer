@@ -17,25 +17,28 @@ async function authorize() {
   const tenant = tenants.find((candidate) => candidate.hosts.includes(normalized))
     ?? tenants.find((candidate) => candidate.slug === normalized.split(".")[0])
     ?? resolveTenant(host, tenants);
-  return { session, tenant };
+  return { session, tenant, tenants };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const authorization = await authorize();
-  if (!authorization || !canViewTenant(authorization.session, authorization.tenant.id)) {
+  const tenantId = new URL(request.url).searchParams.get("tenantId") ?? authorization?.tenant.id;
+  const targetTenant = authorization?.tenants.find((tenant) => tenant.id === tenantId);
+  if (!authorization || !targetTenant || !canViewTenant(authorization.session, targetTenant.id)) {
     return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   }
-  return NextResponse.json(await exportTenantData(authorization.tenant.id));
+  return NextResponse.json(await exportTenantData(targetTenant.id));
 }
 
 export async function POST(request: Request) {
   const authorization = await authorize();
-  if (!authorization || !canManageTenant(authorization.session, authorization.tenant.id)) {
+  const body = await request.json().catch(() => ({}));
+  const targetTenant = authorization?.tenants.find((tenant) => tenant.id === (body.tenantId ?? authorization.tenant.id));
+  if (!authorization || !targetTenant || !canManageTenant(authorization.session, targetTenant.id)) {
     return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   }
-  const body = await request.json().catch(() => ({}));
   if (body.type === "delete") {
-    return NextResponse.json(await markTenantForDeletion(authorization.tenant.id, authorization.session.email));
+    return NextResponse.json(await markTenantForDeletion(targetTenant.id, authorization.session.email));
   }
-  return NextResponse.json(await createPrivacyRequest(authorization.tenant.id, authorization.session.email, "export"));
+  return NextResponse.json(await createPrivacyRequest(targetTenant.id, authorization.session.email, "export"));
 }

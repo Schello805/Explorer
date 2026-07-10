@@ -27,17 +27,65 @@ export const demoTenant: Tenant = {
     emergency: "112 · Rezeption +49 9871 123456"
   },
   legal: {
-    imprint: "Camping Sonnental e. V. · Musterweg 12 · 91572 Sonnental",
-    privacy: "Wir verarbeiten nur Daten, die für den Betrieb dieser Anwendung erforderlich sind. Optionale Dienste werden erst nach Ihrer Einwilligung aktiviert.",
-    cookies: "Notwendige lokale Speicherungen sichern Favoriten und Ihre Einwilligungsentscheidung. Statistik-Cookies werden nur nach Zustimmung gesetzt."
+    imprint: `Angaben gemäß § 5 DDG
+
+Michael Schellenberger
+Ziegeleistrasse 32
+91572 Bechhofen
+Deutschland
+
+E-Mail: info@schellenberger.biz
+
+Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV:
+Michael Schellenberger
+Ziegeleistrasse 32
+91572 Bechhofen`,
+    privacy: `Datenschutzhinweise
+
+Verantwortlicher:
+Michael Schellenberger, Ziegeleistrasse 32, 91572 Bechhofen, E-Mail: info@schellenberger.biz.
+
+Zwecke der Verarbeitung:
+Wir verarbeiten personenbezogene Daten zur Bereitstellung der Platzguide-PWA, zur Mandantenverwaltung, zum Login, zur technischen Sicherheit, zur E-Mail-Kommunikation, für Feedback-, Auskunfts- und Löschanfragen sowie für aktivierte Module wie Gästemappe, Veranstaltungen, Rundgänge oder Check-ins.
+
+Rechtsgrundlagen:
+Die Verarbeitung erfolgt je nach Funktion auf Grundlage von Art. 6 Abs. 1 lit. b DSGVO, Art. 6 Abs. 1 lit. f DSGVO, Art. 6 Abs. 1 lit. c DSGVO oder nach Einwilligung gemäß Art. 6 Abs. 1 lit. a DSGVO.
+
+Mandantentrennung:
+Daten eines Campingplatzes werden mit einer tenantId gespeichert und serverseitig nur dem zugehörigen Mandanten bereitgestellt. Betreiber sehen und bearbeiten ausschließlich die ihrem Mandanten zugeordneten Inhalte.
+
+Technische Daten:
+Beim Aufruf können IP-Adresse, Datum, Uhrzeit, Browserdaten, angeforderte Seiten und technische Protokolldaten verarbeitet werden, um die App sicher und stabil bereitzustellen.
+
+Optionale Dienste:
+Tracking, Push-Mitteilungen, externe Medien oder vergleichbare optionale Dienste werden nur aktiviert, wenn sie in der jeweiligen Mandantenkonfiguration eingerichtet sind und eine erforderliche Einwilligung vorliegt.
+
+Speicherdauer:
+Daten werden nur so lange gespeichert, wie sie für den jeweiligen Zweck erforderlich sind oder gesetzliche Pflichten bestehen. Lösch- und Auskunftsanfragen können über die Kontaktadresse gestellt werden.
+
+Betroffenenrechte:
+Sie haben nach Maßgabe der DSGVO Rechte auf Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit und Widerspruch. Erteilte Einwilligungen können mit Wirkung für die Zukunft widerrufen werden. Außerdem besteht ein Beschwerderecht bei einer Datenschutzaufsichtsbehörde.`,
+    cookies: `Cookie- und Speicherhinweise
+
+Platzguide nutzt notwendige Cookies und lokale Speicherfunktionen, damit Login, Sicherheit, Sprache, Favoriten, Check-ins, Offline-Funktion und Einwilligungsstatus funktionieren.
+
+Notwendige Speicherung:
+- Session-Cookie für den Admin-Login
+- Consent-Status für Datenschutz- und Cookie-Entscheidungen
+- lokale Favoriten und Offline-Daten der PWA
+
+Optionale Speicherung:
+Statistik, Tracking, Push-Mitteilungen oder externe Dienste werden nur nach Aktivierung in der Mandantenkonfiguration und, soweit erforderlich, nach Einwilligung verwendet.
+
+Sie können Browser-Speicher jederzeit über die Einstellungen Ihres Browsers löschen.`
   },
   tracking: { enabled: false, provider: "none", measurementId: "" },
   email: { senderName: "Camping Sonnental", senderEmail: "noreply@camping-sonnental.de", replyTo: "hallo@camping-sonnental.de" },
   integrations: {
-    mail: { provider: "outbox", fromEmail: "noreply@camping-sonnental.de", fromName: "Camping Sonnental" },
+    mail: { provider: "smtp", fromEmail: "info@schellenberger.biz", fromName: "Platzguide", smtpHost: "", smtpPort: 587, smtpSecure: false, smtpUser: "" },
     captcha: { provider: "disabled", siteKey: "", requiredForSignup: true },
     storage: { provider: "local", maxUploadMb: 10, allowedTypes: ["image/png", "image/jpeg", "image/webp", "application/pdf"] },
-    database: { provider: "local-json", rlsRequired: true },
+    database: { provider: "postgresql", rlsRequired: true },
     backup: { enabled: false, schedule: "daily", retentionDays: 14 }
   },
   features: {

@@ -18,16 +18,10 @@ ein zufälliges `AUTH_SECRET`, der bcrypt-Hash des Admin-Passworts,
 E-Mail-Verifikation, Rate-Limit, Nutzungsbedingungen und Missbrauchsschutz darf
 öffentliche Selbstregistrierung aktiviert werden.
 
-Für Betreiber-Registrierungen muss `MAIL_WEBHOOK_URL` auf einen transaktionalen
-Maildienst zeigen. Ohne diesen Wert werden E-Mails nur lokal in
-`.data/mail-outbox.json` abgelegt.
-
-Unterstützte Mailprovider:
-
-- `MAIL_PROVIDER=resend` mit `RESEND_API_KEY`
-- `MAIL_PROVIDER=brevo` mit `BREVO_API_KEY`
-- `MAIL_PROVIDER=mailgun` mit `MAILGUN_API_KEY` und `MAILGUN_DOMAIN`
-- `MAIL_PROVIDER=webhook` mit `MAIL_WEBHOOK_URL`
+Für Betreiber-Registrierungen muss SMTP eingerichtet sein. Platzguide nutzt
+keine Provider-spezifischen APIs, sondern ausschließlich `SMTP_HOST`,
+`SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM`,
+`MAIL_FROM_NAME` und optional `MAIL_LOGO_URL`.
 
 Öffentliche Registrierung sollte zusätzlich per Captcha geschützt werden:
 
@@ -141,16 +135,14 @@ Wichtige Optionen:
 - `NEXT_PUBLIC_BASE_URL`: öffentliche Basis-URL; wird sonst aus `DOMAIN`
   abgeleitet oder bei `DOMAIN=_` automatisch auf die Server-IP gesetzt
 - `ALLOW_PUBLIC_SIGNUP=true`: Self-Service-Registrierung aktivieren
-- `MAIL_PROVIDER`: `outbox`, `webhook`, `resend`, `brevo` oder `mailgun`
-- `MAIL_FROM`, `MAIL_FROM_NAME`, `MAIL_LOGO_URL`, `MAIL_WEBHOOK_URL`
-- `RESEND_API_KEY`, `BREVO_API_KEY`, `MAILGUN_API_KEY`, `MAILGUN_DOMAIN`
+- `MAIL_FROM`, `MAIL_FROM_NAME`, `MAIL_LOGO_URL`
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`
 - `CAPTCHA_PROVIDER`: `disabled`, `turnstile` oder `hcaptcha`
 - `NEXT_PUBLIC_CAPTCHA_SITE_KEY`, `TURNSTILE_SECRET_KEY`, `HCAPTCHA_SECRET_KEY`
 - `UPLOAD_MAX_MB`: Upload-Größenlimit, Standard `10`
 
-Klassisches SMTP per Host/Port/User ist aktuell nicht direkt eingebaut. Für
-Mailversand nutzt Platzguide Transaktionsmail-Anbieter oder einen eigenen
-Webhook.
+Der Mailversand läuft ausschließlich über klassisches SMTP. Bei fehlender
+SMTP-Konfiguration kann die Registrierung keine Bestätigungs-E-Mail versenden.
 
 Nach der Installation:
 

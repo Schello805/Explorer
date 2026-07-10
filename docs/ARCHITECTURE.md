@@ -46,11 +46,11 @@ Der Service Worker cached App-Shell und bereits besuchte GET-Ressourcen. Nach
 einem Release wird durch eine neue Cache-Version kontrolliert aktualisiert.
 Fremde Karten- und Luftbild-Tiles werden bewusst nicht offline gespiegelt.
 
-## Aktueller MVP-Modus
+## Datenhaltung
 
-Ohne `DATABASE_URL` nutzt die App eine lokale Entwicklungsablage unter
-`.data/tenants.json`. Mit `DATABASE_URL` wird PostgreSQL verwendet; die
-verbindliche Struktur und RLS-Regeln liegen in `database/schema.sql`.
-Stationsdaten und Mandantenkonfiguration werden serverseitig gespeichert.
-Datei-Uploads und grafische Platzplan-Kalibrierung sind bewusst als nächster
-Produktionsschritt getrennt, damit keine unfertige Storage-Lösung eingebaut ist.
+In Produktion ist PostgreSQL verpflichtend. Die lokale `.data`-Ablage ist nur
+für Entwicklung und Builds erlaubt, wenn `ALLOW_LOCAL_DATA_FALLBACK=true`
+gesetzt ist. Die verbindliche Struktur und RLS-Regeln liegen in
+`database/schema.sql`. Stationsdaten, Mandantenkonfiguration, Gästemappe,
+Feedback, Rechtstexte, Medienverweise und optionale Module bleiben immer über
+die `tenant_id` dem jeweiligen Mandanten zugeordnet.

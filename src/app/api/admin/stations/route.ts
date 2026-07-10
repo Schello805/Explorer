@@ -1,7 +1,7 @@
 import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { ADMIN_EMAIL, canManageTenant, verifyAdminSession } from "@/lib/auth";
+import { canManageTenant, verifyAdminSession } from "@/lib/auth";
 import { resolveTenant } from "@/lib/tenant-resolver";
 import { deleteStation, listTenants, saveStation } from "@/lib/tenant-store";
 
@@ -33,24 +33,33 @@ async function authorize() {
   const normalized = host.split(":")[0];
   const tenant = tenants.find((candidate) => candidate.hosts.includes(normalized))
     ?? tenants.find((candidate) => candidate.slug === normalized.split(".")[0])
-    ?? resolveTenant(host);
-  return canManageTenant(session, tenant.id) ? tenant : null;
+    ?? resolveTenant(host, tenants);
+  return canManageTenant(session, tenant.id) ? { session, tenant, tenants } : null;
 }
 
 export async function POST(request: Request) {
-  const tenant = await authorize();
-  if (!tenant) return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  const authorization = await authorize();
+  if (!authorization) return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   const parsed = stationSchema.safeParse(await request.json());
   if (!parsed.success) return NextResponse.json({ error: "Ungültige Stationsdaten", details: parsed.error.flatten() }, { status: 400 });
-  if (parsed.data.tenantId !== tenant.id) return NextResponse.json({ error: "Mandantenzugriff verweigert" }, { status: 403 });
-  return NextResponse.json(await saveStation(tenant.id, parsed.data, ADMIN_EMAIL));
+  const targetTenant = authorization.tenants.find((tenant) => tenant.id === parsed.data.tenantId);
+  if (!targetTenant || !canManageTenant(authorization.session, targetTenant.id)) {
+    return NextResponse.json({ error: "Mandantenzugriff verweigert" }, { status: 403 });
+  }
+  return NextResponse.json(await saveStation(targetTenant.id, parsed.data, authorization.session.email));
 }
 
 export async function DELETE(request: Request) {
-  const tenant = await authorize();
-  if (!tenant) return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
-  const id = new URL(request.url).searchParams.get("id");
+  const authorization = await authorize();
+  if (!authorization) return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  const parameters = new URL(request.url).searchParams;
+  const id = parameters.get("id");
+  const tenantId = parameters.get("tenantId") ?? authorization.tenant.id;
   if (!id) return NextResponse.json({ error: "Stations-ID fehlt" }, { status: 400 });
-  await deleteStation(tenant.id, id, ADMIN_EMAIL);
+  const targetTenant = authorization.tenants.find((tenant) => tenant.id === tenantId);
+  if (!targetTenant || !canManageTenant(authorization.session, targetTenant.id)) {
+    return NextResponse.json({ error: "Mandantenzugriff verweigert" }, { status: 403 });
+  }
+  await deleteStation(targetTenant.id, id, authorization.session.email);
   return NextResponse.json({ ok: true });
 }

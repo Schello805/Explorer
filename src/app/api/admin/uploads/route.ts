@@ -8,7 +8,7 @@ import { listTenants, saveTenantConfiguration } from "@/lib/tenant-store";
 
 const fallbackTypes = ["image/png", "image/jpeg", "image/webp", "application/pdf"];
 
-async function authorize() {
+async function authorize(requestedTenantId?: string) {
   const cookieStore = await cookies();
   const session = await verifyAdminSession(
     cookieStore.get("platzguide_session")?.value ?? cookieStore.get("explorer_session")?.value
@@ -21,14 +21,15 @@ async function authorize() {
   const tenant = tenants.find((candidate) => candidate.hosts.includes(normalized))
     ?? tenants.find((candidate) => candidate.slug === normalized.split(".")[0])
     ?? resolveTenant(host, tenants);
-  return canManageTenant(session, tenant.id) ? { session, tenant } : null;
+  const targetTenant = requestedTenantId ? tenants.find((candidate) => candidate.id === requestedTenantId) : tenant;
+  return targetTenant && canManageTenant(session, targetTenant.id) ? { session, tenant: targetTenant } : null;
 }
 
 export async function POST(request: Request) {
-  const authorization = await authorize();
+  const formData = await request.formData();
+  const authorization = await authorize(String(formData.get("tenantId") ?? ""));
   if (!authorization) return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
 
-  const formData = await request.formData();
   const file = formData.get("file");
   const purpose = String(formData.get("purpose") ?? "media");
   if (!(file instanceof File)) return NextResponse.json({ error: "Datei fehlt" }, { status: 400 });

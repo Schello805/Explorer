@@ -31,10 +31,21 @@ async function writeLocalTenants(tenants: Tenant[]) {
 async function readPostgresTenants(): Promise<Tenant[]> {
   const sql = postgres(process.env.DATABASE_URL!, { connect_timeout: 3, idle_timeout: 5, max: 5 });
   try {
-    const rows = await sql<{ configuration: Tenant }[]>`
-      SELECT configuration FROM tenants ORDER BY created_at
+    const tenantRows = await sql<{ id: string; configuration: Tenant }[]>`
+      SELECT id, configuration FROM tenants ORDER BY created_at
     `;
-    return rows.map((row) => normalizeTenant(row.configuration));
+    const stationRows = await sql<{ tenant_id: string; data: Station }[]>`
+      SELECT tenant_id, data FROM stations ORDER BY updated_at DESC
+    `;
+    const stationsByTenant = new Map<string, Station[]>();
+    for (const row of stationRows) {
+      stationsByTenant.set(row.tenant_id, [...(stationsByTenant.get(row.tenant_id) ?? []), row.data]);
+    }
+    return tenantRows.map((row) => normalizeTenant({
+      ...row.configuration,
+      id: row.id,
+      stations: stationsByTenant.get(row.id) ?? row.configuration.stations ?? []
+    }));
   } finally {
     await sql.end();
   }
@@ -78,7 +89,10 @@ function audit(tenantId: string, actorEmail: string, action: string, entityType:
 }
 
 export async function listTenants(): Promise<Tenant[]> {
-  if (!process.env.DATABASE_URL) return readLocalTenants();
+  if (!process.env.DATABASE_URL) {
+    if (!allowsLocalDataFallback()) throw new Error("DATABASE_URL fehlt. Platzguide benötigt in Produktion PostgreSQL.");
+    return readLocalTenants();
+  }
   try {
     if (process.env.NODE_ENV !== "production") {
       if (!await canReachDatabase(process.env.DATABASE_URL, 800)) {
@@ -87,10 +101,16 @@ export async function listTenants(): Promise<Tenant[]> {
     }
     return await readPostgresTenants();
   } catch (error) {
-    if (process.env.NODE_ENV === "production") throw error;
-    console.warn("PostgreSQL nicht erreichbar, nutze lokale Demo-Daten.");
+    if (!allowsLocalDataFallback()) throw error;
+    console.warn("PostgreSQL nicht erreichbar, nutze lokale Entwicklungsdaten.");
     return readLocalTenants();
   }
+}
+
+function allowsLocalDataFallback() {
+  return process.env.ALLOW_LOCAL_DATA_FALLBACK === "true"
+    || process.env.NODE_ENV !== "production"
+    || process.env.NEXT_PHASE === "phase-production-build";
 }
 
 async function canReachDatabase(databaseUrl: string, timeoutMs: number) {
@@ -234,7 +254,7 @@ export async function createTenantInstance(input: { name: string; slug: string; 
 }
 
 export async function verifyTenantUserEmail(token: string) {
-  const tenants = await readLocalTenants();
+  const tenants = await listTenants();
   for (const tenant of tenants) {
     const user = tenant.users.find((candidate) => candidate.emailVerificationToken === token);
     if (!user) continue;
@@ -245,7 +265,7 @@ export async function verifyTenantUserEmail(token: string) {
     delete user.emailVerificationToken;
     delete user.emailVerificationExpiresAt;
     tenant.auditLog = [audit(tenant.id, user.email, "verify-email", "tenant-user", user.id), ...tenant.auditLog].slice(0, 100);
-    await writeLocalTenants(tenants);
+    await saveTenantConfiguration(tenant.id, tenant, user.email);
     return { tenant, user };
   }
   throw new Error("Verification token not found");

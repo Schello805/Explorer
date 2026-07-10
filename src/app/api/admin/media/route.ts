@@ -6,6 +6,7 @@ import { resolveTenant } from "@/lib/tenant-resolver";
 import { listTenants, saveTenantConfiguration } from "@/lib/tenant-store";
 
 const mediaSchema = z.object({
+  tenantId: z.string().uuid().optional(),
   title: z.string().trim().min(2).max(120),
   url: z.string().trim().url().max(2000),
   type: z.enum(["image", "document", "video"]),
@@ -25,7 +26,7 @@ async function authorize() {
   const tenant = tenants.find((candidate) => candidate.hosts.includes(normalized))
     ?? tenants.find((candidate) => candidate.slug === normalized.split(".")[0])
     ?? resolveTenant(host, tenants);
-  return canManageTenant(session, tenant.id) ? { session, tenant } : null;
+  return canManageTenant(session, tenant.id) ? { session, tenant, tenants } : null;
 }
 
 export async function POST(request: Request) {
@@ -33,15 +34,22 @@ export async function POST(request: Request) {
   if (!authorization) return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   const parsed = mediaSchema.safeParse(await request.json());
   if (!parsed.success) return NextResponse.json({ error: "Ungültige Mediendaten" }, { status: 400 });
+  const targetTenant = parsed.data.tenantId ? authorization.tenants.find((tenant) => tenant.id === parsed.data.tenantId) : authorization.tenant;
+  if (!targetTenant || !canManageTenant(authorization.session, targetTenant.id)) {
+    return NextResponse.json({ error: "Mandantenzugriff verweigert" }, { status: 403 });
+  }
   const media = {
     id: crypto.randomUUID(),
-    tenantId: authorization.tenant.id,
+    tenantId: targetTenant.id,
     createdAt: new Date().toISOString(),
-    ...parsed.data
+    title: parsed.data.title,
+    url: parsed.data.url,
+    type: parsed.data.type,
+    alt: parsed.data.alt
   };
-  const tenant = await saveTenantConfiguration(authorization.tenant.id, {
-    ...authorization.tenant,
-    media: [media, ...authorization.tenant.media].slice(0, 500)
+  const tenant = await saveTenantConfiguration(targetTenant.id, {
+    ...targetTenant,
+    media: [media, ...targetTenant.media].slice(0, 500)
   }, authorization.session.email);
   return NextResponse.json(tenant.media[0]);
 }
