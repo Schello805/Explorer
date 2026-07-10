@@ -53,6 +53,7 @@ Details und Optionen stehen in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 - Architektur: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - Karten und Luftbilder: [`docs/MAPS.md`](docs/MAPS.md)
 - Deployment: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+- Workflows: [`docs/WORKFLOWS.md`](docs/WORKFLOWS.md)
 - Geplanter Ausbau: [`ROADMAP.md`](ROADMAP.md)
 
 ## Revisionen

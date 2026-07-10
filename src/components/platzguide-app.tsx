@@ -25,6 +25,7 @@ export function PlatzguideApp({ tenant }: { tenant: Tenant }) {
     const haystack = `${station.name} ${station.shortDescription}`.toLowerCase();
     return matchesCategory && haystack.includes(query.toLowerCase());
   }), [tenant.stations, category, query]);
+  const mapConfigured = tenant.map.configured !== false && tenant.stations.length > 0;
 
   function toggleFavorite(id: string) {
     setFavorites((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
@@ -84,18 +85,24 @@ export function PlatzguideApp({ tenant }: { tenant: Tenant }) {
         <div className="mt-3 flex items-center justify-between">
           <p className="text-sm font-bold">{stations.length} Orte gefunden</p>
           <div className="flex rounded-xl bg-white p-1 shadow-sm">
-            <button onClick={() => setView("map")} className={cn("rounded-lg px-3 py-2 text-sm font-bold", view === "map" && "bg-[var(--primary)] text-white")}><Map size={16} className="inline -mt-0.5 mr-1" /> Karte</button>
+            <button onClick={() => mapConfigured && setView("map")} disabled={!mapConfigured} className={cn("rounded-lg px-3 py-2 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-40", view === "map" && "bg-[var(--primary)] text-white")}><Map size={16} className="inline -mt-0.5 mr-1" /> Karte</button>
             <button onClick={() => setView("list")} className={cn("rounded-lg px-3 py-2 text-sm font-bold", view === "list" && "bg-[var(--primary)] text-white")}><List size={16} className="inline -mt-0.5 mr-1" /> Liste</button>
           </div>
         </div>
 
-        {view === "map" ? (
+        {!mapConfigured && <div className="mt-4 rounded-[1.5rem] border-4 border-white bg-[#dce8d0] p-6 shadow-soft">
+          <p className="text-xs font-bold uppercase tracking-[.18em] text-[var(--primary)]">Noch keine Karte</p>
+          <h2 className="mt-2 font-display text-3xl">Der Platz wird gerade eingerichtet.</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#18332b]/65">Sobald der Betreiber Adresse, Kartenmittelpunkt und erste Stationen gepflegt hat, erscheint hier die interaktive Platzkarte.</p>
+        </div>}
+
+        {mapConfigured && view === "map" ? (
           <CampMap tenant={tenant} stations={stations} selected={selected} onSelect={setSelected} />
-        ) : (
+        ) : mapConfigured || stations.length > 0 ? (
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {stations.map((station) => <StationCard key={station.id} station={station} favorite={favorites.includes(station.id)} onFavorite={() => toggleFavorite(station.id)} onSelect={() => setSelected(station)} />)}
           </div>
-        )}
+        ) : null}
       </section>
 
       <section className="mx-auto w-[90%] py-5">

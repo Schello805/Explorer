@@ -193,6 +193,12 @@ export async function createTenantInstance(input: { name: string; slug: string; 
     tagline: "Mein digitaler Platzguide.",
     logoMark: input.name.trim().charAt(0).toUpperCase() || "C",
     contact: { phone: "", email: input.ownerEmail, emergency: "112" },
+    map: {
+      center: [10.5605, 49.1643],
+      zoom: 15,
+      styleUrl: "https://tiles.openfreemap.org/styles/liberty",
+      configured: false
+    },
     stations: [],
     media: [],
     events: [],

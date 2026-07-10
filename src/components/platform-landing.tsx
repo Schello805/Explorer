@@ -10,9 +10,9 @@ type CaptchaProvider = "turnstile" | "hcaptcha" | "disabled";
 const platformLogo = "/icons/platzguide-logo.png";
 
 export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey }: { allowSignup: boolean; captchaProvider: CaptchaProvider; captchaSiteKey: string }) {
-  const [name, setName] = useState("Camping Sonnental");
-  const [slug, setSlug] = useState("sonnental");
-  const [ownerEmail, setOwnerEmail] = useState("admin@schellenberger.biz");
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [ownerEmail, setOwnerEmail] = useState("");
   const [ownerPassword, setOwnerPassword] = useState("");
   const [website, setWebsite] = useState("");
   const [captchaToken, setCaptchaToken] = useState("");

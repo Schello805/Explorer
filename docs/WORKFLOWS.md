@@ -1,0 +1,40 @@
+# Workflows
+
+## Neuer Kunde / Mandant
+
+1. Plattform-Admin legt den Mandanten im Adminbereich an oder gibt den Self-Service frei.
+2. Betreiber wählt Name, Subdomain und erste Admin-E-Mail.
+3. Betreiber bestätigt die E-Mail-Adresse.
+4. Betreiber pflegt Branding, Kontakt, Rechtstexte und Module.
+5. Betreiber setzt den Kartenmittelpunkt oder lädt einen Platzplan hoch.
+6. Betreiber legt Kategorien und Stationen an.
+7. Plattform-Admin prüft DNS, SMTP, Captcha, Backups und Healthcheck.
+8. Mandant geht live, sobald Smoke-Test und Inhalte geprüft sind.
+
+Neue Mandanten starten bewusst ohne Demo-Stationen und ohne aktivierte Platzkarte.
+Die Besucher-App zeigt erst dann eine Karte, wenn der Betreiber Ort und Stationen
+konfiguriert hat.
+
+## Aufgaben Plattform-Admin
+
+- Installation, Updates, Backups, Restore und Monitoring betreiben
+- PostgreSQL, RLS, SMTP, Captcha, DNS und Reverse Proxy verwalten
+- Mandanten anlegen, sperren oder löschen
+- Mandantenübergreifend nach Datensätzen filtern
+- Deployment-Checks prüfen und Rollbacks auslösen oder kontrollieren
+- Rechtliche Vorlagen bereitstellen, aber keine Rechtsprüfung ersetzen
+
+## Aufgaben Betreiber / Mandanten-Admin
+
+- Eigene App-Daten pflegen: Name, Logo, Farben, Kontakt und Rechtstexte
+- Kartenmittelpunkt, Luftbild oder Platzplan konfigurieren
+- Kategorien, Stationen, Bilder, Öffnungszeiten und Status pflegen
+- Gästemappe, Veranstaltungen, Rundgänge, Feedback und Module verwalten
+- Eigene Inhalte rechtlich prüfen lassen
+- Gästehinweise und Notfallkontakte aktuell halten
+
+## Besucher
+
+- Öffnen die App über Domain, Subdomain, QR-Code oder PWA-Icon
+- Suchen Stationen, nutzen Karte/Liste, Favoriten und optionale Check-ins
+- Sehen nur Inhalte des jeweiligen Campingplatzes

@@ -19,7 +19,8 @@ export const demoTenant: Tenant = {
   map: {
     center: [10.5605, 49.1643],
     zoom: 16,
-    styleUrl: "https://tiles.openfreemap.org/styles/liberty"
+    styleUrl: "https://tiles.openfreemap.org/styles/liberty",
+    configured: true
   },
   contact: {
     phone: "+49 9871 123456",
