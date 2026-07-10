@@ -7,6 +7,7 @@ APP_DIR="${APP_DIR:-/opt/platzguide}"
 BRANCH="${BRANCH:-main}"
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/platzguide}"
 RUN_VERIFY="${RUN_VERIFY:-true}"
+FORCE_REBUILD="${FORCE_REBUILD:-false}"
 
 log() { printf '\033[1;34m[INFO]\033[0m %s\n' "$*"; }
 ok() { printf '\033[1;32m[OK]\033[0m %s\n' "$*"; }
@@ -81,6 +82,14 @@ fetch_update() {
   ok "Update geladen: ${OLD_REV:0:8} → ${NEW_REV:0:8}"
 }
 
+needs_rebuild() {
+  local current_revision env_revision
+  [[ "${FORCE_REBUILD}" == "true" ]] && return 0
+  current_revision="$(git -C "${APP_DIR}" rev-parse --short HEAD)"
+  env_revision="$(grep -E '^NEXT_PUBLIC_APP_REVISION=' "${APP_DIR}/.env.local" 2>/dev/null | cut -d= -f2 || true)"
+  [[ "${env_revision}" != "${current_revision}" ]]
+}
+
 install_and_build() {
   log "Installiere Abhängigkeiten mit npm ci ..."
   sudo -u "${APP_USER}" bash -lc "cd '${APP_DIR}' && npm ci"
@@ -141,6 +150,13 @@ main() {
     restart_service
     health_check
     ok "Update abgeschlossen."
+  elif needs_rebuild; then
+    warn "Code ist bereits aktuell, aber Build/Revision passt nicht. Baue neu ..."
+    install_and_build
+    write_revision
+    restart_service
+    health_check
+    ok "Rebuild abgeschlossen."
   else
     ok "Kein Update notwendig."
   fi

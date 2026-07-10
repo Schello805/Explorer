@@ -190,5 +190,12 @@ Optionen:
 - `APP_DIR=/opt/platzguide`
 - `APP_NAME=platzguide`
 - `BRANCH=main`
+- `FORCE_REBUILD=true`, wenn Code schon gepullt wurde, aber Build/Service neu erstellt werden soll
 - `RUN_VERIFY=false` für nur `npm run build` statt vollständiger Prüfung
 - `BACKUP_DIR=/var/backups/platzguide`
+
+Admin-Passwort zurücksetzen:
+
+```bash
+sudo bash /opt/platzguide/scripts/reset-admin-password.sh
+```
