@@ -142,7 +142,7 @@ Wichtige Optionen:
   abgeleitet oder bei `DOMAIN=_` automatisch auf die Server-IP gesetzt
 - `ALLOW_PUBLIC_SIGNUP=true`: Self-Service-Registrierung aktivieren
 - `MAIL_PROVIDER`: `outbox`, `webhook`, `resend`, `brevo` oder `mailgun`
-- `MAIL_FROM`, `MAIL_FROM_NAME`, `MAIL_WEBHOOK_URL`
+- `MAIL_FROM`, `MAIL_FROM_NAME`, `MAIL_LOGO_URL`, `MAIL_WEBHOOK_URL`
 - `RESEND_API_KEY`, `BREVO_API_KEY`, `MAILGUN_API_KEY`, `MAILGUN_DOMAIN`
 - `CAPTCHA_PROVIDER`: `disabled`, `turnstile` oder `hcaptcha`
 - `NEXT_PUBLIC_CAPTCHA_SITE_KEY`, `TURNSTILE_SECRET_KEY`, `HCAPTCHA_SECRET_KEY`

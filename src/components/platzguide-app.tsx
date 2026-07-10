@@ -2,10 +2,13 @@
 
 import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
+import Image from "next/image";
 import { BookOpen, CalendarDays, CheckCircle2, ChevronRight, Compass, Gift, Heart, Info, List, Map, MessageSquareWarning, Navigation, Route, Search, ShieldAlert, SlidersHorizontal, X } from "lucide-react";
 import type { Station, Tenant } from "@/lib/types";
 import { cn, statusLabel } from "@/lib/utils";
 import { CampMap } from "@/components/camp-map";
+
+const platformLogo = "/icons/platzguide-logo.png";
 
 export function PlatzguideApp({ tenant }: { tenant: Tenant }) {
   const [view, setView] = useState<"map" | "list">("list");
@@ -52,7 +55,9 @@ export function PlatzguideApp({ tenant }: { tenant: Tenant }) {
         <div className="relative mx-auto w-[90%]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[var(--secondary)] font-display text-xl font-bold text-[#18332b]">{tenant.logoMark}</span>
+              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white/95 p-1.5 shadow-sm">
+                <Image src={platformLogo} alt="Platzguide" width={40} height={40} className="h-full w-full object-contain" priority />
+              </span>
               <div><p className="text-[11px] font-bold uppercase tracking-[.18em] text-white/60">Platzguide</p><p className="font-display text-xl">{tenant.name}</p></div>
             </div>
             <a href="/hinweise" aria-label="Wichtige Hinweise" className="rounded-full bg-white/10 p-3"><Info size={20} /></a>

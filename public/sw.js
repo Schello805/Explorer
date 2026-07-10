@@ -1,5 +1,5 @@
 const CACHE = "platzguide-shell-v2";
-const SHELL = ["/", "/offline", "/manifest.webmanifest", "/icons/icon.svg"];
+const SHELL = ["/", "/offline", "/manifest.webmanifest", "/icons/platzguide-logo.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));

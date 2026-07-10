@@ -11,7 +11,8 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#195f4c",
     orientation: "portrait",
     icons: [
-      { src: "/icons/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" }
+      { src: "/icons/platzguide-logo.png", sizes: "600x600", type: "image/png", purpose: "any" },
+      { src: "/icons/platzguide-logo.png", sizes: "600x600", type: "image/png", purpose: "maskable" }
     ]
   };
 }

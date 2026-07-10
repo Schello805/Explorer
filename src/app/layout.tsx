@@ -8,6 +8,10 @@ export async function generateMetadata(): Promise<Metadata> {
     title: `${tenant.name} · Platzguide`,
     description: tenant.tagline,
     manifest: "/manifest.webmanifest",
+    icons: {
+      icon: "/icons/platzguide-logo.png",
+      apple: "/icons/platzguide-logo.png"
+    },
     appleWebApp: { capable: true, title: tenant.name, statusBarStyle: "default" }
   };
 }

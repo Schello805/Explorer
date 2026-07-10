@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import Link from "next/link";
-import { ArrowRight, Caravan, Code2, ShieldCheck, Smartphone } from "lucide-react";
+import Image from "next/image";
+import { ArrowRight, Code2, ShieldCheck, Smartphone } from "lucide-react";
 
 type CaptchaProvider = "turnstile" | "hcaptcha" | "disabled";
+const platformLogo = "/icons/platzguide-logo.png";
 
 export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey }: { allowSignup: boolean; captchaProvider: CaptchaProvider; captchaSiteKey: string }) {
   const [name, setName] = useState("Camping Sonnental");
@@ -57,7 +59,7 @@ export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey }
   return <main className="min-h-screen bg-[#f5f2e9] text-[#18332b]">
     <section className="mx-auto grid min-h-screen w-[90%] content-center gap-6 py-8 lg:grid-cols-[1fr_.9fr] lg:items-center">
       <div>
-        <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-bold text-[#195f4c] shadow-sm"><Caravan size={16} /> Platzguide Plattform</div>
+        <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-bold text-[#195f4c] shadow-sm"><Image src={platformLogo} alt="" width={20} height={20} className="h-5 w-5 object-contain" /> Platzguide Plattform</div>
         <h1 className="mt-5 max-w-2xl font-display text-4xl leading-[1.02] sm:text-6xl">Camping-App erstellen. Subdomain wählen. Inhalte pflegen.</h1>
         <p className="mt-4 max-w-xl text-base leading-7 text-[#18332b]/65">Mobile-first PWA für Campingplätze: Karte, Stationen, Gästemappe, Events und Adminbereich — pro Campingplatz strikt getrennt.</p>
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
