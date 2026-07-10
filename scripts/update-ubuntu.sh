@@ -63,7 +63,18 @@ backup_runtime_files() {
 
 check_clean_tree() {
   if [[ -n "$(git -C "${APP_DIR}" status --porcelain)" ]]; then
-    fail "Arbeitsbaum in ${APP_DIR} ist nicht sauber. Bitte lokale Änderungen sichern oder committen."
+    local stamp stash_output
+    stamp="$(date +%Y%m%d-%H%M%S)"
+    warn "Arbeitsbaum in ${APP_DIR} enthält lokale Änderungen."
+    mkdir -p "${BACKUP_DIR}"
+    git -C "${APP_DIR}" status --porcelain > "${BACKUP_DIR}/${APP_NAME}-local-changes-${stamp}.status"
+    stash_output="$(git -C "${APP_DIR}" stash push --include-untracked -m "platzguide-auto-update-${stamp}" 2>&1 || true)"
+    if [[ "${stash_output}" == *"No local changes to save"* ]]; then
+      ok "Nur ignorierte Laufzeitdateien vorhanden; Git-Update kann fortfahren."
+    else
+      ok "Lokale Änderungen wurden sicher als Git-Stash abgelegt: platzguide-auto-update-${stamp}"
+      ok "Statusliste: ${BACKUP_DIR}/${APP_NAME}-local-changes-${stamp}.status"
+    fi
   fi
   ok "Git-Arbeitsbaum ist sauber."
 }
