@@ -101,6 +101,13 @@ Für einen eigenen Ubuntu-Server liegen fertige Skripte im Ordner `scripts`.
 Sie prüfen Betriebssystem, Rechte, Node.js, Git, Build, systemd und optional
 Nginx/PostgreSQL. Alle Schritte geben klare Statusmeldungen aus.
 
+Das Installationsskript richtet den Plattform-Admin automatisch ein:
+
+- Standard-E-Mail: `admin@schellenberger.biz`
+- Interaktiv: Passwort wird während der Installation abgefragt
+- Automatisiert: `ADMIN_PASSWORD='...'` vorgeben
+- Ohne Terminal-Eingabe: ein einmaliges Passwort wird generiert und am Ende angezeigt
+
 ### Minimal mit externer Datenbank
 
 ```bash
@@ -130,6 +137,7 @@ Wichtige Optionen:
 - `INSTALL_NGINX=false`: Nginx nicht installieren
 - `INSTALL_POSTGRES=true`: PostgreSQL lokal installieren
 - `ADMIN_PASSWORD`: erzeugt automatisch den bcrypt-Hash
+- `ADMIN_EMAIL`: Admin-Adresse, Standard `admin@schellenberger.biz`
 
 Nach der Installation:
 
@@ -137,6 +145,9 @@ Nach der Installation:
 systemctl status platzguide
 journalctl -u platzguide -f
 ```
+
+Die App ist nach erfolgreichem Abschluss direkt startbereit. Das Skript prüft
+abschließend `systemd` und `/api/health`.
 
 ## Ubuntu-Updates
 

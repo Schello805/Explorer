@@ -18,6 +18,7 @@ ADMIN_EMAIL="${ADMIN_EMAIL:-admin@schellenberger.biz}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"
 AUTH_SECRET="${AUTH_SECRET:-}"
 GITHUB_URL="${GITHUB_URL:-https://github.com/Schello805/Explorer}"
+GENERATED_ADMIN_PASSWORD=""
 
 log() { printf '\033[1;34m[INFO]\033[0m %s\n' "$*"; }
 ok() { printf '\033[1;32m[OK]\033[0m %s\n' "$*"; }
@@ -47,6 +48,36 @@ require_command() {
 
 generate_secret() {
   openssl rand -base64 48 | tr -d '\n'
+}
+
+generate_password() {
+  openssl rand -base64 24 | tr -d '\n'
+}
+
+collect_admin_password() {
+  if [[ -n "${ADMIN_PASSWORD}" ]]; then
+    ok "Admin-Passwort wurde per ADMIN_PASSWORD übergeben."
+    return
+  fi
+
+  if [[ -t 0 ]]; then
+    local password_confirm
+    log "Lege das Passwort für den Plattform-Admin ${ADMIN_EMAIL} fest."
+    read -r -s -p "Admin-Passwort: " ADMIN_PASSWORD
+    printf '\n'
+    read -r -s -p "Admin-Passwort wiederholen: " password_confirm
+    printf '\n'
+    [[ -n "${ADMIN_PASSWORD}" ]] || fail "Admin-Passwort darf nicht leer sein."
+    [[ "${ADMIN_PASSWORD}" == "${password_confirm}" ]] || fail "Admin-Passwörter stimmen nicht überein."
+    [[ "${#ADMIN_PASSWORD}" -ge 12 ]] || fail "Admin-Passwort muss mindestens 12 Zeichen lang sein."
+    ok "Admin-Passwort gesetzt."
+    return
+  fi
+
+  GENERATED_ADMIN_PASSWORD="$(generate_password)"
+  ADMIN_PASSWORD="${GENERATED_ADMIN_PASSWORD}"
+  warn "Kein ADMIN_PASSWORD übergeben und keine interaktive Eingabe möglich."
+  warn "Es wurde ein einmaliges sicheres Admin-Passwort generiert. Bitte sofort nach der Installation sichern."
 }
 
 install_base_packages() {
@@ -117,6 +148,9 @@ configure_postgres() {
   sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" | grep -q 1 \
     || sudo -u postgres createdb -O "${DB_USER}" "${DB_NAME}"
   sudo -u postgres psql -d "${DB_NAME}" -f "${APP_DIR}/database/schema.sql"
+  sudo -u postgres psql -d "${DB_NAME}" -c "GRANT USAGE ON SCHEMA public TO ${DB_USER};"
+  sudo -u postgres psql -d "${DB_NAME}" -c "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${DB_USER};"
+  sudo -u postgres psql -d "${DB_NAME}" -c "GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO ${DB_USER};"
   ok "PostgreSQL bereit: Datenbank ${DB_NAME}, Benutzer ${DB_USER}."
 }
 
@@ -124,12 +158,7 @@ write_env_file() {
   local env_file="${APP_DIR}/.env.local"
   local password_hash
   [[ -n "${AUTH_SECRET}" ]] || AUTH_SECRET="$(generate_secret)"
-  if [[ -n "${ADMIN_PASSWORD}" ]]; then
-    password_hash="$(cd "${APP_DIR}" && node -e "require('bcryptjs').hash(process.argv[1], 12).then(console.log)" "${ADMIN_PASSWORD}")"
-  else
-    password_hash=""
-    warn "ADMIN_PASSWORD wurde nicht gesetzt. Trage ADMIN_PASSWORD_HASH vor dem Livegang in ${env_file} ein."
-  fi
+  password_hash="$(cd "${APP_DIR}" && node -e "require('bcryptjs').hash(process.argv[1], 12).then(console.log)" "${ADMIN_PASSWORD}")"
 
   if [[ "${INSTALL_POSTGRES}" == "true" ]]; then
     DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@localhost:5432/${DB_NAME}"
@@ -239,6 +268,7 @@ main() {
   require_ubuntu
   require_command apt-get
   install_base_packages
+  collect_admin_password
   install_node
   create_app_user
   clone_or_update_repo
@@ -256,6 +286,14 @@ main() {
   printf '  Status:  systemctl status %s\n' "${APP_NAME}"
   printf '  Logs:    journalctl -u %s -f\n' "${APP_NAME}"
   printf '  Update:  bash %s/scripts/update-ubuntu.sh\n' "${APP_DIR}"
+  printf '\nAdmin:\n'
+  printf '  E-Mail:  %s\n' "${ADMIN_EMAIL}"
+  if [[ -n "${GENERATED_ADMIN_PASSWORD}" ]]; then
+    printf '  Passwort: %s\n' "${GENERATED_ADMIN_PASSWORD}"
+    printf '  Hinweis: Dieses Passwort wird nur jetzt angezeigt. Bitte sicher speichern.\n'
+  else
+    printf '  Passwort: wie während der Installation gesetzt\n'
+  fi
 }
 
 main "$@"

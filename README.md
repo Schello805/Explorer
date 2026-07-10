@@ -131,6 +131,11 @@ sudo bash scripts/install-ubuntu.sh
 sudo bash /opt/platzguide/scripts/update-ubuntu.sh
 ```
 
+Das Installationsskript fragt das Admin-Passwort für
+`admin@schellenberger.biz` ab oder nutzt `ADMIN_PASSWORD=...` für
+automatisierte Setups. Nach erfolgreichem Abschluss laufen `systemd`, Build und
+`/api/health`.
+
 Details und Optionen stehen in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 ## Mitwirken
