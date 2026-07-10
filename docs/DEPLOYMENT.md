@@ -98,8 +98,8 @@ Deployment muss den verifizierten Build-Artefakt verwenden oder
 ## Ubuntu-Installation
 
 Für einen eigenen Ubuntu-Server liegen fertige Skripte im Ordner `scripts`.
-Sie prüfen Betriebssystem, Rechte, Node.js, Git, Build, systemd und optional
-Nginx/PostgreSQL. Alle Schritte geben klare Statusmeldungen aus.
+Sie prüfen Betriebssystem, Rechte, Node.js, Git, Build, PostgreSQL, systemd und
+optional Nginx. Alle Schritte geben klare Statusmeldungen aus.
 
 Das Installationsskript richtet den Plattform-Admin automatisch ein:
 
@@ -108,21 +108,20 @@ Das Installationsskript richtet den Plattform-Admin automatisch ein:
 - Automatisiert: `ADMIN_PASSWORD='...'` vorgeben
 - Ohne Terminal-Eingabe: ein einmaliges Passwort wird generiert und am Ende angezeigt
 
-### Minimal mit externer Datenbank
+### Standardinstallation mit lokaler Datenbank
 
 ```bash
 sudo APP_DIR=/opt/platzguide \
   DOMAIN=example.org \
   ADMIN_PASSWORD='sehr-sicheres-passwort' \
-  DATABASE_URL='postgresql://user:pass@db-host:5432/platzguide' \
   bash scripts/install-ubuntu.sh
 ```
 
-### Mit lokalem PostgreSQL
+### Mit externer Datenbank
 
 ```bash
-sudo INSTALL_POSTGRES=true \
-  DB_PASSWORD='langes-db-passwort' \
+sudo INSTALL_POSTGRES=false \
+  DATABASE_URL='postgresql://user:pass@db-host:5432/platzguide' \
   DOMAIN=example.org \
   ADMIN_PASSWORD='sehr-sicheres-passwort' \
   bash scripts/install-ubuntu.sh
@@ -135,10 +134,12 @@ Wichtige Optionen:
 - `DOMAIN`: Nginx-Domain oder `_` für alle Hosts
 - `PORT`: interner Next.js-Port, Standard `3000`
 - `INSTALL_NGINX=false`: Nginx nicht installieren
-- `INSTALL_POSTGRES=true`: PostgreSQL lokal installieren
+- `INSTALL_POSTGRES=true`: PostgreSQL lokal installieren, Standard `true`
+- `INSTALL_POSTGRES=false`: externe Datenbank über `DATABASE_URL` verwenden
 - `ADMIN_PASSWORD`: erzeugt automatisch den bcrypt-Hash
 - `ADMIN_EMAIL`: Admin-Adresse, Standard `admin@schellenberger.biz`
-- `NEXT_PUBLIC_BASE_URL`: öffentliche Basis-URL, wird sonst aus `DOMAIN` abgeleitet
+- `NEXT_PUBLIC_BASE_URL`: öffentliche Basis-URL; wird sonst aus `DOMAIN`
+  abgeleitet oder bei `DOMAIN=_` automatisch auf die Server-IP gesetzt
 - `ALLOW_PUBLIC_SIGNUP=true`: Self-Service-Registrierung aktivieren
 - `MAIL_PROVIDER`: `outbox`, `webhook`, `resend`, `brevo` oder `mailgun`
 - `MAIL_FROM`, `MAIL_FROM_NAME`, `MAIL_WEBHOOK_URL`

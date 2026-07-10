@@ -10,7 +10,7 @@ NODE_MAJOR="${NODE_MAJOR:-22}"
 PORT="${PORT:-3000}"
 DOMAIN="${DOMAIN:-_}"
 INSTALL_NGINX="${INSTALL_NGINX:-true}"
-INSTALL_POSTGRES="${INSTALL_POSTGRES:-false}"
+INSTALL_POSTGRES="${INSTALL_POSTGRES:-true}"
 DB_NAME="${DB_NAME:-platzguide}"
 DB_USER="${DB_USER:-platzguide}"
 DB_PASSWORD="${DB_PASSWORD:-}"
@@ -67,6 +67,10 @@ generate_secret() {
 
 generate_password() {
   openssl rand -base64 24 | tr -d '\n'
+}
+
+detect_primary_ip() {
+  hostname -I 2>/dev/null | awk '{print $1}'
 }
 
 collect_admin_password() {
@@ -182,7 +186,13 @@ write_env_file() {
   fi
   if [[ -z "${NEXT_PUBLIC_BASE_URL}" ]]; then
     if [[ "${DOMAIN}" == "_" ]]; then
-      NEXT_PUBLIC_BASE_URL="http://localhost:${PORT}"
+      local primary_ip
+      primary_ip="$(detect_primary_ip)"
+      if [[ -n "${primary_ip}" ]]; then
+        NEXT_PUBLIC_BASE_URL="http://${primary_ip}"
+      else
+        NEXT_PUBLIC_BASE_URL="http://localhost:${PORT}"
+      fi
     else
       NEXT_PUBLIC_BASE_URL="http://${DOMAIN}"
     fi

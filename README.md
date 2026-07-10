@@ -41,8 +41,8 @@ sudo bash scripts/install-ubuntu.sh
 sudo bash /opt/platzguide/scripts/update-ubuntu.sh
 ```
 
-Das Installationsskript richtet Node.js, Abhängigkeiten, Build, `systemd`,
-optional Nginx/PostgreSQL und den Plattform-Admin
+Das Installationsskript richtet Node.js, PostgreSQL, Abhängigkeiten, Build,
+`systemd`, optional Nginx und den Plattform-Admin
 `admin@schellenberger.biz` ein. Das Admin-Passwort wird während der
 Installation abgefragt oder per `ADMIN_PASSWORD=...` gesetzt.
 
