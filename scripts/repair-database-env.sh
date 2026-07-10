@@ -13,8 +13,23 @@ fail() { printf '\033[1;31m[FEHLER]\033[0m %s\n' "$*" >&2; exit 1; }
 
 [[ "${EUID}" -eq 0 ]] || fail "Bitte mit root-Rechten starten: sudo bash scripts/repair-database-env.sh"
 [[ -f "${APP_DIR}/.env.local" ]] || fail ".env.local fehlt in ${APP_DIR}"
-command -v psql >/dev/null 2>&1 || fail "psql fehlt. Bitte PostgreSQL installieren."
-id postgres >/dev/null 2>&1 || fail "PostgreSQL-Systembenutzer fehlt."
+
+install_postgres_if_missing() {
+  if command -v psql >/dev/null 2>&1 && id postgres >/dev/null 2>&1; then
+    return
+  fi
+  command -v apt-get >/dev/null 2>&1 || fail "psql fehlt und apt-get ist nicht verfügbar. Bitte PostgreSQL installieren."
+  log "PostgreSQL fehlt. Installiere PostgreSQL und Client ..."
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get update
+  apt-get install -y postgresql postgresql-client openssl
+  systemctl enable --now postgresql
+  command -v psql >/dev/null 2>&1 || fail "psql fehlt nach Installation weiterhin."
+  id postgres >/dev/null 2>&1 || fail "PostgreSQL-Systembenutzer fehlt nach Installation weiterhin."
+  ok "PostgreSQL installiert."
+}
+
+install_postgres_if_missing
 
 generate_password() {
   openssl rand -base64 24 | tr -d '\n'

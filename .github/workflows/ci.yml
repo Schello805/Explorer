@@ -11,11 +11,26 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: platzguide
+          POSTGRES_PASSWORD: platzguide-ci
+          POSTGRES_DB: platzguide_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U platzguide -d platzguide_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       NEXT_PUBLIC_APP_REVISION: ${{ github.ref_name }}.${{ github.run_number }}
       NEXT_PUBLIC_GITHUB_URL: https://github.com/Schello805/Explorer
       AUTH_SECRET: ci-only-secret-with-at-least-thirty-two-characters
       ADMIN_EMAIL: admin@schellenberger.biz
+      DATABASE_URL: postgresql://platzguide:platzguide-ci@127.0.0.1:5432/platzguide_ci
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -23,7 +38,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Run PostgreSQL migrations
+        run: APP_DIR="$PWD" bash scripts/migrate-postgres.sh
       - run: npm run verify
+      - name: Verify PostgreSQL RLS
+        run: bash scripts/test-postgres-rls.sh
 
       - name: Store revision metadata
         run: |

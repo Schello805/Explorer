@@ -8,6 +8,10 @@ BRANCH="${BRANCH:-main}"
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/platzguide}"
 RUN_VERIFY="${RUN_VERIFY:-true}"
 FORCE_REBUILD="${FORCE_REBUILD:-false}"
+RUN_SMOKE_TEST="${RUN_SMOKE_TEST:-true}"
+RUN_DEPLOY_HEALTHCHECK="${RUN_DEPLOY_HEALTHCHECK:-true}"
+BACKUP_DATABASE_BEFORE_MIGRATION="${BACKUP_DATABASE_BEFORE_MIGRATION:-true}"
+AUTO_REPAIR_DATABASE_ENV="${AUTO_REPAIR_DATABASE_ENV:-true}"
 
 log() { printf '\033[1;34m[INFO]\033[0m %s\n' "$*"; }
 ok() { printf '\033[1;32m[OK]\033[0m %s\n' "$*"; }
@@ -16,17 +20,16 @@ fail() { printf '\033[1;31m[FEHLER]\033[0m %s\n' "$*" >&2; exit 1; }
 
 OLD_REV=""
 NEW_REV=""
+RUNTIME_BACKUP_PATH=""
+DB_BACKUP_PATH=""
+ROLLBACK_IN_PROGRESS="false"
 
 on_error() {
   printf '\n\033[1;31m[FEHLER]\033[0m Update abgebrochen.\n' >&2
-  if [[ -n "${OLD_REV}" ]]; then
-    printf 'Rollback bei Bedarf:\n' >&2
-    printf '  cd %s\n' "${APP_DIR}" >&2
-    printf '  git checkout %s\n' "${OLD_REV}" >&2
-    printf '  npm ci\n' >&2
-    printf '  npm run build\n' >&2
-    printf '  systemctl restart %s\n' "${APP_NAME}" >&2
+  if [[ "${ROLLBACK_IN_PROGRESS}" != "true" && -n "${OLD_REV}" ]]; then
+    rollback || true
   fi
+  [[ -n "${DB_BACKUP_PATH}" ]] && printf 'Datenbank-Backup vor Migration: %s\n' "${DB_BACKUP_PATH}" >&2
   exit 1
 }
 trap on_error ERR
@@ -58,6 +61,7 @@ backup_runtime_files() {
   [[ -d "${APP_DIR}/.data" ]] && cp -a "${APP_DIR}/.data" "${backup_path}/.data"
   git -C "${APP_DIR}" rev-parse HEAD > "${backup_path}/revision.txt"
   chmod -R go-rwx "${backup_path}"
+  RUNTIME_BACKUP_PATH="${backup_path}"
   ok "Backup erstellt."
 }
 
@@ -72,6 +76,14 @@ require_environment() {
   [[ -n "$(env_value DATABASE_URL)" ]] || missing+=("DATABASE_URL")
   [[ -n "$(env_value AUTH_SECRET)" ]] || missing+=("AUTH_SECRET")
   [[ -n "$(env_value ADMIN_PASSWORD_HASH)" ]] || missing+=("ADMIN_PASSWORD_HASH")
+  if [[ "${AUTO_REPAIR_DATABASE_ENV}" == "true" && "${missing[*]}" == "DATABASE_URL" && -f "${APP_DIR}/scripts/repair-database-env.sh" ]]; then
+    warn "DATABASE_URL fehlt. Starte automatische PostgreSQL-Reparatur ..."
+    APP_DIR="${APP_DIR}" APP_USER="${APP_USER}" bash "${APP_DIR}/scripts/repair-database-env.sh"
+    missing=()
+    [[ -n "$(env_value DATABASE_URL)" ]] || missing+=("DATABASE_URL")
+    [[ -n "$(env_value AUTH_SECRET)" ]] || missing+=("AUTH_SECRET")
+    [[ -n "$(env_value ADMIN_PASSWORD_HASH)" ]] || missing+=("ADMIN_PASSWORD_HASH")
+  fi
   if (( ${#missing[@]} > 0 )); then
     printf '\033[1;31m[FEHLER]\033[0m Produktionsumgebung unvollständig: %s\n' "${missing[*]}" >&2
     printf 'Wiederherstellung prüfen:\n' >&2
@@ -137,6 +149,59 @@ run_migrations() {
   DATABASE_URL="${url}" APP_DIR="${APP_DIR}" bash "${APP_DIR}/scripts/migrate-postgres.sh"
 }
 
+backup_database() {
+  local url before after
+  [[ "${BACKUP_DATABASE_BEFORE_MIGRATION}" == "true" ]] || return 0
+  url="$(env_value DATABASE_URL)"
+  [[ -n "${url}" ]] || fail "DATABASE_URL fehlt; Datenbank-Backup nicht möglich."
+  [[ -f "${APP_DIR}/scripts/backup-postgres.sh" ]] || fail "backup-postgres.sh fehlt."
+  before="$(find "${BACKUP_DIR}" -maxdepth 1 -name "${APP_NAME}-*.dump" -print 2>/dev/null | sort | tail -n 1 || true)"
+  log "Erstelle PostgreSQL-Backup vor Migration ..."
+  DATABASE_URL="${url}" BACKUP_DIR="${BACKUP_DIR}" APP_NAME="${APP_NAME}" bash "${APP_DIR}/scripts/backup-postgres.sh"
+  after="$(find "${BACKUP_DIR}" -maxdepth 1 -name "${APP_NAME}-*.dump" -print 2>/dev/null | sort | tail -n 1 || true)"
+  DB_BACKUP_PATH="${after:-${before}}"
+}
+
+run_post_deploy_checks() {
+  if [[ "${RUN_DEPLOY_HEALTHCHECK}" == "true" && -f "${APP_DIR}/scripts/deploy-healthcheck.sh" ]]; then
+    log "Führe Deploy-Healthcheck aus ..."
+    APP_DIR="${APP_DIR}" bash "${APP_DIR}/scripts/deploy-healthcheck.sh"
+    return
+  fi
+  if [[ "${RUN_SMOKE_TEST}" == "true" && -f "${APP_DIR}/scripts/smoke-test.sh" ]]; then
+    log "Führe Smoke-Test aus ..."
+    APP_DIR="${APP_DIR}" bash "${APP_DIR}/scripts/smoke-test.sh"
+    return
+  fi
+  health_check
+}
+
+rollback() {
+  ROLLBACK_IN_PROGRESS="true"
+  warn "Starte automatischen Rollback auf ${OLD_REV:0:8} ..."
+  if [[ -n "${RUNTIME_BACKUP_PATH}" && -f "${RUNTIME_BACKUP_PATH}/.env.local" ]]; then
+    cp "${RUNTIME_BACKUP_PATH}/.env.local" "${APP_DIR}/.env.local"
+    chown "${APP_USER}:${APP_USER}" "${APP_DIR}/.env.local"
+    chmod 600 "${APP_DIR}/.env.local"
+    ok ".env.local aus Backup wiederhergestellt."
+  fi
+  git -C "${APP_DIR}" checkout "${OLD_REV}"
+  sudo -u "${APP_USER}" bash -lc "cd '${APP_DIR}' && npm ci"
+  sudo -u "${APP_USER}" bash -lc "cd '${APP_DIR}' && npm run build"
+  systemctl restart "${APP_NAME}.service"
+  sleep 2
+  if [[ -f "${APP_DIR}/scripts/smoke-test.sh" ]]; then
+    APP_DIR="${APP_DIR}" bash "${APP_DIR}/scripts/smoke-test.sh"
+  else
+    local rollback_port
+    rollback_port="$(env_value PORT)"
+    rollback_port="${rollback_port:-3000}"
+    curl -fsS "http://127.0.0.1:${rollback_port}/api/health" >/dev/null \
+      || fail "Rollback ausgeführt, aber Healthcheck schlägt fehl. Prüfe journalctl -u ${APP_NAME} -n 120 --no-pager"
+  fi
+  ok "Rollback erfolgreich."
+}
+
 install_and_build() {
   log "Installiere Abhängigkeiten mit npm ci ..."
   sudo -u "${APP_USER}" bash -lc "cd '${APP_DIR}' && npm ci"
@@ -194,19 +259,21 @@ main() {
   require_environment
   if fetch_update; then
     require_environment
+    backup_database
     run_migrations
     install_and_build
     write_revision
     restart_service
-    health_check
+    run_post_deploy_checks
     ok "Update abgeschlossen."
   elif needs_rebuild; then
     warn "Code ist bereits aktuell, aber Build/Revision passt nicht. Baue neu ..."
+    backup_database
     run_migrations
     install_and_build
     write_revision
     restart_service
-    health_check
+    run_post_deploy_checks
     ok "Rebuild abgeschlossen."
   else
     ok "Kein Update notwendig."

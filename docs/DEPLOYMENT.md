@@ -170,8 +170,10 @@ sudo bash scripts/repair-nginx.sh
 ## Ubuntu-Updates
 
 Das Updatescript erstellt ein Backup von `.env.local` und `.data`, prüft den
-Git-Arbeitsbaum, lädt Updates per Fast-Forward, baut die App neu, aktualisiert
-`NEXT_PUBLIC_APP_REVISION` und startet den Service neu.
+Git-Arbeitsbaum, prüft die Produktionsumgebung, erstellt vor Migrationen ein
+PostgreSQL-Backup, führt Migrationen aus, baut die App neu, startet den Service,
+führt Smoke-/Healthchecks aus und rollt bei Fehlern automatisch auf die vorige
+Git-Revision zurück.
 
 ```bash
 sudo bash /opt/platzguide/scripts/update-ubuntu.sh
@@ -185,6 +187,12 @@ Optionen:
 - `FORCE_REBUILD=true`, wenn Code schon gepullt wurde, aber Build/Service neu erstellt werden soll
 - `RUN_VERIFY=false` für nur `npm run build` statt vollständiger Prüfung
 - `BACKUP_DIR=/var/backups/platzguide`
+- `RUN_SMOKE_TEST=true`: prüft `/api/health`, Startseite, Admin-Loginseite,
+  Manifest und Hinweise
+- `RUN_DEPLOY_HEALTHCHECK=true`: führt Smoke-Test plus optionalen Admin-Login aus
+- `DEPLOY_ADMIN_PASSWORD=...`: aktiviert echten Admin-Login-Test beim Deployment
+- `BACKUP_DATABASE_BEFORE_MIGRATION=true`: PostgreSQL-Dump vor Migrationen
+- `AUTO_REPAIR_DATABASE_ENV=true`: fehlende lokale PostgreSQL-URL automatisch reparieren
 
 Admin-Passwort zurücksetzen:
 
