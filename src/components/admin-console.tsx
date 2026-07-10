@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Activity, Bell, BookOpen, CalendarDays, Caravan, ChevronRight, CircleAlert, Download, FileText, Gift, Globe2, ImageIcon, LayoutDashboard, MapPinned, Menu, MessageSquareWarning, Palette, Plus, Search, Settings, ShieldCheck, Trash2, Users, X } from "lucide-react";
+import { Activity, Bell, BookOpen, CalendarDays, Caravan, CheckCircle2, ChevronRight, Download, FileText, Gift, Globe2, ImageIcon, LayoutDashboard, MapPinned, Menu, MessageSquareWarning, Palette, Plus, Search, Settings, ShieldCheck, Trash2, Users, X } from "lucide-react";
 import type { Category, EventItem, GuestGuideItem, MediaAsset, Reward, Station, Tenant, Tour } from "@/lib/types";
 import { cn, statusLabel } from "@/lib/utils";
 import { StationLocationPicker } from "@/components/station-location-picker";
@@ -94,7 +94,7 @@ export function AdminConsole({ tenant, tenants, adminEmail }: { tenant: Tenant; 
         <button aria-label="Menü öffnen" className="shrink-0 lg:hidden" onClick={() => setMenuOpen(true)}><Menu /></button><div className="hidden min-w-0 sm:block"><p className="text-xs font-bold uppercase tracking-widest text-[#1b302a]/40">Plattformverwaltung</p><h1 className="truncate font-display text-2xl">{navigation.find((item) => item.id === section)?.label}</h1></div><div className="flex min-w-0 flex-1 justify-end gap-2"><select aria-label="Mandant wählen" value={currentTenant.id} onChange={(event) => { const nextTenant = availableTenants.find((item) => item.id === event.target.value); if (!nextTenant) return; setCurrentTenant(nextTenant); setStations(nextTenant.stations); setEditing(null); }} className="min-w-0 max-w-[46vw] rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm font-bold"><option value="" disabled>Mandant wählen</option>{availableTenants.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><a href="/" target="_blank" className="rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm font-bold"><Globe2 size={16} className="sm:mr-2 sm:inline" /><span className="hidden sm:inline">Besucheransicht</span></a><button aria-label="Benachrichtigungen" className="rounded-xl border border-black/10 bg-white p-2.5"><Bell size={18} /></button></div>
       </header>
       <div className="mx-auto min-w-0 w-[90%] py-5">
-        {section === "overview" && <Overview key={currentTenant.id} tenant={currentTenant} stationCount={stations.filter((station) => !station.isTemplate).length} templateCount={stations.filter((station) => station.isTemplate).length} onNavigate={setSection} />}
+        {section === "overview" && <Overview key={currentTenant.id} tenant={currentTenant} stations={stations} stationCount={stations.filter((station) => !station.isTemplate).length} templateCount={stations.filter((station) => station.isTemplate).length} onNavigate={setSection} />}
         {section === "stations" && <Stations key={currentTenant.id} tenant={currentTenant} stations={stations} onEdit={setEditing} onRemove={removeStation} onCreate={() => setEditing(blankStation(currentTenant.id))} onImport={importStations} />}
         {section === "categories" && <Categories key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "tenants" && <TenantSettings key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
@@ -116,8 +116,52 @@ export function AdminConsole({ tenant, tenants, adminEmail }: { tenant: Tenant; 
   </div>;
 }
 
-function Overview({ tenant, stationCount, templateCount, onNavigate }: { tenant: Tenant; stationCount: number; templateCount: number; onNavigate: (id: string) => void }) {
-  return <div className="animate-enter"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-sm text-[#1b302a]/55">Guten Tag, Michael.</p><h2 className="mt-1 font-display text-4xl">Alles im grünen Bereich.</h2></div><p className="flex items-center gap-2 text-sm font-bold text-emerald-700"><span className="h-2 w-2 rounded-full bg-emerald-500" /> System betriebsbereit</p></div><div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><Metric label="Campingplätze" value="1" note="Aktiver Mandant" icon={<Caravan />} /><Metric label="Stationen" value={String(stationCount)} note={`${templateCount} Vorlagen`} icon={<MapPinned />} /><Metric label="Besuche heute" value="—" note="Tracking deaktiviert" icon={<Activity />} /><Metric label="Admins" value="1" note="Plattformweit" icon={<Users />} /></div><div className="mt-8 grid gap-6 xl:grid-cols-[1.4fr_1fr]"><section className="rounded-2xl bg-white p-6 shadow-sm"><div className="flex items-center justify-between"><h3 className="font-display text-2xl">Dein Campingplatz</h3><button onClick={() => onNavigate("tenants")} className="text-sm font-bold text-[#286551]">Verwalten <ChevronRight size={16} className="inline" /></button></div><div className="mt-5 flex items-center gap-4 rounded-2xl bg-[#eff3ec] p-4"><span className="grid h-14 w-14 place-items-center rounded-2xl bg-white p-1.5 shadow-sm"><Image src={platformLogo} alt="Platzguide" width={44} height={44} className="h-full w-full object-contain" /></span><div><p className="font-bold">{tenant.name}</p><p className="text-sm text-[#1b302a]/50">{tenant.slug}.app-domain.de</p></div><span className="ml-auto rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">Aktiv</span></div></section><section className="rounded-2xl bg-[#173c32] p-6 text-white"><CircleAlert className="text-[#e8b65f]" /><h3 className="mt-5 font-display text-2xl">Vor dem Livegang</h3><p className="mt-2 text-sm leading-6 text-white/55">Datenbank, Passwort-Hash, Domain und rechtlich geprüfte Texte hinterlegen.</p><button onClick={() => onNavigate("security")} className="mt-5 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-[#173c32]">Checkliste öffnen</button></section></div></div>;
+function Overview({ tenant, stations, stationCount, templateCount, onNavigate }: { tenant: Tenant; stations: Station[]; stationCount: number; templateCount: number; onNavigate: (id: string) => void }) {
+  return <div className="animate-enter">
+    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+      <div><p className="text-sm text-[#1b302a]/55">Guten Tag, Michael.</p><h2 className="mt-1 font-display text-4xl">Alles im grünen Bereich.</h2></div>
+      <p className="flex items-center gap-2 text-sm font-bold text-emerald-700"><span className="h-2 w-2 rounded-full bg-emerald-500" /> System betriebsbereit</p>
+    </div>
+    <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <Metric label="Campingplätze" value="1" note="Aktiver Mandant" icon={<Caravan />} />
+      <Metric label="Stationen" value={String(stationCount)} note={`${templateCount} Vorlagen`} icon={<MapPinned />} />
+      <Metric label="Besuche heute" value="—" note="Tracking deaktiviert" icon={<Activity />} />
+      <Metric label="Admins" value="1" note="Plattformweit" icon={<Users />} />
+    </div>
+    <div className="mt-8 grid gap-6 xl:grid-cols-[1.2fr_.8fr]">
+      <SetupAssistant tenant={tenant} stations={stations} onNavigate={onNavigate} />
+      <section className="rounded-2xl bg-white p-6 shadow-sm">
+        <div className="flex items-center justify-between"><h3 className="font-display text-2xl">Dein Campingplatz</h3><button onClick={() => onNavigate("tenants")} className="text-sm font-bold text-[#286551]">Verwalten <ChevronRight size={16} className="inline" /></button></div>
+        <div className="mt-5 flex items-center gap-4 rounded-2xl bg-[#eff3ec] p-4"><span className="grid h-14 w-14 place-items-center rounded-2xl bg-white p-1.5 shadow-sm"><Image src={platformLogo} alt="Platzguide" width={44} height={44} className="h-full w-full object-contain" /></span><div className="min-w-0"><p className="truncate font-bold">{tenant.name}</p><p className="truncate text-sm text-[#1b302a]/50">{tenant.slug}.app-domain.de</p></div><span className="ml-auto rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">Aktiv</span></div>
+      </section>
+    </div>
+  </div>;
+}
+
+function SetupAssistant({ tenant, stations, onNavigate }: { tenant: Tenant; stations: Station[]; onNavigate: (id: string) => void }) {
+  const activeStations = stations.filter((station) => !station.isTemplate);
+  const steps = [
+    { id: "tenants", label: "Kontakt & Domain", done: Boolean(tenant.contact.email && tenant.hosts.length) },
+    { id: "branding", label: "Logo & Farben", done: Boolean(tenant.name && tenant.theme.primary && tenant.theme.surface) },
+    { id: "tenants", label: "Karte oder Platzplan", done: tenant.map.configured !== false },
+    { id: "stations", label: "Stationen aktivieren", done: activeStations.length > 0 },
+    { id: "legal", label: "Rechtstexte prüfen", done: Boolean(tenant.legal.imprint && tenant.legal.privacy && tenant.legal.cookies) },
+    { id: "integrations", label: "SMTP & Module prüfen", done: Boolean(tenant.integrations.mail.smtpHost || tenant.email.senderEmail) }
+  ];
+  const doneCount = steps.filter((step) => step.done).length;
+  return <section className="rounded-2xl bg-[#173c32] p-5 text-white shadow-sm sm:p-6">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div><p className="text-xs font-bold uppercase tracking-widest text-[#e8b65f]">Einrichtung</p><h3 className="mt-2 font-display text-3xl">Livegang-Assistent</h3><p className="mt-2 text-sm leading-6 text-white/60">{doneCount} von {steps.length} Punkten erledigt.</p></div>
+      <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold">{Math.round(doneCount / steps.length * 100)}%</span>
+    </div>
+    <div className="mt-5 space-y-2">
+      {steps.map((step) => <button key={step.label} onClick={() => onNavigate(step.id)} className="flex w-full items-center justify-between gap-3 rounded-xl bg-white/7 px-3 py-3 text-left text-sm transition hover:bg-white/12">
+        <span className="flex min-w-0 items-center gap-3"><CheckCircle2 size={18} className={cn("shrink-0", step.done ? "text-emerald-300" : "text-white/30")} /><span className="truncate font-bold">{step.label}</span></span>
+        <ChevronRight size={16} className="shrink-0 text-white/45" />
+      </button>)}
+    </div>
+    <p className="mt-4 rounded-xl bg-white/8 p-3 text-xs leading-5 text-white/60">Vorlagen bleiben für Besucher unsichtbar, bis sie in „Stationen“ aktiviert werden.</p>
+  </section>;
 }
 
 function Metric({ label, value, note, icon }: { label: string; value: string; note: string; icon: React.ReactNode }) { return <div className="rounded-2xl bg-white p-5 shadow-sm"><div className="flex justify-between text-[#286551]"><p className="text-xs font-bold uppercase tracking-widest text-[#1b302a]/40">{label}</p>{icon}</div><p className="mt-4 font-display text-4xl">{value}</p><p className="mt-1 text-xs text-[#1b302a]/45">{note}</p></div>; }

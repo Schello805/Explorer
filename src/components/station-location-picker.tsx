@@ -33,6 +33,7 @@ export function StationLocationPicker({ mapConfig, longitude, latitude, onChange
     longitude || latitude ? [longitude, latitude] : mapConfig.center
   );
   const [locating, setLocating] = useState(false);
+  const [locationMessage, setLocationMessage] = useState("");
 
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
   useEffect(() => {
@@ -74,15 +75,29 @@ export function StationLocationPicker({ mapConfig, longitude, latitude, onChange
   }, [mapConfig]);
 
   function useCurrentLocation() {
-    if (!navigator.geolocation) return;
+    setLocationMessage("");
+    if (!navigator.geolocation) {
+      setLocationMessage("Dieses Gerät unterstützt keine Standortfreigabe.");
+      return;
+    }
+    if (!window.isSecureContext) {
+      setLocationMessage("GPS funktioniert auf iOS und Android nur über HTTPS oder lokal auf localhost.");
+      return;
+    }
     setLocating(true);
     navigator.geolocation.getCurrentPosition(({ coords }) => {
       const next = { longitude: coords.longitude, latitude: coords.latitude };
       markerRef.current?.setLngLat([next.longitude, next.latitude]);
       mapRef.current?.flyTo({ center: [next.longitude, next.latitude], zoom: 19 });
       onChangeRef.current(next);
+      setLocationMessage(coords.accuracy > 50 ? `Standort gefunden, Genauigkeit ca. ${Math.round(coords.accuracy)} m.` : "Standort gefunden.");
       setLocating(false);
-    }, () => setLocating(false), { enableHighAccuracy: true, timeout: 15000 });
+    }, (error) => {
+      if (error.code === error.PERMISSION_DENIED) setLocationMessage("Standort wurde nicht freigegeben. Bitte Browser-Berechtigung prüfen.");
+      else if (error.code === error.TIMEOUT) setLocationMessage("Standort konnte nicht schnell genug ermittelt werden. Bitte erneut versuchen.");
+      else setLocationMessage("Standort konnte nicht ermittelt werden.");
+      setLocating(false);
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 30_000 });
   }
 
   return <section>
@@ -98,6 +113,7 @@ export function StationLocationPicker({ mapConfig, longitude, latitude, onChange
       <label className="text-xs font-bold text-black/55">Breitengrad<input type="number" step="any" value={latitude} onChange={(event) => onChange({ latitude: Number(event.target.value), longitude })} className="mt-1 w-full rounded-xl border p-3 text-sm text-black" /></label>
       <label className="text-xs font-bold text-black/55">Längengrad<input type="number" step="any" value={longitude} onChange={(event) => onChange({ longitude: Number(event.target.value), latitude })} className="mt-1 w-full rounded-xl border p-3 text-sm text-black" /></label>
     </div>
+    {locationMessage && <p className="mt-2 rounded-xl bg-[#f7f7f4] p-3 text-xs font-bold leading-5 text-black/60">{locationMessage}</p>}
     <p className="mt-2 flex items-start gap-2 text-xs font-normal leading-5 text-black/45"><MapPin size={14} className="mt-0.5 shrink-0" /> GPS funktioniert am besten direkt an der Station und auf einem Smartphone.</p>
   </section>;
 }

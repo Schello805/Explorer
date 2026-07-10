@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Layers3, Map as MapIcon, Satellite } from "lucide-react";
+import { AlertCircle, Layers3, LocateFixed, Map as MapIcon, Satellite } from "lucide-react";
 import maplibregl from "maplibre-gl";
 import type { StyleSpecification } from "maplibre-gl";
 import type { Station, Tenant } from "@/lib/types";
@@ -35,10 +35,13 @@ export function CampMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import("maplibre-gl").Map | null>(null);
   const markersRef = useRef<import("maplibre-gl").Marker[]>([]);
+  const userMarkerRef = useRef<import("maplibre-gl").Marker | null>(null);
   const [layer, setLayer] = useState<Layer>("map");
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const [tilesVisible, setTilesVisible] = useState(false);
+  const [locationMessage, setLocationMessage] = useState("");
+  const [locating, setLocating] = useState(false);
   const validStations = useMemo(() => stations.filter(hasCoordinates), [stations]);
   const center = useMemo<[number, number]>(() => hasLngLat(tenant.map.center) ? tenant.map.center : stationCenter(validStations) ?? [10.5605, 49.1643], [tenant.map.center, validStations]);
   const zoom = Number.isFinite(tenant.map.zoom) ? tenant.map.zoom : 16;
@@ -62,10 +65,6 @@ export function CampMap({
         attributionControl: false
       });
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
-      map.addControl(new maplibregl.GeolocateControl({
-        positionOptions: { enableHighAccuracy: true },
-        trackUserLocation: true
-      }), "bottom-right");
       map.addControl(new maplibregl.AttributionControl({
         compact: true,
         customAttribution: "© OpenStreetMap-Mitwirkende · OpenFreeMap"
@@ -137,8 +136,10 @@ export function CampMap({
       window.clearTimeout(fallbackTimer);
       window.clearTimeout(tileTimer);
       markersRef.current.forEach((marker) => marker.remove());
+      userMarkerRef.current?.remove();
       mapRef.current?.remove();
       mapRef.current = null;
+      userMarkerRef.current = null;
     };
   }, [tenant, validStations, onSelect, center, zoom]);
 
@@ -153,6 +154,35 @@ export function CampMap({
     if (map.getLayer("aerial")) map.setLayoutProperty("aerial", "visibility", next === "aerial" ? "visible" : "none");
     if (map.getLayer("site-plan")) map.setLayoutProperty("site-plan", "visibility", next === "sitePlan" ? "visible" : "none");
     setLayer(next);
+  }
+
+  function locateVisitor() {
+    const map = mapRef.current;
+    setLocationMessage("");
+    if (!map) return;
+    if (!("geolocation" in navigator)) {
+      setLocationMessage("Dieses Gerät unterstützt keine Standortfreigabe.");
+      return;
+    }
+    if (!window.isSecureContext) {
+      setLocationMessage("GPS funktioniert auf iOS und Android nur über HTTPS oder lokal auf localhost.");
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(({ coords }) => {
+      setLocating(false);
+      setLocationMessage(coords.accuracy > 50 ? `Standort gefunden, Genauigkeit ca. ${Math.round(coords.accuracy)} m.` : "Standort gefunden.");
+      map.flyTo({ center: [coords.longitude, coords.latitude], zoom: Math.max(zoom, 18) });
+      const element = document.createElement("div");
+      element.className = "h-5 w-5 rounded-full border-4 border-white bg-blue-500 shadow-[0_0_0_10px_rgba(59,130,246,.18)]";
+      userMarkerRef.current?.remove();
+      userMarkerRef.current = new maplibregl.Marker({ element }).setLngLat([coords.longitude, coords.latitude]).addTo(map);
+    }, (error) => {
+      setLocating(false);
+      if (error.code === error.PERMISSION_DENIED) setLocationMessage("Standort wurde nicht freigegeben. Bitte Browser-Berechtigung prüfen.");
+      else if (error.code === error.TIMEOUT) setLocationMessage("Standort konnte nicht schnell genug ermittelt werden. Bitte erneut versuchen.");
+      else setLocationMessage("Standort konnte nicht ermittelt werden.");
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 30_000 });
   }
 
   const choices = [
@@ -176,6 +206,10 @@ export function CampMap({
     </button>)}
     {!ready && <div className="absolute inset-0 grid place-items-center bg-[#dce8d0] text-sm font-bold text-[#18332b]/55">Karte wird geladen …</div>}
     {choices.length > 1 && <div className="glass absolute left-3 top-3 z-10 flex rounded-xl p-1 shadow-lg">{choices.map((choice) => <button key={choice.id} onClick={() => switchLayer(choice.id)} className={cn("flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold", layer === choice.id && "bg-[var(--primary)] text-white")}><choice.icon size={15} />{choice.label}</button>)}</div>}
+    <div className="absolute bottom-3 left-3 z-10 max-w-[calc(100%-1.5rem)]">
+      <button type="button" onClick={locateVisitor} disabled={!ready || locating} className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-[#18332b] shadow-lg disabled:opacity-60"><LocateFixed size={15} className="mr-1.5 inline" />{locating ? "Standort wird gesucht …" : "Mein Standort"}</button>
+      {locationMessage && <p className="mt-2 max-w-xs rounded-xl bg-white/95 px-3 py-2 text-xs font-bold leading-5 text-[#18332b] shadow-lg"><AlertCircle size={14} className="mr-1 inline text-[#c9653d]" />{locationMessage}</p>}
+    </div>
   </div>;
 }
 
