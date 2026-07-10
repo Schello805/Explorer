@@ -19,14 +19,14 @@ bleiben je Mandant getrennt.
 - PWA-Manifest, Service Worker und Offline-Fallback
 - Separater Adminbereich unter `/admin`
 - Stationseditor sowie Einstellungen für Branding, Module und Rechtstexte
-- Persistente Stationsänderungen mit PostgreSQL-Adapter und lokaler Entwicklungsablage
+- Persistente Stationsänderungen mit PostgreSQL-Adapter
 - CSV-/XLSX-Import mit Vorschau und Zeilenvalidierung
 - Persistente Verwaltung von Kategorien, Medien, Rechtstexten, Branding,
   Kartenquellen, E-Mail, Tracking und Funktionsmodulen
 - Optionale Module: Veranstaltungen, Rundgänge, Platzguide-Pass, Feedback,
   Check-ins, Statusanzeigen und digitale Gästemappe
 - Healthcheck unter `/api/health` für Monitoring und Deployments
-- E-Mail-Verifikation per Webhook oder lokaler Mail-Outbox vorbereitet
+- E-Mail-Verifikation per Webhook oder Mailprovider vorbereitet
 - Mailprovider: Webhook, Resend, Brevo oder Mailgun
 - Captcha: Cloudflare Turnstile oder hCaptcha
 - Uploads mit Tenant-Pfad, Größenlimit und MIME-Prüfung
@@ -34,31 +34,19 @@ bleiben je Mandant getrennt.
 - Ein Plattform-Admin: `admin@schellenberger.biz`
 - Revisionsnummer im Footer, bei jedem GitHub-Actions-Lauf automatisch erhöht
 
-## Schnellstart
-
-Voraussetzungen: Node.js 22 und npm.
+## Installation
 
 ```bash
-npm install
-cp .env.example .env.local
-npm run dev
+sudo bash scripts/install-ubuntu.sh
+sudo bash /opt/platzguide/scripts/update-ubuntu.sh
 ```
 
-Danach:
+Das Installationsskript richtet Node.js, Abhängigkeiten, Build, `systemd`,
+optional Nginx/PostgreSQL und den Plattform-Admin
+`admin@schellenberger.biz` ein. Das Admin-Passwort wird während der
+Installation abgefragt oder per `ADMIN_PASSWORD=...` gesetzt.
 
-- Besucher-App: `http://localhost:3000`
-- Beispiel-Subdomain: `http://sonnental.localhost:3000`
-- Admin: `http://localhost:3000/admin`
-- Lokales Entwicklungspasswort: `platzguide-admin`
-
-Wenn die Startseite lokal nicht lädt: `DATABASE_URL` in `.env.local` leer
-lassen, solange keine lokale PostgreSQL-Datenbank läuft.
-
-Für Produktion muss `ADMIN_PASSWORD_HASH` gesetzt werden:
-
-```bash
-node -e "require('bcryptjs').hash(process.argv[1], 12).then(console.log)" "DEIN-SEHR-SICHERES-PASSWORT"
-```
+Details und Optionen stehen in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 ## Dokumentation
 
@@ -83,31 +71,6 @@ Umgebungsvariable gemappt werden.
   nötig.
 - Mail, Captcha, Upload-Limit und Self-Service werden per Server-Konfiguration
   gesetzt; Details stehen in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
-
-## Qualität
-
-```bash
-npm run lint
-npm test
-npm run build
-npm run verify
-```
-
-## Ubuntu-Server
-
-Für eigene Ubuntu-/Debian-Server gibt es geprüfte Skripte:
-
-```bash
-sudo bash scripts/install-ubuntu.sh
-sudo bash /opt/platzguide/scripts/update-ubuntu.sh
-```
-
-Das Installationsskript fragt das Admin-Passwort für
-`admin@schellenberger.biz` ab oder nutzt `ADMIN_PASSWORD=...` für
-automatisierte Setups. Nach erfolgreichem Abschluss laufen `systemd`, Build und
-`/api/health`.
-
-Details und Optionen stehen in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 ## Mitwirken
 
