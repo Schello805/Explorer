@@ -196,6 +196,10 @@ Optionen:
 - `BACKUP_DATABASE_BEFORE_MIGRATION=true`: PostgreSQL-Dump vor Migrationen
 - `AUTO_REPAIR_DATABASE_ENV=true`: fehlende lokale PostgreSQL-URL automatisch reparieren
 
+Bei einer frischen, leeren Installation ohne Mandanten überspringt das
+Updatescript den PostgreSQL-Dump vor Migrationen automatisch. Sobald mindestens
+ein Mandant existiert, wird vor Migrationen wieder ein Datenbank-Backup erzeugt.
+
 Admin-Passwort zurücksetzen:
 
 ```bash

@@ -150,11 +150,23 @@ run_migrations() {
 }
 
 backup_database() {
-  local url before after
+  local url before after tenants_table_exists tenant_count
   [[ "${BACKUP_DATABASE_BEFORE_MIGRATION}" == "true" ]] || return 0
   url="$(env_value DATABASE_URL)"
   [[ -n "${url}" ]] || fail "DATABASE_URL fehlt; Datenbank-Backup nicht möglich."
   [[ -f "${APP_DIR}/scripts/backup-postgres.sh" ]] || fail "backup-postgres.sh fehlt."
+  if command -v psql >/dev/null 2>&1; then
+    tenants_table_exists="$(PGOPTIONS="-c app.platform_admin=true" psql "${url}" -At -c "SELECT to_regclass('public.tenants') IS NOT NULL" 2>/dev/null || printf "unknown")"
+    if [[ "${tenants_table_exists}" != "t" ]]; then
+      ok "Datenbank enthält noch keine Mandantentabelle; PostgreSQL-Backup vor Migration wird übersprungen."
+      return 0
+    fi
+    tenant_count="$(PGOPTIONS="-c app.platform_admin=true" psql "${url}" -At -c "SELECT count(*) FROM tenants" 2>/dev/null || printf "unknown")"
+    if [[ "${tenant_count}" == "0" ]]; then
+      ok "Datenbank enthält noch keine Mandanten; PostgreSQL-Backup vor Migration wird übersprungen."
+      return 0
+    fi
+  fi
   before="$(find "${BACKUP_DIR}" -maxdepth 1 -name "${APP_NAME}-*.dump" -print 2>/dev/null | sort | tail -n 1 || true)"
   log "Erstelle PostgreSQL-Backup vor Migration ..."
   DATABASE_URL="${url}" BACKUP_DIR="${BACKUP_DIR}" APP_NAME="${APP_NAME}" bash "${APP_DIR}/scripts/backup-postgres.sh"
