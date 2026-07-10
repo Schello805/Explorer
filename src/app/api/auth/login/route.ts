@@ -60,17 +60,29 @@ export async function POST(request: Request) {
   response.cookies.set("platzguide_session", token, {
     httpOnly: true,
     sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecureCookie(request),
     path: "/",
     maxAge: 60 * 60 * 8
   });
   return response;
 }
 
+function shouldUseSecureCookie(request: Request) {
+  if (process.env.AUTH_COOKIE_SECURE === "true") return true;
+  if (process.env.AUTH_COOKIE_SECURE === "false") return false;
+  if (process.env.NEXT_PUBLIC_BASE_URL?.startsWith("https://")) return true;
+  return new URL(request.url).protocol === "https:";
+}
+
 async function getAdminConfig() {
   const fileEnv = await readEnvLocal();
-  const passwordHash = fileEnv.ADMIN_PASSWORD_HASH || process.env.ADMIN_PASSWORD_HASH || "";
-  const email = fileEnv.ADMIN_EMAIL || process.env.ADMIN_EMAIL || "admin@schellenberger.biz";
+  const preferProcessEnv = process.env.PLAYWRIGHT_TEST === "1";
+  const passwordHash = preferProcessEnv
+    ? process.env.ADMIN_PASSWORD_HASH || fileEnv.ADMIN_PASSWORD_HASH || ""
+    : fileEnv.ADMIN_PASSWORD_HASH || process.env.ADMIN_PASSWORD_HASH || "";
+  const email = preferProcessEnv
+    ? process.env.ADMIN_EMAIL || fileEnv.ADMIN_EMAIL || "admin@schellenberger.biz"
+    : fileEnv.ADMIN_EMAIL || process.env.ADMIN_EMAIL || "admin@schellenberger.biz";
   return {
     email,
     passwordHash,

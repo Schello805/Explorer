@@ -9,7 +9,7 @@ import { sendMail } from "@/lib/mail";
 import { createDefaultStationTemplates, tenantDefaults } from "@/lib/tenant-defaults";
 import type { AuditEntry, FeedbackMessage, PrivacyRequest, Station, Tenant } from "@/lib/types";
 
-const dataDirectory = path.join(process.cwd(), ".data");
+const dataDirectory = process.env.PLATZGUIDE_DATA_DIR ?? path.join(process.cwd(), ".data");
 const dataFile = path.join(dataDirectory, "tenants.json");
 
 async function readLocalTenants(): Promise<Tenant[]> {

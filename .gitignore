@@ -1,6 +1,9 @@
 node_modules
 .next
 coverage
+playwright-report
+test-results
+.playwright-data
 .env
 .env.local
 .data
