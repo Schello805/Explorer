@@ -52,7 +52,7 @@ require_root() {
 require_ubuntu() {
   [[ -r /etc/os-release ]] || fail "/etc/os-release nicht gefunden."
   . /etc/os-release
-  [[ "${ID:-}" == "ubuntu" || "${ID_LIKE:-}" == *"ubuntu"* || "${ID_LIKE:-}" == *"debian"* ]] \
+  [[ "${ID:-}" == "ubuntu" || "${ID:-}" == "debian" || "${ID_LIKE:-}" == *"ubuntu"* || "${ID_LIKE:-}" == *"debian"* ]] \
     || fail "Dieses Script ist für Ubuntu/Debian gedacht. Erkannt: ${PRETTY_NAME:-unbekannt}"
   ok "Linux erkannt: ${PRETTY_NAME:-Ubuntu/Debian}"
 }
