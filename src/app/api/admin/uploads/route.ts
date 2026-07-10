@@ -6,7 +6,7 @@ import { canManageTenant, verifyAdminSession } from "@/lib/auth";
 import { resolveTenant } from "@/lib/tenant-resolver";
 import { listTenants, saveTenantConfiguration } from "@/lib/tenant-store";
 
-const fallbackTypes = ["image/png", "image/jpeg", "image/webp", "application/pdf"];
+const fallbackTypes = ["image/png", "image/jpeg", "image/webp", "application/pdf", "video/mp4", "video/webm"];
 
 async function authorize(requestedTenantId?: string) {
   const cookieStore = await cookies();
@@ -38,7 +38,10 @@ export async function POST(request: Request) {
   const allowedTypes = authorization.tenant.integrations.storage.allowedTypes.length
     ? authorization.tenant.integrations.storage.allowedTypes
     : fallbackTypes;
+  const usedBytes = authorization.tenant.media.reduce((sum, asset) => sum + (asset.sizeBytes ?? 0), 0);
+  const limitBytes = authorization.tenant.billing.storageLimitMb * 1024 * 1024;
   if (file.size > maxUploadMb * 1024 * 1024) return NextResponse.json({ error: `Datei ist größer als ${maxUploadMb} MB` }, { status: 413 });
+  if (usedBytes + file.size > limitBytes) return NextResponse.json({ error: `Speicherlimit von ${authorization.tenant.billing.storageLimitMb} MB erreicht` }, { status: 413 });
   if (!allowedTypes.includes(file.type)) return NextResponse.json({ error: "Dateityp ist nicht erlaubt" }, { status: 415 });
 
   const extension = extensionFor(file.type);
@@ -72,9 +75,10 @@ export async function POST(request: Request) {
     tenantId: authorization.tenant.id,
     title: file.name.replace(/\.[^.]+$/, ""),
     url: relativeUrl,
-    type: file.type === "application/pdf" ? "document" as const : "image" as const,
+    type: file.type === "application/pdf" ? "document" as const : file.type.startsWith("video/") ? "video" as const : "image" as const,
     alt: "",
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    sizeBytes: file.size
   };
   await saveTenantConfiguration(authorization.tenant.id, {
     ...authorization.tenant,
@@ -88,5 +92,7 @@ function extensionFor(type: string) {
   if (type === "image/jpeg") return ".jpg";
   if (type === "image/webp") return ".webp";
   if (type === "application/pdf") return ".pdf";
+  if (type === "video/mp4") return ".mp4";
+  if (type === "video/webm") return ".webm";
   return ".bin";
 }

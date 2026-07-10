@@ -58,10 +58,22 @@ Optionale Speicherung für Statistik, Tracking, Push-Mitteilungen oder externe D
   },
   tracking: { enabled: false, provider: "none", measurementId: "" },
   email: { senderName: "Platzguide", senderEmail: "info@schellenberger.biz", replyTo: "info@schellenberger.biz" },
+  billing: {
+    plan: "starter",
+    status: "trial",
+    publicEnabled: false,
+    monthlyPriceCents: 499,
+    yearlyDiscountPercent: 15,
+    storageLimitMb: 100,
+    supportResponseHours: 24,
+    setupServiceBooked: false,
+    setupServicePriceCents: 19900,
+    customDomainEnabled: false
+  },
   integrations: {
     mail: { provider: "smtp", fromEmail: "info@schellenberger.biz", fromName: "Platzguide", smtpHost: "", smtpPort: 587, smtpSecure: false, smtpUser: "" },
     captcha: { provider: "disabled", siteKey: "", requiredForSignup: true },
-    storage: { provider: "local", maxUploadMb: 10, allowedTypes: ["image/png", "image/jpeg", "image/webp", "application/pdf"] },
+    storage: { provider: "local", maxUploadMb: 100, allowedTypes: ["image/png", "image/jpeg", "image/webp", "application/pdf", "video/mp4", "video/webm"] },
     database: { provider: "postgresql", rlsRequired: true },
     backup: { enabled: false, schedule: "daily", retentionDays: 14 }
   },

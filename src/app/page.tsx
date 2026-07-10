@@ -4,7 +4,9 @@ import { Footer } from "@/components/footer";
 import { PlatformLanding } from "@/components/platform-landing";
 import { PwaRegister } from "@/components/pwa-register";
 import { SystemError } from "@/components/system-error";
+import { canManageTenant, verifyAdminSession } from "@/lib/auth";
 import { headers } from "next/headers";
+import { cookies } from "next/headers";
 import { isPlatformHost, resolveTenant } from "@/lib/tenant-resolver";
 import { listTenants } from "@/lib/tenant-store";
 
@@ -35,6 +37,15 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const tenant = queryTenant ?? resolveTenant(host, tenants);
   if (!tenant) {
     return <SystemError title="Campingplatz nicht gefunden" message="Für diese Domain ist noch kein Mandant eingerichtet." />;
+  }
+  if (!tenant.billing.publicEnabled) {
+    const cookieStore = await cookies();
+    const session = await verifyAdminSession(
+      cookieStore.get("platzguide_session")?.value ?? cookieStore.get("explorer_session")?.value
+    );
+    if (!session || !canManageTenant(session, tenant.id)) {
+      return <SystemError title="Noch nicht veröffentlicht" message="Dieser Platzguide ist eingerichtet, aber noch nicht öffentlich freigeschaltet. Der Betreiber kann ihn im Adminbereich testen; Besucher sehen ihn erst nach Freigabe." />;
+    }
   }
   return <>
     <PwaRegister />

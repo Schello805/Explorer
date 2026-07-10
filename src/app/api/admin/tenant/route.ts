@@ -37,6 +37,18 @@ const tenantSchema = z.object({
   legal: z.object({ imprint: z.string().max(10000), privacy: z.string().max(20000), cookies: z.string().max(10000) }),
   tracking: z.object({ enabled: z.boolean(), provider: z.string().max(80), measurementId: z.string().max(120) }),
   email: z.object({ senderName: z.string().max(120), senderEmail: z.string().email(), replyTo: z.string().email() }),
+  billing: z.object({
+    plan: z.enum(["starter", "pro"]),
+    status: z.enum(["trial", "active", "past_due", "blocked"]),
+    publicEnabled: z.boolean(),
+    monthlyPriceCents: z.number().min(0).max(100000),
+    yearlyDiscountPercent: z.number().min(0).max(100),
+    storageLimitMb: z.number().min(1).max(10240),
+    supportResponseHours: z.number().min(1).max(168),
+    setupServiceBooked: z.boolean().optional(),
+    setupServicePriceCents: z.number().min(0).max(100000),
+    customDomainEnabled: z.boolean()
+  }),
   integrations: z.object({
     mail: z.object({
       provider: z.literal("smtp"),

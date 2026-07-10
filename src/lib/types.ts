@@ -15,6 +15,7 @@ export type MediaAsset = {
   type: "image" | "document" | "video";
   alt: string;
   createdAt: string;
+  sizeBytes?: number;
 };
 
 export type EventItem = {
@@ -144,6 +145,18 @@ export type Tenant = {
   legal: { imprint: string; privacy: string; cookies: string };
   tracking: { enabled: boolean; provider: string; measurementId: string };
   email: { senderName: string; senderEmail: string; replyTo: string };
+  billing: {
+    plan: "starter" | "pro";
+    status: "trial" | "active" | "past_due" | "blocked";
+    publicEnabled: boolean;
+    monthlyPriceCents: number;
+    yearlyDiscountPercent: number;
+    storageLimitMb: number;
+    supportResponseHours: number;
+    setupServiceBooked?: boolean;
+    setupServicePriceCents: number;
+    customDomainEnabled: boolean;
+  };
   integrations: {
     mail: { provider: "smtp"; fromEmail: string; fromName: string; smtpHost: string; smtpPort: number; smtpSecure: boolean; smtpUser: string };
     captcha: { provider: "turnstile" | "hcaptcha" | "disabled"; siteKey: string; requiredForSignup: boolean };

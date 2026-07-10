@@ -4,6 +4,7 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
 import postgres from "postgres";
+import { applyBillingPlan } from "@/lib/billing";
 import { sendMail } from "@/lib/mail";
 import { createDefaultStationTemplates, tenantDefaults } from "@/lib/tenant-defaults";
 import type { AuditEntry, FeedbackMessage, PrivacyRequest, Station, Tenant } from "@/lib/types";
@@ -55,7 +56,7 @@ async function readPostgresTenants(): Promise<Tenant[]> {
 }
 
 function normalizeTenant(tenant: Tenant): Tenant {
-  return {
+  const normalized = {
     ...tenantDefaults,
     ...tenant,
     theme: { ...tenantDefaults.theme, ...tenant.theme },
@@ -64,6 +65,7 @@ function normalizeTenant(tenant: Tenant): Tenant {
     legal: { ...tenantDefaults.legal, ...tenant.legal },
     tracking: { ...tenantDefaults.tracking, ...tenant.tracking },
     email: { ...tenantDefaults.email, ...tenant.email },
+    billing: { ...tenantDefaults.billing, ...tenant.billing },
     integrations: {
       mail: { ...tenantDefaults.integrations.mail, ...tenant.integrations?.mail },
       captcha: { ...tenantDefaults.integrations.captcha, ...tenant.integrations?.captcha },
@@ -84,6 +86,7 @@ function normalizeTenant(tenant: Tenant): Tenant {
     users: tenant.users ?? [],
     privacyRequests: tenant.privacyRequests ?? []
   };
+  return applyBillingPlan(normalized, normalized.billing.plan);
 }
 
 function audit(tenantId: string, actorEmail: string, action: string, entityType: string, entityId: string): AuditEntry {

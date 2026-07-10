@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { Activity, Bell, BookOpen, CalendarDays, Caravan, CheckCircle2, ChevronRight, Download, FileText, Gift, Globe2, ImageIcon, LayoutDashboard, MapPinned, Menu, MessageSquareWarning, Palette, Plus, Search, Settings, ShieldCheck, Trash2, Users, X } from "lucide-react";
+import { applyBillingPlan, billingPlans, formatEuro, storageUsedMb } from "@/lib/billing";
 import type { Category, EventItem, GuestGuideItem, MediaAsset, Reward, Station, Tenant, Tour } from "@/lib/types";
 import { cn, statusLabel } from "@/lib/utils";
 import { StationLocationPicker } from "@/components/station-location-picker";
@@ -25,6 +26,7 @@ const navigation = [
   { id: "legal", label: "Recht & Datenschutz", icon: FileText },
   { id: "modules", label: "Module", icon: Settings },
   { id: "integrations", label: "Integrationen", icon: Settings },
+  { id: "billing", label: "Abo & Veröffentlichung", icon: ShieldCheck },
   { id: "security", label: "Sicherheit", icon: ShieldCheck },
   { id: "profile", label: "Profil", icon: Users }
 ];
@@ -102,6 +104,7 @@ export function AdminConsole({ tenant, tenants, adminEmail }: { tenant: Tenant; 
         {section === "legal" && <Legal key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "modules" && <Modules key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "integrations" && <Integrations key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
+        {section === "billing" && <Billing key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "events" && <Events key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "tours" && <Tours key={currentTenant.id} tenant={currentTenant} stations={stations} saving={saving} onSave={saveTenant} />}
         {section === "rewards" && <Rewards key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
@@ -146,7 +149,8 @@ function SetupAssistant({ tenant, stations, onNavigate }: { tenant: Tenant; stat
     { id: "tenants", label: "Karte oder Platzplan", done: tenant.map.configured !== false },
     { id: "stations", label: "Stationen aktivieren", done: activeStations.length > 0 },
     { id: "legal", label: "Rechtstexte prüfen", done: Boolean(tenant.legal.imprint && tenant.legal.privacy && tenant.legal.cookies) },
-    { id: "integrations", label: "SMTP & Module prüfen", done: Boolean(tenant.integrations.mail.smtpHost || tenant.email.senderEmail) }
+    { id: "integrations", label: "SMTP & Module prüfen", done: Boolean(tenant.integrations.mail.smtpHost || tenant.email.senderEmail) },
+    { id: "billing", label: "Veröffentlichung freigeben", done: tenant.billing.publicEnabled }
   ];
   const doneCount = steps.filter((step) => step.done).length;
   return <section className="rounded-2xl bg-[#173c32] p-5 text-white shadow-sm sm:p-6">
@@ -284,6 +288,46 @@ function Integrations({ tenant, saving, onSave }: { tenant: Tenant; saving: bool
     </SettingsCard>
   </div>;
 }
+
+function Billing({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) {
+  const [draft, setDraft] = useState(tenant);
+  const usedMb = storageUsedMb(draft);
+  const yearlyPrice = Math.round(draft.billing.monthlyPriceCents * 12 * (1 - draft.billing.yearlyDiscountPercent / 100));
+  function choosePlan(plan: Tenant["billing"]["plan"]) {
+    setDraft((current) => applyBillingPlan(current, plan));
+  }
+  return <div className="space-y-6">
+    <SettingsCard title="Pakete" description="Der Betreiber kann einrichten und testen. Öffentlich wird die App erst nach manueller Freigabe.">
+      <div className="grid gap-4 lg:grid-cols-2">
+        {Object.entries(billingPlans).map(([id, plan]) => <button key={id} onClick={() => choosePlan(id as Tenant["billing"]["plan"])} className={cn("rounded-2xl border p-4 text-left transition", draft.billing.plan === id ? "border-[#173c32] bg-[#eff3ec]" : "border-black/10 bg-white hover:border-[#173c32]/40")}>
+          <p className="text-xs font-bold uppercase tracking-widest text-[#286551]">{plan.label}</p>
+          <p className="mt-2 font-display text-4xl">{formatEuro(plan.monthlyPriceCents)}</p>
+          <p className="text-sm text-black/55">monatlich kündbar</p>
+          <ul className="mt-4 space-y-2 text-sm text-black/65">
+            <li>{plan.storageLimitMb >= 1024 ? "1 GB" : `${plan.storageLimitMb} MB`} Speicher</li>
+            <li>Support innerhalb {plan.supportResponseHours}h</li>
+            <li>{plan.customDomainEnabled ? "Eigene Domain möglich" : "Subdomain inklusive"}</li>
+          </ul>
+        </button>)}
+      </div>
+      <div className="rounded-xl bg-[#f7f7f4] p-4 text-sm leading-6 text-black/65">
+        <p><strong>Jahreszahlung:</strong> {draft.billing.yearlyDiscountPercent}% Rabatt, aktuell {formatEuro(yearlyPrice)} pro Jahr.</p>
+        <p><strong>Einrichtungsservice:</strong> optional durch Michael für {formatEuro(draft.billing.setupServicePriceCents)} einmalig.</p>
+      </div>
+    </SettingsCard>
+    <SettingsCard title="Veröffentlichung" description="Du steuerst manuell, ob Besucher die Subdomain sehen dürfen.">
+      <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-4 text-sm font-bold">Besucher-App öffentlich freischalten<input type="checkbox" checked={draft.billing.publicEnabled} onChange={(event) => setDraft({ ...draft, billing: { ...draft.billing, publicEnabled: event.target.checked, status: event.target.checked ? "active" : draft.billing.status } })} className="h-5 w-5 accent-[#286551]" /></label>
+      <Select label="Status" value={draft.billing.status} options={["trial", "active", "past_due", "blocked"]} onChange={(status) => setDraft({ ...draft, billing: { ...draft.billing, status: status as Tenant["billing"]["status"], publicEnabled: status === "active" ? draft.billing.publicEnabled : false } })} />
+      <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-4 text-sm font-bold">Einrichtungsservice gebucht<input type="checkbox" checked={draft.billing.setupServiceBooked ?? false} onChange={(event) => setDraft({ ...draft, billing: { ...draft.billing, setupServiceBooked: event.target.checked } })} className="h-5 w-5 accent-[#286551]" /></label>
+      <div className="rounded-xl bg-[#f7f7f4] p-4 text-sm leading-6 text-black/65">
+        <p><strong>Speicher:</strong> {usedMb} MB von {draft.billing.storageLimitMb} MB genutzt.</p>
+        <p><strong>Frontend:</strong> {draft.billing.publicEnabled ? "öffentlich sichtbar" : "nur für eingeloggte Admins/Betreiber als Test sichtbar"}.</p>
+      </div>
+      <Save saving={saving} onClick={() => onSave(draft)} />
+    </SettingsCard>
+  </div>;
+}
+
 function Categories({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) {
   const [draft, setDraft] = useState(tenant);
   const update = (id: string, changes: Partial<Category>) => setDraft({ ...draft, categories: draft.categories.map((category) => category.id === id ? { ...category, ...changes } : category) });
@@ -312,9 +356,10 @@ function Media({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; on
     const media = await response.json() as MediaAsset;
     setDraft((current) => ({ ...current, media: [media, ...current.media] }));
   }
-  return <SettingsCard title="Medienbibliothek" description="Bilder, PDFs und spätere Uploads zentral verwalten.">
-    <div className="flex flex-wrap gap-2"><button onClick={add} className="rounded-xl border px-4 py-3 text-sm font-bold"><Plus size={16} className="mr-2 inline" />Medium hinzufügen</button><label className="rounded-xl border px-4 py-3 text-sm font-bold">Datei hochladen<input type="file" accept="image/png,image/jpeg,image/webp,application/pdf" className="sr-only" onChange={(event) => event.target.files?.[0] && uploadMedia(event.target.files[0])} /></label><Save saving={saving} onClick={() => onSave(draft)} /></div>
-    <div className="grid gap-3 lg:grid-cols-2">{draft.media.map((asset) => <div key={asset.id} className="rounded-xl border border-black/10 p-3"><Field label="Titel" value={asset.title} onChange={(title) => update(asset.id, { title })} /><Field label="URL" value={asset.url} onChange={(url) => update(asset.id, { url })} /><Field label="Alternativtext" value={asset.alt} onChange={(alt) => update(asset.id, { alt })} /><button onClick={() => setDraft({ ...draft, media: draft.media.filter((item) => item.id !== asset.id) })} className="mt-3 text-sm font-bold text-red-600">Entfernen</button></div>)}</div>
+  return <SettingsCard title="Medienbibliothek" description="Bilder, PDFs und kurze Videos zentral verwalten.">
+    <p className="rounded-xl bg-[#f7f7f4] p-3 text-sm text-black/55">Speicher genutzt: <strong>{storageUsedMb(draft)} MB</strong> von <strong>{draft.billing.storageLimitMb} MB</strong>.</p>
+    <div className="flex flex-wrap gap-2"><button onClick={add} className="rounded-xl border px-4 py-3 text-sm font-bold"><Plus size={16} className="mr-2 inline" />Medium hinzufügen</button><label className="rounded-xl border px-4 py-3 text-sm font-bold">Datei hochladen<input type="file" accept="image/png,image/jpeg,image/webp,application/pdf,video/mp4,video/webm" className="sr-only" onChange={(event) => event.target.files?.[0] && uploadMedia(event.target.files[0])} /></label><Save saving={saving} onClick={() => onSave(draft)} /></div>
+    <div className="grid gap-3 lg:grid-cols-2">{draft.media.map((asset) => <div key={asset.id} className="rounded-xl border border-black/10 p-3"><Field label="Titel" value={asset.title} onChange={(title) => update(asset.id, { title })} /><Field label="URL" value={asset.url} onChange={(url) => update(asset.id, { url })} /><Field label="Alternativtext" value={asset.alt} onChange={(alt) => update(asset.id, { alt })} />{asset.sizeBytes && <p className="mt-2 text-xs text-black/45">{Math.round(asset.sizeBytes / 1024 / 1024 * 10) / 10} MB · {asset.type}</p>}<button onClick={() => setDraft({ ...draft, media: draft.media.filter((item) => item.id !== asset.id) })} className="mt-3 text-sm font-bold text-red-600">Entfernen</button></div>)}</div>
   </SettingsCard>;
 }
 function Events({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) {

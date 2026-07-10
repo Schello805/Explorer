@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { canManageTenant, canViewTenant } from "@/lib/auth";
+import { applyBillingPlan } from "@/lib/billing";
 import { rateLimit } from "@/lib/rate-limit";
 import { onlyTenantRecords, resolveTenant } from "@/lib/tenant-resolver";
 import { createDefaultStationTemplates, tenantDefaults } from "@/lib/tenant-defaults";
@@ -74,5 +75,17 @@ describe("tenant isolation", () => {
       "Restaurant"
     ]);
     expect(templates.every((station) => station.tenantId === "tenant-a" && station.isTemplate)).toBe(true);
+  });
+
+  it("applies the public pricing packages", () => {
+    const tenant = testTenant({ id: "tenant-a", slug: "platz-a", hosts: ["platz-a.localhost"], name: "Platz A" });
+    const starter = applyBillingPlan(tenant, "starter");
+    const pro = applyBillingPlan(tenant, "pro");
+    expect(starter.billing.monthlyPriceCents).toBe(499);
+    expect(starter.billing.storageLimitMb).toBe(100);
+    expect(starter.billing.supportResponseHours).toBe(24);
+    expect(pro.billing.monthlyPriceCents).toBe(1999);
+    expect(pro.billing.storageLimitMb).toBe(1024);
+    expect(pro.billing.supportResponseHours).toBe(6);
   });
 });
