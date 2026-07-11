@@ -17,10 +17,10 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
   return <main className="min-h-screen bg-[#f2f3ef] p-4 text-[#1b302a] sm:p-6">
     <section className="mx-auto w-full max-w-7xl">
       <header className="flex flex-col gap-4 rounded-[2rem] bg-[#173c32] p-5 text-white shadow-sm sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
+        <a href="https://platzguide.de" className="flex min-w-0 items-center gap-3">
           <span className="grid h-14 w-14 place-items-center rounded-2xl bg-white/95 p-1.5 shadow-sm"><Image src={platformLogo} alt="Platzguide" width={48} height={48} className="h-full w-full object-contain" priority /></span>
-          <div><p className="text-xs font-bold uppercase tracking-[.18em] text-white/45">Plattformverwaltung</p><h1 className="font-display text-3xl">Platzguide Admin</h1><p className="mt-1 text-sm text-white/55">{adminEmail}</p></div>
-        </div>
+          <div className="min-w-0"><p className="text-xs font-bold uppercase tracking-[.18em] text-white/45">Plattformverwaltung</p><h1 className="font-display text-3xl">Platzguide Admin</h1><p className="mt-1 truncate text-sm text-white/55">{adminEmail}</p></div>
+        </a>
         <div className="flex flex-wrap gap-2">
           <Link href="/" className="rounded-xl bg-white px-4 py-3 text-sm font-bold text-[#173c32]">Startseite öffnen</Link>
           <form action="/api/auth/logout" method="post"><button className="rounded-xl border border-white/20 px-4 py-3 text-sm font-bold text-white">Abmelden</button></form>

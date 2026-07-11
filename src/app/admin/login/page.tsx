@@ -30,7 +30,7 @@ export default function LoginPage() {
 
   return <main className="grid min-h-screen bg-[#173c32] p-4 lg:grid-cols-2">
     <section className="hidden flex-col justify-between rounded-[2rem] bg-[#e8b65f] p-10 lg:flex">
-      <Image src={platformLogo} alt="Platzguide" width={80} height={80} className="h-20 w-20 object-contain" priority /><div><p className="text-xs font-bold uppercase tracking-[.2em]">Platzguide Plattform</p><h1 className="mt-4 max-w-xl font-display text-6xl">Ein Ort für alle deine Campingplätze.</h1></div><p className="text-sm opacity-65">Sicher · Mandantenfähig · Zentral verwaltet</p>
+      <a href="https://platzguide.de" className="w-fit"><Image src={platformLogo} alt="Platzguide" width={80} height={80} className="h-20 w-20 object-contain" priority /></a><div><p className="text-xs font-bold uppercase tracking-[.2em]">Platzguide Plattform</p><h1 className="mt-4 max-w-xl font-display text-6xl">Ein Ort für alle deine Campingplätze.</h1></div><p className="text-sm opacity-65">Sicher · Mandantenfähig · Zentral verwaltet</p>
     </section>
     <section className="grid place-items-center px-4 py-10">
       <form onSubmit={submit} className="w-full max-w-md text-white">
@@ -48,5 +48,9 @@ export default function LoginPage() {
 }
 
 function LabelText({ label, tooltip }: { label: string; tooltip: string }) {
-  return <span className="flex items-center gap-1.5">{label}<span className="group relative inline-flex text-[#e8b65f]" title={tooltip}><HelpCircle size={15} aria-hidden="true" /><span className="pointer-events-none absolute left-1/2 top-6 z-20 hidden w-64 -translate-x-1/2 rounded-xl bg-white p-3 text-xs font-normal leading-5 text-[#173c32] shadow-xl group-hover:block">{tooltip}</span></span></span>;
+  const [open, setOpen] = useState(false);
+  return <span className="flex items-center gap-1.5">{label}<span className="relative inline-flex text-[#e8b65f]">
+    <button type="button" aria-label="Hilfe anzeigen" onClick={() => setOpen((value) => !value)} onBlur={() => window.setTimeout(() => setOpen(false), 160)} className="rounded-full p-0.5 text-[#e8b65f]"><HelpCircle size={15} aria-hidden="true" /></button>
+    {open && <span className="absolute left-1/2 top-7 z-30 w-64 max-w-[80vw] -translate-x-1/2 rounded-xl bg-white p-3 text-xs font-normal leading-5 text-[#173c32] shadow-xl">{tooltip}</span>}
+  </span></span>;
 }

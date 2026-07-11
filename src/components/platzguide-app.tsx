@@ -56,12 +56,12 @@ export function PlatzguideApp({ tenant, basePath = "" }: { tenant: Tenant; baseP
         <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full border-[42px] border-white/5" />
         <div className="relative mx-auto w-[90%]">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <a href="https://platzguide.de" className="flex min-w-0 items-center gap-3">
               <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white/95 p-1.5 shadow-sm">
                 <Image src={platformLogo} alt="Platzguide" width={40} height={40} className="h-full w-full object-contain" priority />
               </span>
-              <div><p className="text-[11px] font-bold uppercase tracking-[.18em] text-white/60">Platzguide</p><p className="font-display text-xl">{tenant.name}</p></div>
-            </div>
+              <div className="min-w-0"><p className="text-[11px] font-bold uppercase tracking-[.18em] text-white/60">Platzguide</p><p className="truncate font-display text-xl">{tenant.name}</p></div>
+            </a>
             <a href={`${basePath}/hinweise`} aria-label="Wichtige Hinweise" className="rounded-full bg-white/10 p-3"><Info size={20} /></a>
           </div>
           <div className="mt-5">
