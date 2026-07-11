@@ -181,6 +181,11 @@ Git-Revision zurück.
 sudo bash /opt/platzguide/scripts/update-ubuntu.sh
 ```
 
+Während des Updates zeigt das Script nummerierte Schritte, laufende Dauer pro
+Abschnitt und klare Hinweise für längere Phasen wie `npm ci` oder Build. Am
+Ende werden Base URL, lokale Healthcheck-URL, Revision, Backup-Pfad und die
+wichtigsten Service-Befehle ausgegeben.
+
 Optionen:
 
 - `APP_DIR=/opt/platzguide`
@@ -195,6 +200,8 @@ Optionen:
 - `DEPLOY_ADMIN_PASSWORD=...`: aktiviert echten Admin-Login-Test beim Deployment
 - `BACKUP_DATABASE_BEFORE_MIGRATION=true`: PostgreSQL-Dump vor Migrationen
 - `AUTO_REPAIR_DATABASE_ENV=true`: fehlende lokale PostgreSQL-URL automatisch reparieren
+- `FORCE_NPM_CI=true`: erzwingt Neuinstallation der Node-Abhängigkeiten
+- `NPM_CI_TIMEOUT_SECONDS=900`: maximale Dauer für `npm ci`
 
 Bei einer frischen, leeren Installation ohne Mandanten überspringt das
 Updatescript den PostgreSQL-Dump vor Migrationen automatisch. Sobald mindestens

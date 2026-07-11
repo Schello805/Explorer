@@ -20,11 +20,73 @@ ok() { printf '\033[1;32m[OK]\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m[WARN]\033[0m %s\n' "$*"; }
 fail() { printf '\033[1;31m[FEHLER]\033[0m %s\n' "$*" >&2; exit 1; }
 
+TOTAL_STEPS=12
+CURRENT_STEP=0
+UPDATE_STARTED_AT="$(date +%s)"
+STEP_STARTED_AT="${UPDATE_STARTED_AT}"
 OLD_REV=""
 NEW_REV=""
 RUNTIME_BACKUP_PATH=""
 DB_BACKUP_PATH=""
 ROLLBACK_IN_PROGRESS="false"
+
+elapsed_seconds() {
+  local started_at="$1"
+  printf '%ss' "$(( $(date +%s) - started_at ))"
+}
+
+progress() {
+  local label="$1"
+  CURRENT_STEP=$((CURRENT_STEP + 1))
+  STEP_STARTED_AT="$(date +%s)"
+  printf '\n\033[1;36m[%02d/%02d]\033[0m %s\n' "${CURRENT_STEP}" "${TOTAL_STEPS}" "${label}"
+}
+
+progress_done() {
+  ok "$1 ($(elapsed_seconds "${STEP_STARTED_AT}"))"
+}
+
+env_public_base_url() {
+  local value port
+  value="$(env_value NEXT_PUBLIC_BASE_URL)"
+  if [[ -n "${value}" ]]; then
+    printf '%s' "${value}"
+    return
+  fi
+  value="$(env_value DOMAIN)"
+  if [[ -n "${value}" && "${value}" != "_" ]]; then
+    printf 'https://%s' "${value}"
+    return
+  fi
+  port="$(env_value PORT)"
+  port="${port:-3000}"
+  printf 'http://127.0.0.1:%s' "${port}"
+}
+
+print_summary() {
+  local port base_url revision service_state total_duration
+  port="$(env_value PORT)"
+  port="${port:-3000}"
+  base_url="$(env_public_base_url)"
+  revision="$(git -C "${APP_DIR}" rev-parse --short HEAD 2>/dev/null || printf "unbekannt")"
+  service_state="$(systemctl is-active "${APP_NAME}.service" 2>/dev/null || printf "unbekannt")"
+  total_duration="$(elapsed_seconds "${UPDATE_STARTED_AT}")"
+
+  printf '\n\033[1;32mUpdate-Zusammenfassung\033[0m\n'
+  printf '  App:       %s\n' "${APP_NAME}"
+  printf '  Revision:  %s\n' "${revision}"
+  printf '  Service:   %s\n' "${service_state}"
+  printf '  Dauer:     %s\n' "${total_duration}"
+  printf '  Base URL:  %s\n' "${base_url}"
+  printf '  Lokal:     http://127.0.0.1:%s\n' "${port}"
+  [[ -n "${RUNTIME_BACKUP_PATH}" ]] && printf '  Backup:    %s\n' "${RUNTIME_BACKUP_PATH}"
+  [[ -n "${DB_BACKUP_PATH}" ]] && printf '  DB-Backup: %s\n' "${DB_BACKUP_PATH}"
+  printf '\nNützliche Befehle:\n'
+  printf '  Status:    systemctl status %s\n' "${APP_NAME}"
+  printf '  Logs:      journalctl -u %s -f\n' "${APP_NAME}"
+  printf '  Health:    curl -fsS http://127.0.0.1:%s/api/health\n' "${port}"
+  printf '  Update:    bash %s/scripts/update-ubuntu.sh\n' "${APP_DIR}"
+}
 
 on_error() {
   printf '\n\033[1;31m[FEHLER]\033[0m Update abgebrochen.\n' >&2
@@ -226,7 +288,8 @@ rollback() {
 
 install_and_build() {
   if dependencies_changed; then
-    log "Installiere Abhängigkeiten mit npm ci (Timeout: ${NPM_CI_TIMEOUT_SECONDS}s) ..."
+    log "Installiere Abhängigkeiten mit npm ci. Das kann je nach Server einige Minuten dauern."
+    log "Timeout: ${NPM_CI_TIMEOUT_SECONDS}s. Wenn package-lock unverändert ist, wird dieser Schritt künftig übersprungen."
     sudo -u "${APP_USER}" bash -lc "cd '${APP_DIR}' && timeout '${NPM_CI_TIMEOUT_SECONDS}' npm ci --no-audit --no-fund"
   else
     ok "package.json/package-lock.json unverändert; npm ci wird übersprungen."
@@ -277,32 +340,96 @@ health_check() {
 }
 
 main() {
+  printf '\n\033[1;36mPlatzguide Update startet\033[0m\n'
+  printf '  App-Verzeichnis: %s\n' "${APP_DIR}"
+  printf '  Branch:          %s\n' "${BRANCH}"
+  printf '  Vollprüfung:     %s\n' "${RUN_VERIFY}"
+  printf '  Smoke-Test:      %s\n' "${RUN_SMOKE_TEST}"
+
+  progress "Grundsystem prüfen"
   require_root
   require_layout
+  progress_done "Grundsystem geprüft"
+
+  progress "Git-Verzeichnis vorbereiten"
   trust_git_directory
   check_clean_tree
+  progress_done "Git bereit"
+
+  progress "Laufzeitdateien sichern"
   backup_runtime_files
+  progress_done "Laufzeitdateien gesichert"
+
+  progress "Produktionsumgebung prüfen"
   require_environment
+  progress_done "Produktionsumgebung geprüft"
+
+  progress "Updates von GitHub laden"
   if fetch_update; then
+    progress_done "Update geladen"
+
+    progress "Produktionsumgebung erneut prüfen"
     require_environment
+    progress_done "Produktionsumgebung erneut geprüft"
+
+    progress "Datenbank sichern"
     backup_database
+    progress_done "Datenbank-Sicherung geprüft"
+
+    progress "Migrationen ausführen"
     run_migrations
+    progress_done "Migrationen abgeschlossen"
+
+    progress "Abhängigkeiten und Build prüfen"
     install_and_build
+    progress_done "Build abgeschlossen"
+
+    progress "Revision schreiben"
     write_revision
+    progress_done "Revision geschrieben"
+
+    progress "Service neu starten"
     restart_service
+    progress_done "Service neu gestartet"
+
+    progress "Livechecks ausführen"
     run_post_deploy_checks
+    progress_done "Livechecks erfolgreich"
     ok "Update abgeschlossen."
+    print_summary
   elif needs_rebuild; then
+    progress_done "Kein neuer Code geladen"
     warn "Code ist bereits aktuell, aber Build/Revision passt nicht. Baue neu ..."
+
+    progress "Datenbank sichern"
     backup_database
+    progress_done "Datenbank-Sicherung geprüft"
+
+    progress "Migrationen ausführen"
     run_migrations
+    progress_done "Migrationen abgeschlossen"
+
+    progress "Abhängigkeiten und Build prüfen"
     install_and_build
+    progress_done "Build abgeschlossen"
+
+    progress "Revision schreiben"
     write_revision
+    progress_done "Revision geschrieben"
+
+    progress "Service neu starten"
     restart_service
+    progress_done "Service neu gestartet"
+
+    progress "Livechecks ausführen"
     run_post_deploy_checks
+    progress_done "Livechecks erfolgreich"
     ok "Rebuild abgeschlossen."
+    print_summary
   else
+    progress_done "Kein neuer Code geladen"
     ok "Kein Update notwendig."
+    print_summary
   fi
 }
 
