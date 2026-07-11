@@ -79,6 +79,43 @@ export function AdminConsole({ tenant, tenants, adminEmail }: { tenant: Tenant; 
     setAvailableTenants((items) => items.map((item) => item.id === saved.id ? saved : item));
   }
 
+  async function updateTenantLifecycle(action: "archive" | "reactivate" | "delete") {
+    const confirmation = action === "delete"
+      ? `Mandant "${currentTenant.name}" endgültig löschen? Diese Aktion kann nicht rückgängig gemacht werden.`
+      : action === "archive"
+        ? `Mandant "${currentTenant.name}" archivieren und öffentlich sperren?`
+        : `Mandant "${currentTenant.name}" reaktivieren? Die Besucher-App bleibt bis zur Freigabe weiterhin geschlossen.`;
+    if (!confirm(confirmation)) return;
+    setSaving(true);
+    const response = await fetch("/api/admin/tenant/lifecycle", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tenantId: currentTenant.id, action })
+    });
+    setSaving(false);
+    if (!response.ok) {
+      alert("Die Mandantenaktion konnte nicht ausgeführt werden.");
+      return;
+    }
+    if (action === "delete") {
+      const remainingTenants = availableTenants.filter((item) => item.id !== currentTenant.id);
+      setAvailableTenants(remainingTenants);
+      const nextTenant = remainingTenants[0];
+      if (!nextTenant) {
+        window.location.reload();
+        return;
+      }
+      setCurrentTenant(nextTenant);
+      setStations(nextTenant.stations);
+      setEditing(null);
+      return;
+    }
+    const payload = await response.json() as { tenant: Tenant };
+    setCurrentTenant(payload.tenant);
+    setStations(payload.tenant.stations);
+    setAvailableTenants((items) => items.map((item) => item.id === payload.tenant.id ? payload.tenant : item));
+  }
+
   async function importStations(importedStations: Station[]) {
     for (const station of importedStations) await persistStation(station);
   }
@@ -99,7 +136,7 @@ export function AdminConsole({ tenant, tenants, adminEmail }: { tenant: Tenant; 
         {section === "overview" && <Overview key={currentTenant.id} tenant={currentTenant} stations={stations} stationCount={stations.filter((station) => !station.isTemplate).length} templateCount={stations.filter((station) => station.isTemplate).length} onNavigate={setSection} />}
         {section === "stations" && <Stations key={currentTenant.id} tenant={currentTenant} stations={stations} onEdit={setEditing} onRemove={removeStation} onCreate={() => setEditing(blankStation(currentTenant.id))} onImport={importStations} />}
         {section === "categories" && <Categories key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
-        {section === "tenants" && <TenantSettings key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
+        {section === "tenants" && <TenantSettings key={currentTenant.id} tenant={currentTenant} saving={saving} platformAdmin={adminEmail.toLowerCase() === "admin@schellenberger.biz"} onLifecycle={updateTenantLifecycle} onSave={saveTenant} />}
         {section === "branding" && <Branding key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "legal" && <Legal key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "modules" && <Modules key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
@@ -210,7 +247,7 @@ function BillingBadge({ tenant }: { tenant: Tenant }) {
   return <span className={cn("ml-auto shrink-0 rounded-full px-3 py-1 text-xs font-bold", billingStatusClass[tenant.billing.status])}>{billingStatusLabel[tenant.billing.status]}</span>;
 }
 
-function TenantSettings({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) {
+function TenantSettings({ tenant, saving, platformAdmin, onLifecycle, onSave }: { tenant: Tenant; saving: boolean; platformAdmin: boolean; onLifecycle: (action: "archive" | "reactivate" | "delete") => void; onSave: (tenant: Tenant) => void }) {
   const [draft, setDraft] = useState(tenant);
   const hostText = draft.hosts.join(", ");
   const save = () => onSave({ ...draft, hosts: hostText.split(",").map((host) => host.trim()).filter(Boolean) });
@@ -268,6 +305,20 @@ function TenantSettings({ tenant, saving, onSave }: { tenant: Tenant; saving: bo
       <p className="text-xs leading-5 text-black/45">Für exakte Wege abseits öffentlicher Straßen: eigenes Luftbild/Lageplan hinterlegen und über vier Eckpunkte georeferenzieren.</p>
       <Save saving={saving} onClick={save} />
     </SettingsCard>
+    {platformAdmin && <SettingsCard title="Mandantenstatus" description="Archivieren sperrt die Besucher-App. Reaktivieren stellt den Mandanten wieder zur Bearbeitung bereit.">
+      <div className="rounded-xl bg-[#f7f7f4] p-4 text-sm leading-6 text-black/65">
+        <p><strong>Status:</strong> {billingStatusLabel[draft.billing.status]}</p>
+        <p><strong>Öffentlich:</strong> {draft.billing.publicEnabled ? "Ja" : "Nein"}</p>
+        <p><strong>Archiviert:</strong> {draft.archivedAt ? formatStableDate(draft.archivedAt) : "Nein"}</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {draft.archivedAt
+          ? <button disabled={saving} onClick={() => onLifecycle("reactivate")} className="rounded-xl border border-emerald-200 px-4 py-3 text-sm font-bold text-emerald-700 disabled:opacity-60">Reaktivieren</button>
+          : <button disabled={saving} onClick={() => onLifecycle("archive")} className="rounded-xl border border-orange-200 px-4 py-3 text-sm font-bold text-orange-700 disabled:opacity-60">Archivieren / sperren</button>}
+        <button disabled={saving} onClick={() => onLifecycle("delete")} className="rounded-xl border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-60">Endgültig löschen</button>
+      </div>
+      <p className="text-xs leading-5 text-black/45">Löschen entfernt den Mandanten dauerhaft aus der Datenbank. Vorher Backup/Export prüfen.</p>
+    </SettingsCard>}
   </div>;
 }
 function Branding({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) { const [draft, setDraft] = useState(tenant); return <SettingsCard title="Erscheinungsbild" description="Farben und Texte werden nur für diesen Mandanten ausgespielt."><Field label="Claim" value={draft.tagline} onChange={(tagline) => setDraft({ ...draft, tagline })} /><Field label="Logo-Kürzel" value={draft.logoMark} onChange={(logoMark) => setDraft({ ...draft, logoMark })} /><div className="grid gap-4 sm:grid-cols-3"><Color label="Primärfarbe" value={draft.theme.primary} onChange={(primary) => setDraft({ ...draft, theme: { ...draft.theme, primary } })} /><Color label="Akzentfarbe" value={draft.theme.secondary} onChange={(secondary) => setDraft({ ...draft, theme: { ...draft.theme, secondary } })} /><Color label="Hintergrund" value={draft.theme.surface} onChange={(surface) => setDraft({ ...draft, theme: { ...draft.theme, surface } })} /></div><Save saving={saving} onClick={() => onSave(draft)} /></SettingsCard>; }

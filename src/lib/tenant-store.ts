@@ -175,6 +175,61 @@ export async function saveTenantConfiguration(tenantId: string, tenant: Tenant, 
   return tenants[index];
 }
 
+export async function archiveTenant(tenantId: string, actorEmail: string) {
+  const tenant = (await listTenants()).find((candidate) => candidate.id === tenantId);
+  if (!tenant) throw new Error("Tenant not found");
+  return saveTenantConfiguration(tenantId, {
+    ...tenant,
+    archivedAt: new Date().toISOString(),
+    billing: {
+      ...tenant.billing,
+      status: "blocked",
+      publicEnabled: false
+    },
+    auditLog: [audit(tenantId, actorEmail, "archive", "tenant", tenantId), ...tenant.auditLog].slice(0, 100)
+  }, actorEmail);
+}
+
+export async function reactivateTenant(tenantId: string, actorEmail: string) {
+  const tenant = (await listTenants()).find((candidate) => candidate.id === tenantId);
+  if (!tenant) throw new Error("Tenant not found");
+  const { archivedAt: _archivedAt, ...rest } = tenant;
+  void _archivedAt;
+  return saveTenantConfiguration(tenantId, {
+    ...rest,
+    billing: {
+      ...tenant.billing,
+      status: "trial",
+      publicEnabled: false
+    },
+    auditLog: [audit(tenantId, actorEmail, "reactivate", "tenant", tenantId), ...tenant.auditLog].slice(0, 100)
+  }, actorEmail);
+}
+
+export async function deleteTenantPermanently(tenantId: string, actorEmail: string) {
+  if (process.env.DATABASE_URL) {
+    const sql = postgres(process.env.DATABASE_URL, { connect_timeout: 3, idle_timeout: 5, max: 1 });
+    try {
+      await sql.begin(async (transaction) => {
+        await transaction`SELECT set_config('app.platform_admin', 'true', true)`;
+        await transaction`
+          INSERT INTO audit_log (tenant_id, actor_email, action, entity_type, entity_id)
+          VALUES (${tenantId}, ${actorEmail}, 'delete-permanent', 'tenant', ${tenantId})
+        `;
+        await transaction`DELETE FROM tenants WHERE id = ${tenantId}`;
+      });
+    } finally {
+      await sql.end();
+    }
+    return;
+  }
+
+  const tenants = await readLocalTenants();
+  const nextTenants = tenants.filter((candidate) => candidate.id !== tenantId);
+  if (nextTenants.length === tenants.length) throw new Error("Tenant not found");
+  await writeLocalTenants(nextTenants);
+}
+
 export async function createTenantInstance(input: { name: string; slug: string; ownerEmail: string; ownerPasswordHash?: string }) {
   const slug = input.slug.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
   if (slug.length < 2) throw new Error("Invalid slug");

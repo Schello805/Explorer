@@ -33,10 +33,26 @@ Der öffentliche Platzguide-Link bleibt für anonyme Besucher gesperrt, bis im A
 
 - Installation, Updates, Backups, Restore und Monitoring betreiben
 - PostgreSQL, RLS, SMTP, Captcha, DNS und Reverse Proxy verwalten
-- Mandanten anlegen, sperren oder löschen
+- Mandanten anlegen, archivieren, reaktivieren oder endgültig löschen
 - Mandantenübergreifend nach Datensätzen filtern
 - Deployment-Checks prüfen und Rollbacks auslösen oder kontrollieren
 - Rechtliche Vorlagen bereitstellen, aber keine Rechtsprüfung ersetzen
+- Vor endgültigem Löschen Export/Backup prüfen, da diese Aktion nicht
+  rückgängig gemacht werden kann
+
+## CRUD und Lebenszyklus
+
+- Mandanten können erstellt, gelesen, bearbeitet, archiviert, reaktiviert und
+  endgültig gelöscht werden.
+- Archivieren setzt den Mandanten auf gesperrt und deaktiviert die öffentliche
+  Besucher-App. Die Daten bleiben erhalten.
+- Reaktivieren setzt den Mandanten zurück in die Testphase; die
+  Veröffentlichung bleibt bis zur erneuten Freigabe geschlossen.
+- Stationen können erstellt, bearbeitet, importiert, als Vorlage deaktiviert
+  und gelöscht werden.
+- Kategorien, Medien, Veranstaltungen, Rundgänge, Belohnungen, Gästemappe,
+  Rechtstexte, Module, Integrationen, Billing und Feedback werden
+  mandantengebunden gespeichert und bearbeitet.
 
 ## Aufgaben Betreiber / Mandanten-Admin
 

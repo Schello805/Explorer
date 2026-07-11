@@ -124,6 +124,7 @@ export type Tenant = {
   id: string;
   slug: string;
   hosts: string[];
+  archivedAt?: string;
   name: string;
   tagline: string;
   logoMark: string;
