@@ -1,10 +1,6 @@
-import { AdminConsole } from "@/components/admin-console";
-import { PlatformAdminConsole } from "@/components/platform-admin-console";
-import { SystemError } from "@/components/system-error";
-import { ADMIN_EMAIL, canViewTenant, verifyAdminSession } from "@/lib/auth";
-import { listTenants } from "@/lib/tenant-store";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { ADMIN_EMAIL, verifyAdminSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -14,22 +10,6 @@ export default async function AdminPage() {
     cookieStore.get("platzguide_session")?.value ?? cookieStore.get("explorer_session")?.value
   );
   if (!session) redirect("/admin/login");
-  let tenants;
-  try {
-    tenants = await listTenants();
-  } catch (error) {
-    console.error("Platzguide Admin konnte Mandanten nicht laden.", error);
-    return <SystemError title="Admin-Daten nicht bereit" message="Der Adminbereich konnte die Mandanten nicht laden. Bitte PostgreSQL-Verbindung und Migrationen prüfen." />;
-  }
-  const visibleTenants = session.role === "platform-admin" && session.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()
-    ? tenants
-    : tenants.filter((candidate) => canViewTenant(session, candidate.id));
-  const tenant = visibleTenants[0];
-  if (!tenant) {
-    if (session.role === "platform-admin" && session.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
-      return <PlatformAdminConsole adminEmail={session.email} tenants={visibleTenants} />;
-    }
-    return <SystemError title="Noch kein Campingplatz zugeordnet" message="Deinem Zugang ist noch kein Campingplatz zugeordnet." />;
-  }
-  return <AdminConsole tenant={tenant} tenants={visibleTenants} adminEmail={session.email} />;
+  if (session.role === "platform-admin" && session.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) redirect("/admin/platform");
+  redirect("/admin/tenant");
 }

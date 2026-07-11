@@ -1,18 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { Activity, Bell, BookOpen, CalendarDays, Caravan, CheckCircle2, ChevronRight, CreditCard, Database, Download, FileText, Gift, Globe2, HelpCircle, ImageIcon, LayoutDashboard, LifeBuoy, Mail, MapPinned, Menu, MessageSquareWarning, Palette, Plus, Search, Server, Settings, ShieldCheck, Trash2, Users, X } from "lucide-react";
+import Link from "next/link";
+import { Activity, Bell, BookOpen, CalendarDays, Caravan, CheckCircle2, ChevronRight, CreditCard, Download, FileText, Gift, Globe2, HelpCircle, ImageIcon, LayoutDashboard, LifeBuoy, MapPinned, Menu, MessageSquareWarning, Palette, Plus, Search, Server, Settings, ShieldCheck, Trash2, Users, X } from "lucide-react";
 import { applyBillingPlan, billingPlans, formatEuro, storageUsedMb } from "@/lib/billing";
-import type { AuditEntry, Category, EventItem, GuestGuideItem, MediaAsset, OccupancyStatus, PushMessage, Reward, Station, Tenant, Tour } from "@/lib/types";
+import type { Category, EventItem, GuestGuideItem, MediaAsset, OccupancyStatus, PushMessage, Reward, Station, Tenant, Tour } from "@/lib/types";
 import { cn, statusLabel } from "@/lib/utils";
 import { StationLocationPicker } from "@/components/station-location-picker";
 import { StationImport } from "@/components/station-import";
-import { CreateTenantForm } from "@/components/platform-admin-console";
 import { CampAreaPicker } from "@/components/camp-area-picker";
 
 const platformLogo = "/icons/platzguide-logo.png";
-type PlatformAuditEntry = AuditEntry & { tenantName: string; tenantSlug?: string };
 
 const navigation = [
   { id: "overview", label: "Übersicht", icon: LayoutDashboard },
@@ -47,7 +46,7 @@ export function AdminConsole({ tenant, tenants, adminEmail }: { tenant: Tenant; 
   const isPlatformAdmin = adminEmail.toLowerCase() === "admin@schellenberger.biz";
   const tenantAdminHiddenSections = new Set(["modules", "billing", "security"]);
   const platformNavigation = isPlatformAdmin
-    ? [{ id: "platform", label: "Plattform", icon: Server }, ...navigation.filter((item) => tenantAdminHiddenSections.has(item.id))]
+    ? navigation.filter((item) => tenantAdminHiddenSections.has(item.id))
     : [];
   const tenantNavigation = navigation.filter((item) => !tenantAdminHiddenSections.has(item.id));
   const visibleNavigation = [...platformNavigation, ...tenantNavigation];
@@ -137,7 +136,8 @@ export function AdminConsole({ tenant, tenants, adminEmail }: { tenant: Tenant; 
     <aside className={cn("fixed inset-y-0 left-0 z-30 flex w-60 flex-col overflow-y-auto overflow-x-hidden bg-[#173c32] p-4 text-white transition-transform lg:translate-x-0", menuOpen ? "translate-x-0" : "-translate-x-full")}>
       <div className="flex items-center justify-between"><a href="https://platzguide.de" className="flex min-w-0 items-center gap-3"><span className="grid h-12 w-12 place-items-center rounded-xl bg-white/95 p-1.5 shadow-sm"><Image src={platformLogo} alt="Platzguide" width={40} height={40} className="h-full w-full object-contain" priority /></span><div className="min-w-0"><p className="font-display text-xl">Platzguide</p><p className="text-[10px] uppercase tracking-widest text-white/45">Plattform Admin</p></div></a><button className="lg:hidden" onClick={() => setMenuOpen(false)}><X /></button></div>
       <nav className="mt-6 space-y-5">
-        {platformNavigation.length > 0 && <NavGroup title="Nur Superadmin" items={platformNavigation} section={section} onSelect={(id) => { setSection(id); setMenuOpen(false); }} />}
+        {isPlatformAdmin && <Link href="/admin/platform" className="flex items-center gap-3 rounded-lg bg-white/10 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-white hover:text-[#173c32]"><Server size={18} /> Plattformverwaltung</Link>}
+        {platformNavigation.length > 0 && <NavGroup title="Superadmin am Mandanten" items={platformNavigation} section={section} onSelect={(id) => { setSection(id); setMenuOpen(false); }} />}
         <NavGroup title="Mandantenverwaltung" items={tenantNavigation} section={section} onSelect={(id) => { setSection(id); setMenuOpen(false); }} />
       </nav>
       <div className="mt-auto shrink-0 rounded-xl bg-white/5 p-3"><p className="truncate text-xs font-bold">{adminEmail}</p><p className="mt-1 text-[10px] uppercase tracking-wider text-white/35">{isPlatformAdmin ? "Superadmin" : "Mandantenadmin"}</p><form action="/api/auth/logout" method="post"><button className="mt-3 text-xs text-[#e8b65f]">Sicher abmelden</button></form></div>
@@ -148,7 +148,6 @@ export function AdminConsole({ tenant, tenants, adminEmail }: { tenant: Tenant; 
         <button aria-label="Menü öffnen" className="shrink-0 lg:hidden" onClick={() => setMenuOpen(true)}><Menu /></button><div className="hidden min-w-0 sm:block"><p className="text-xs font-bold uppercase tracking-widest text-[#1b302a]/40">Plattformverwaltung</p><h1 className="truncate font-display text-2xl">{visibleNavigation.find((item) => item.id === section)?.label}</h1></div><div className="flex min-w-0 flex-1 justify-end gap-2"><select title="Wähle aus, welchen Campingplatz du gerade ansehen oder bearbeiten möchtest." aria-label="Mandant wählen" value={currentTenant.id} onChange={(event) => { const nextTenant = availableTenants.find((item) => item.id === event.target.value); if (!nextTenant) return; setCurrentTenant(nextTenant); setStations(nextTenant.stations); setEditing(null); }} className="min-w-0 max-w-[46vw] rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm font-bold"><option value="" disabled>Mandant wählen</option>{availableTenants.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><a href={`/c/${currentTenant.slug}`} target="_blank" className="rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm font-bold"><Globe2 size={16} className="sm:mr-2 sm:inline" /><span className="hidden sm:inline">Besucheransicht</span></a><button aria-label="Benachrichtigungen" className="rounded-xl border border-black/10 bg-white p-2.5"><Bell size={18} /></button></div>
       </header>
       <div className="mx-auto min-w-0 w-[90%] py-5">
-        {section === "platform" && <PlatformSection tenants={availableTenants} adminEmail={adminEmail} />}
         {section === "overview" && <Overview key={currentTenant.id} tenant={currentTenant} stations={stations} stationCount={stations.filter((station) => !station.isTemplate).length} templateCount={stations.filter((station) => station.isTemplate).length} onNavigate={setSection} />}
         {section === "stations" && <Stations key={currentTenant.id} tenant={currentTenant} stations={stations} onEdit={setEditing} onRemove={removeStation} onCreate={() => setEditing(blankStation(currentTenant.id))} onImport={importStations} />}
         {section === "categories" && <Categories key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
@@ -201,120 +200,6 @@ function Overview({ tenant, stations, stationCount, templateCount, onNavigate }:
       </section>
     </div>
   </div>;
-}
-
-function PlatformSection({ tenants, adminEmail }: { tenants: Tenant[]; adminEmail: string }) {
-  const auditEntries: PlatformAuditEntry[] = tenants.flatMap((tenant) => tenant.auditLog.map((entry) => ({ ...entry, tenantName: tenant.name }))).slice(0, 20);
-  const archivedCount = tenants.filter((tenant) => tenant.archivedAt).length;
-  const publicCount = tenants.filter((tenant) => tenant.billing.publicEnabled && tenant.billing.status === "active").length;
-  const [systemLogs, setSystemLogs] = useState<string[]>([]);
-  const [auditLines, setAuditLines] = useState(auditEntries);
-  const [cleanup, setCleanup] = useState<{ candidates: { url: string; sizeBytes: number }[]; reclaimableBytes: number; dryRun: boolean; deleted: number } | null>(null);
-  const [systemMessage, setSystemMessage] = useState("");
-
-  const loadSystemLogs = useCallback(async () => {
-    const response = await fetch("/api/admin/system/logs?lines=80");
-    const payload = await response.json() as { lines?: string[]; warning?: string };
-    setSystemLogs(payload.lines ?? []);
-    if (payload.warning) setSystemMessage(payload.warning);
-  }, []);
-
-  const loadAudit = useCallback(async () => {
-    const response = await fetch("/api/admin/system/audit");
-    if (!response.ok) return;
-    const payload = await response.json() as { entries: PlatformAuditEntry[] };
-    setAuditLines(payload.entries);
-  }, []);
-
-  const previewCleanup = useCallback(async () => {
-    const response = await fetch("/api/admin/system/cleanup");
-    if (!response.ok) return;
-    setCleanup(await response.json());
-  }, []);
-
-  async function runCleanup() {
-    if (!cleanup?.candidates.length) return;
-    if (!confirm(`${cleanup.candidates.length} ungenutzte Upload-Dateien endgültig löschen?`)) return;
-    const response = await fetch("/api/admin/system/cleanup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ dryRun: false })
-    });
-    if (!response.ok) return alert("Upload-Cleanup konnte nicht ausgeführt werden.");
-    const payload = await response.json();
-    setCleanup(payload);
-    setSystemMessage(`${payload.deleted} Upload-Dateien gelöscht.`);
-  }
-
-  async function checkMonitoring() {
-    const response = await fetch("/api/admin/system/monitoring");
-    const payload = await response.json().catch(() => null) as { ok?: boolean; error?: string; latencyMs?: number } | null;
-    setSystemMessage(payload?.ok ? `Monitoring OK · ${payload.latencyMs ?? "?"} ms` : `Monitoring meldet Fehler: ${payload?.error ?? response.status}`);
-  }
-
-  return <div className="animate-enter space-y-6">
-    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-      <div><p className="text-sm text-[#1b302a]/55">Angemeldet als {adminEmail}</p><h2 className="mt-1 font-display text-4xl">Plattformverwaltung</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-black/55">Hier verwaltest du das Projekt selbst: Mandantenstatus, Betriebschecks, globales SMTP, Logs und Auditübersicht.</p></div>
-      <a href="/api/health" target="_blank" className="rounded-xl bg-[#173c32] px-4 py-3 text-sm font-bold text-white">Healthcheck öffnen</a>
-    </div>
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <Metric label="Mandanten" value={String(tenants.length)} note="Gesamt" icon={<Users />} />
-      <Metric label="Öffentlich" value={String(publicCount)} note="Aktive Besucher-Apps" icon={<Globe2 />} />
-      <Metric label="Archiviert" value={String(archivedCount)} note="Gesperrt, Daten erhalten" icon={<Database />} />
-      <Metric label="System" value="Online" note="Service erreichbar" icon={<Activity />} />
-    </div>
-    <div className="grid gap-6 xl:grid-cols-2">
-      <SettingsCard title="Globale Betriebsinfos" description="Serverweite Einstellungen liegen bewusst nicht als Klartext im Browser.">
-        <InfoRow icon={<Mail />} title="SMTP" text="Globale SMTP-Zugangsdaten setzt du ausschließlich in .env.local. Mandanten speichern keine SMTP-Serverdaten." />
-        <InfoRow icon={<ShieldCheck />} title="Datenisolierung" text="Alle Mandantendaten sind tenantgebunden. PostgreSQL-RLS wird serverseitig erzwungen." />
-        <InfoRow icon={<Server />} title="Updates" text="Updates laufen über scripts/update-ubuntu.sh mit Backup, Migration, Build, Healthcheck und Rollback." />
-      </SettingsCard>
-      <SettingsCard title="Wichtige Befehle" description="Diese Befehle führst du direkt auf dem Server aus.">
-        <Command label="Logs live ansehen" command="journalctl -u platzguide -f" />
-        <Command label="Service-Status" command="systemctl status platzguide" />
-        <Command label="Update starten" command="sudo RUN_VERIFY=false bash /opt/platzguide/scripts/update-ubuntu.sh" />
-        <Command label="Healthcheck lokal" command="curl -fsS http://127.0.0.1:3000/api/health" />
-      </SettingsCard>
-      <SettingsCard title="Systemlogs" description="Letzte Servermeldungen direkt aus journalctl, falls der Prozess darauf zugreifen darf.">
-        <div className="flex flex-wrap gap-2"><button onClick={loadSystemLogs} className="rounded-xl border px-4 py-3 text-sm font-bold">Logs aktualisieren</button><button onClick={checkMonitoring} className="rounded-xl border px-4 py-3 text-sm font-bold">Monitoring prüfen</button></div>
-        {systemMessage && <p className="rounded-xl bg-[#f7f7f4] p-3 text-sm font-bold text-[#286551]">{systemMessage}</p>}
-        <pre className="max-h-80 overflow-auto rounded-xl bg-[#101f1a] p-3 text-xs leading-5 text-white/80">{systemLogs.length ? systemLogs.join("\n") : "Noch keine Logs geladen."}</pre>
-      </SettingsCard>
-      <SettingsCard title="Upload-Cleanup" description="Findet Dateien in public/uploads, die in keinem Mandanten mehr referenziert sind.">
-        <div className="rounded-xl bg-[#f7f7f4] p-4 text-sm">
-          <p><strong>{cleanup?.candidates.length ?? 0}</strong> ungenutzte Dateien · {Math.round((cleanup?.reclaimableBytes ?? 0) / 1024 / 1024 * 10) / 10} MB freigebbar</p>
-          <div className="mt-3 flex flex-wrap gap-2"><button onClick={previewCleanup} className="rounded-xl border px-4 py-3 text-sm font-bold">Erneut prüfen</button><button onClick={runCleanup} disabled={!cleanup?.candidates.length} className="rounded-xl bg-red-700 px-4 py-3 text-sm font-bold text-white disabled:opacity-40">Ungenutzte löschen</button></div>
-        </div>
-        <div className="max-h-44 overflow-auto rounded-xl border border-black/10 p-3 text-xs text-black/55">{cleanup?.candidates.slice(0, 20).map((item) => <p key={item.url} className="break-all">{item.url}</p>) || "Keine Kandidaten."}</div>
-      </SettingsCard>
-      <SettingsCard title="Mandanten" description="Schneller Überblick über Zahlung, Veröffentlichung und Archivstatus.">
-        {tenants.length === 0 && <p className="rounded-xl bg-[#f7f7f4] p-4 text-sm text-black/55">Noch keine Mandanten vorhanden.</p>}
-        <div className="space-y-2">{tenants.map((tenant) => <div key={tenant.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-black/10 p-3 text-sm">
-          <div className="min-w-0"><p className="truncate font-bold">{tenant.name}</p><p className="truncate text-xs text-black/45">/c/{tenant.slug}</p></div>
-          <div className="flex flex-wrap gap-2"><BillingBadge tenant={tenant} />{tenant.archivedAt && <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">Archiviert</span>}</div>
-        </div>)}</div>
-      </SettingsCard>
-      <SettingsCard title="Neuen Campingplatz anlegen" description="Plattform-Admin erstellt Mandanten ohne öffentliche Registrierung.">
-        <CreateTenantForm compact />
-      </SettingsCard>
-      <SettingsCard title="Auditlog" description="Letzte protokollierte Änderungen mandantenübergreifend.">
-        <button onClick={loadAudit} className="rounded-xl border px-4 py-3 text-sm font-bold">Auditlog aktualisieren</button>
-        {auditLines.length === 0 && <p className="rounded-xl bg-[#f7f7f4] p-4 text-sm text-black/55">Noch keine Audit-Einträge vorhanden.</p>}
-        <div className="space-y-2">{auditLines.map((entry) => <div key={`${entry.id}-${entry.createdAt}`} className="rounded-xl border border-black/10 p-3 text-sm">
-          <div className="flex flex-wrap justify-between gap-2"><p className="font-bold">{entry.action}</p><p className="text-xs text-black/45">{formatStableDate(entry.createdAt)}</p></div>
-          <p className="mt-1 text-xs text-black/55">{entry.tenantName} · {entry.entityType} · {entry.actorEmail}</p>
-        </div>)}</div>
-      </SettingsCard>
-    </div>
-  </div>;
-}
-
-function InfoRow({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
-  return <div className="flex gap-3 rounded-xl border border-black/5 p-3"><span className="mt-0.5 text-[#286551]">{icon}</span><div><p className="font-bold">{title}</p><p className="mt-1 text-sm leading-5 text-black/50">{text}</p></div></div>;
-}
-
-function Command({ label, command }: { label: string; command: string }) {
-  return <div className="rounded-xl bg-[#173c32] p-3 text-white"><p className="text-xs font-bold uppercase tracking-widest text-white/45">{label}</p><code className="mt-2 block break-all text-sm">{command}</code></div>;
 }
 
 function SetupAssistant({ tenant, stations, onNavigate }: { tenant: Tenant; stations: Station[]; onNavigate: (id: string) => void }) {

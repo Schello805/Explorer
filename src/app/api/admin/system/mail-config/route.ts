@@ -60,9 +60,9 @@ export async function PUT() {
     eyebrow: "Superadmin",
     title: "SMTP ist korrekt konfiguriert.",
     intro: "Diese Testmail wurde über die zentrale Plattform-Konfiguration versendet.",
-    text: `SMTP-Test erfolgreich.\n\nAdminbereich: ${appUrl("/admin")}`,
+    text: `SMTP-Test erfolgreich.\n\nAdminbereich: ${appUrl("/admin/platform")}`,
     actionLabel: "Adminbereich öffnen",
-    actionUrl: appUrl("/admin"),
+    actionUrl: appUrl("/admin/platform"),
     rows: [
       { label: "Empfänger", value: session.email },
       { label: "Absender", value: `${process.env.MAIL_FROM_NAME ?? "Platzguide"} <${process.env.MAIL_FROM ?? ""}>` }

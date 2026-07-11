@@ -14,8 +14,32 @@ function slugify(value: string) {
 
 export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: string; tenants: Tenant[] }) {
   const [mailConfigured, setMailConfigured] = useState(false);
-  return <main className="min-h-screen bg-[#f2f3ef] p-4 text-[#1b302a] sm:p-6">
-    <section className="mx-auto w-full max-w-7xl">
+  return <div className="min-h-screen bg-[#f2f3ef] text-[#1b302a]">
+    <aside className="border-b border-white/10 bg-[#173c32] p-4 text-white lg:fixed lg:inset-y-0 lg:left-0 lg:w-64 lg:border-b-0">
+      <a href="https://platzguide.de" className="flex min-w-0 items-center gap-3">
+        <span className="grid h-12 w-12 place-items-center rounded-xl bg-white/95 p-1.5 shadow-sm"><Image src={platformLogo} alt="Platzguide" width={40} height={40} className="h-full w-full object-contain" priority /></span>
+        <div className="min-w-0"><p className="font-display text-xl">Platzguide</p><p className="text-[10px] uppercase tracking-widest text-white/45">Superadmin</p></div>
+      </a>
+      <nav className="mt-6 space-y-2">
+        <PlatformNavLink href="#plattform" label="Übersicht" icon={<Activity size={18} />} />
+        <PlatformNavLink href="#mandanten" label="Mandanten" icon={<Users size={18} />} />
+        <PlatformNavLink href="#einrichtung" label="Globale Einrichtung" icon={<Server size={18} />} />
+        <PlatformNavLink href="#smtp" label="SMTP & E-Mail" icon={<Mail size={18} />} />
+        <PlatformNavLink href="#werkzeuge" label="Werkzeuge" icon={<Terminal size={18} />} />
+        <PlatformNavLink href="#logs" label="Logs & Audit" icon={<AlertTriangle size={18} />} />
+        {tenants.length > 0
+          ? <Link href="/admin/tenant" className="mt-5 flex items-center gap-3 rounded-xl bg-white px-3 py-3 text-sm font-bold text-[#173c32]"><Database size={18} />Mandantenverwaltung</Link>
+          : <p className="mt-5 rounded-xl bg-white/5 px-3 py-3 text-xs font-bold leading-5 text-white/45">Mandantenverwaltung erscheint nach dem ersten Campingplatz.</p>}
+      </nav>
+      <div className="mt-8 rounded-xl bg-white/5 p-3 lg:absolute lg:bottom-4 lg:left-4 lg:right-4">
+        <p className="truncate text-xs font-bold">{adminEmail}</p>
+        <p className="mt-1 text-[10px] uppercase tracking-wider text-white/35">Zentraler Superadmin</p>
+        <form action="/api/auth/logout" method="post"><button className="mt-3 text-xs font-bold text-[#e8b65f]">Sicher abmelden</button></form>
+      </div>
+    </aside>
+
+    <main className="p-4 sm:p-6 lg:ml-64">
+    <section id="plattform" className="mx-auto w-full max-w-7xl scroll-mt-6">
       <header className="flex flex-col gap-4 rounded-[2rem] bg-[#173c32] p-5 text-white shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <a href="https://platzguide.de" className="flex min-w-0 items-center gap-3">
           <span className="grid h-14 w-14 place-items-center rounded-2xl bg-white/95 p-1.5 shadow-sm"><Image src={platformLogo} alt="Platzguide" width={48} height={48} className="h-full w-full object-contain" priority /></span>
@@ -34,7 +58,7 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
         <Metric icon={<Activity />} label="System" value="Online" note="App erreichbar" />
       </div>
 
-      {tenants.length === 0 && <section className="mt-6 grid gap-6 rounded-[2rem] bg-white p-6 shadow-sm xl:grid-cols-[.9fr_1.1fr]">
+      {tenants.length === 0 && <section id="mandanten" className="mt-6 grid scroll-mt-6 gap-6 rounded-[2rem] bg-white p-6 shadow-sm xl:grid-cols-[.9fr_1.1fr]">
         <div>
           <p className="text-xs font-bold uppercase tracking-[.18em] text-[#286551]/70">Noch leer</p>
           <h2 className="mt-2 font-display text-4xl">Noch kein Campingplatz angelegt.</h2>
@@ -43,26 +67,26 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
         <CreateTenantForm />
       </section>}
 
-      {tenants.length > 0 && <section className="mt-6 rounded-[2rem] bg-white p-6 shadow-sm">
+      {tenants.length > 0 && <section id="mandanten" className="mt-6 scroll-mt-6 rounded-[2rem] bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[.18em] text-[#286551]/70">Mandanten bereit</p>
             <h2 className="mt-2 font-display text-4xl">Campingplätze verwalten.</h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-black/55">Öffne die normale Admin-Konsole, um Mandanten zu filtern, zu archivieren, zu reaktivieren oder zu löschen.</p>
           </div>
-          <Link href="/admin" className="rounded-xl bg-[#173c32] px-5 py-3 text-sm font-bold text-white">Admin-Konsole öffnen</Link>
+          <Link href="/admin/tenant" className="rounded-xl bg-[#173c32] px-5 py-3 text-sm font-bold text-white">Mandantenverwaltung öffnen</Link>
         </div>
       </section>}
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_1fr]">
-        <AdminCard title="Globale Einrichtung" icon={<Server />}>
+        <AdminCard id="einrichtung" title="Globale Einrichtung" icon={<Server />}>
           <ChecklistItem done label="Admin-Login aktiv" />
           <ChecklistItem done label="PostgreSQL angebunden" />
           <ChecklistItem done label="Mandantentrennung aktiv" />
           <ChecklistItem done={mailConfigured} label="SMTP konfiguriert" />
         </AdminCard>
 
-        <AdminCard title="Admin-Werkzeuge" icon={<Terminal />}>
+        <AdminCard id="werkzeuge" title="Admin-Werkzeuge" icon={<Terminal />}>
           <Command label="Live-Logs" command="journalctl -u platzguide -f" />
           <Command label="Status" command="systemctl status platzguide" />
           <Command label="Update" command="sudo RUN_VERIFY=false bash /opt/platzguide/scripts/update-ubuntu.sh" />
@@ -71,13 +95,18 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
 
         <MailSettingsCard onConfiguredChange={setMailConfigured} />
 
-        <AdminCard title="Fehlerlogs & Auditlog" icon={<AlertTriangle />}>
+        <AdminCard id="logs" title="Fehlerlogs & Auditlog" icon={<AlertTriangle />}>
           <p className="text-sm leading-6 text-black/55">Systemfehler liest du aktuell über `journalctl`. Mandanten-Auditlogs erscheinen, sobald mindestens ein Campingplatz existiert, in dessen Adminbereich. Der nächste sinnvolle Ausbauschritt wäre eine eigene Webansicht für Systemlogs und Auditlog-Filter.</p>
           <Link href="/api/health" target="_blank" className="inline-flex w-fit rounded-xl border border-black/10 px-4 py-3 text-sm font-bold">Healthcheck öffnen</Link>
         </AdminCard>
       </div>
     </section>
-  </main>;
+    </main>
+  </div>;
+}
+
+function PlatformNavLink({ href, label, icon }: { href: string; label: string; icon: React.ReactNode }) {
+  return <a href={href} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-white/70 transition hover:bg-white/10 hover:text-white">{icon}{label}</a>;
 }
 
 export function CreateTenantForm({ compact = false }: { compact?: boolean }) {
@@ -103,7 +132,7 @@ export function CreateTenantForm({ compact = false }: { compact?: boolean }) {
       return;
     }
     setState({ loading: false, error: "", success: "Campingplatz angelegt. Admin wird neu geladen …" });
-    window.setTimeout(() => window.location.assign("/admin"), 700);
+    window.setTimeout(() => window.location.assign("/admin/tenant"), 700);
   }
 
   return <form onSubmit={submit} className={compact ? "space-y-3" : "rounded-2xl bg-[#f7f7f4] p-4"}>
@@ -192,7 +221,7 @@ function MailSettingsCard({ onConfiguredChange }: { onConfiguredChange: (configu
     setState({ loading: false, testing: false, message: response.ok ? "Testmail wurde an deinen Superadmin-Zugang gesendet." : "", error: response.ok ? "" : "Testmail fehlgeschlagen. Bitte SMTP-Daten prüfen." });
   }
 
-  return <AdminCard title="SMTP & E-Mail" icon={<Mail />}>
+  return <AdminCard id="smtp" title="SMTP & E-Mail" icon={<Mail />}>
     <p className="text-sm leading-6 text-black/55">Diese Einstellungen gelten zentral für die ganze Plattform. Absender, Name und SMTP-Zugang werden hier gespeichert; Mandanten können diese Werte nicht ändern.</p>
     <p className="rounded-xl bg-[#f7f7f4] p-3 text-xs leading-5 text-black/55">Systemmails gehen an Mandantenadmins oder an dich als Superadmin. Gäste erhalten keine E-Mails.</p>
     <form onSubmit={save} className="space-y-3">
@@ -234,8 +263,8 @@ function Metric({ icon, label, value, note }: { icon: React.ReactNode; label: st
   return <article className="rounded-2xl bg-white p-5 shadow-sm"><div className="flex justify-between text-[#286551]"><p className="text-xs font-bold uppercase tracking-widest text-[#1b302a]/40">{label}</p>{icon}</div><p className="mt-4 font-display text-4xl">{value}</p><p className="mt-1 text-xs text-[#1b302a]/45">{note}</p></article>;
 }
 
-function AdminCard({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
-  return <section className="rounded-[1.5rem] bg-white p-5 shadow-sm"><div className="flex items-center justify-between gap-3"><h2 className="font-display text-2xl">{title}</h2><span className="text-[#286551]">{icon}</span></div><div className="mt-4 space-y-3">{children}</div></section>;
+function AdminCard({ id, title, icon, children }: { id?: string; title: string; icon: React.ReactNode; children: React.ReactNode }) {
+  return <section id={id} className="scroll-mt-6 rounded-[1.5rem] bg-white p-5 shadow-sm"><div className="flex items-center justify-between gap-3"><h2 className="font-display text-2xl">{title}</h2><span className="text-[#286551]">{icon}</span></div><div className="mt-4 space-y-3">{children}</div></section>;
 }
 
 function ChecklistItem({ done, label }: { done: boolean; label: string }) {
