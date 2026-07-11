@@ -22,6 +22,7 @@ export function ConsentBanner() {
 
   function save(value: "essential" | "all") {
     localStorage.setItem("platzguide-consent", JSON.stringify({ value, savedAt: new Date().toISOString() }));
+    window.dispatchEvent(new Event("platzguide-consent-changed"));
     setVisible(false);
   }
 

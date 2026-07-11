@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { ConsentBanner } from "@/components/consent-banner";
 import { Footer } from "@/components/footer";
+import { MatomoTracker } from "@/components/matomo-tracker";
 import { PlatzguideApp } from "@/components/platzguide-app";
 import { PwaRegister } from "@/components/pwa-register";
 import { SystemError } from "@/components/system-error";
@@ -22,5 +23,6 @@ export async function TenantExperience({ tenant, basePath }: { tenant: Tenant; b
     <PlatzguideApp tenant={tenant} basePath={basePath} />
     <Footer tenant={tenant} basePath={basePath} />
     <ConsentBanner />
+    <MatomoTracker tracking={tenant.tracking} />
   </>;
 }

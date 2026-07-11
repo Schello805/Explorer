@@ -35,7 +35,15 @@ const tenantSchema = z.object({
   }),
   contact: z.object({ phone: z.string().max(80), email: z.string().email(), emergency: z.string().max(160) }),
   legal: z.object({ imprint: z.string().max(10000), privacy: z.string().max(20000), cookies: z.string().max(10000), terms: z.string().max(20000) }),
-  tracking: z.object({ enabled: z.boolean(), provider: z.string().max(80), measurementId: z.string().max(120) }),
+  tracking: z.object({
+    enabled: z.boolean(),
+    provider: z.enum(["none", "matomo"]),
+    measurementId: z.string().max(120),
+    matomoUrl: z.string().max(500),
+    matomoSiteId: z.string().max(80),
+    anonymizeIp: z.boolean(),
+    respectDoNotTrack: z.boolean()
+  }),
   email: z.object({ senderName: z.string().max(120), senderEmail: z.string().email(), replyTo: z.string().email() }),
   billing: z.object({
     plan: z.enum(["starter", "pro"]),

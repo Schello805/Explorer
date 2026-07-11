@@ -95,7 +95,15 @@ Diese Bedingungen können angepasst werden, wenn technische, rechtliche oder wir
 12. Schlussbestimmungen
 Es gilt deutsches Recht. Sollten einzelne Regelungen unwirksam sein, bleibt die Wirksamkeit der übrigen Regelungen unberührt.`
   },
-  tracking: { enabled: false, provider: "none", measurementId: "" },
+  tracking: {
+    enabled: false,
+    provider: "none",
+    measurementId: "",
+    matomoUrl: "",
+    matomoSiteId: "",
+    anonymizeIp: true,
+    respectDoNotTrack: true
+  },
   email: { senderName: "Platzguide", senderEmail: "info@schellenberger.biz", replyTo: "info@schellenberger.biz" },
   billing: {
     plan: "starter",

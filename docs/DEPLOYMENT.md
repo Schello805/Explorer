@@ -79,6 +79,23 @@ und maximale Dateigröße sind pro Mandant im Adminpanel unter `Integrationen`
 verwaltbar. Platzpläne können im Bereich `Campingplätze` hochgeladen und über
 vier Eckpunkte georeferenziert werden.
 
+## Analytics
+
+Matomo kann pro Mandant im Adminbereich unter `Integrationen` aktiviert werden.
+Dazu werden Matomo-URL und Site-ID des jeweiligen Campingplatzes hinterlegt.
+Das Tracking wird in der Besucher-App nur geladen, wenn der Mandant Matomo
+aktiviert hat und Besucher im Consent-Banner „Alle akzeptieren“ wählen.
+
+## Abo-Automatisierung
+
+Die aktuelle Version unterstützt manuelle Pakete, Status und Freischaltung im
+Adminbereich. Für automatische Freischaltung, Rechnungen und Kündigungen sollte
+später ein Zahlungsanbieter mit Kundenportal und Webhooks angebunden werden,
+z. B. Stripe Billing, Mollie Subscriptions oder Paddle. Der Webhook setzt dann
+serverseitig `billing.status`, `billing.publicEnabled`, Paket, Speicherlimit
+und Rechnungsstatus. Die Besucher-App darf niemals allein aufgrund von
+Frontend-Daten freigeschaltet werden.
+
 ## Domains
 
 Der Load Balancer muss den originalen `Host`-Header unverändert an Next.js
