@@ -248,7 +248,7 @@ EOF_ENV
 
 install_dependencies_and_build() {
   log "Installiere npm-Abhängigkeiten ..."
-  sudo -u "${APP_USER}" bash -lc "cd '${APP_DIR}' && npm ci"
+  sudo -u "${APP_USER}" bash -lc "cd '${APP_DIR}' && npm ci --no-audit --no-fund"
   log "Prüfe und baue Anwendung ..."
   sudo -u "${APP_USER}" bash -lc "cd '${APP_DIR}' && npm run verify"
   ok "Build und Tests erfolgreich."

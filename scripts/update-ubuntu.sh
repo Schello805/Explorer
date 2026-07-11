@@ -12,6 +12,8 @@ RUN_SMOKE_TEST="${RUN_SMOKE_TEST:-true}"
 RUN_DEPLOY_HEALTHCHECK="${RUN_DEPLOY_HEALTHCHECK:-true}"
 BACKUP_DATABASE_BEFORE_MIGRATION="${BACKUP_DATABASE_BEFORE_MIGRATION:-true}"
 AUTO_REPAIR_DATABASE_ENV="${AUTO_REPAIR_DATABASE_ENV:-true}"
+FORCE_NPM_CI="${FORCE_NPM_CI:-false}"
+NPM_CI_TIMEOUT_SECONDS="${NPM_CI_TIMEOUT_SECONDS:-900}"
 
 log() { printf '\033[1;34m[INFO]\033[0m %s\n' "$*"; }
 ok() { printf '\033[1;32m[OK]\033[0m %s\n' "$*"; }
@@ -134,6 +136,14 @@ needs_rebuild() {
   [[ "${env_revision}" != "${current_revision}" ]]
 }
 
+dependencies_changed() {
+  [[ "${FORCE_NPM_CI}" == "true" ]] && return 0
+  [[ ! -d "${APP_DIR}/node_modules" ]] && return 0
+  [[ -z "${OLD_REV}" ]] && return 1
+  git -C "${APP_DIR}" diff --name-only "${OLD_REV}" HEAD -- package.json package-lock.json \
+    | grep -q .
+}
+
 run_migrations() {
   local url
   url="$(env_value DATABASE_URL)"
@@ -198,7 +208,7 @@ rollback() {
     ok ".env.local aus Backup wiederhergestellt."
   fi
   git -C "${APP_DIR}" checkout "${OLD_REV}"
-  sudo -u "${APP_USER}" bash -lc "cd '${APP_DIR}' && npm ci"
+  sudo -u "${APP_USER}" bash -lc "cd '${APP_DIR}' && npm ci --no-audit --no-fund"
   sudo -u "${APP_USER}" bash -lc "cd '${APP_DIR}' && npm run build"
   systemctl restart "${APP_NAME}.service"
   sleep 2
@@ -215,8 +225,12 @@ rollback() {
 }
 
 install_and_build() {
-  log "Installiere Abhängigkeiten mit npm ci ..."
-  sudo -u "${APP_USER}" bash -lc "cd '${APP_DIR}' && npm ci"
+  if dependencies_changed; then
+    log "Installiere Abhängigkeiten mit npm ci (Timeout: ${NPM_CI_TIMEOUT_SECONDS}s) ..."
+    sudo -u "${APP_USER}" bash -lc "cd '${APP_DIR}' && timeout '${NPM_CI_TIMEOUT_SECONDS}' npm ci --no-audit --no-fund"
+  else
+    ok "package.json/package-lock.json unverändert; npm ci wird übersprungen."
+  fi
   if [[ "${RUN_VERIFY}" == "true" ]]; then
     log "Führe vollständige Prüfung aus ..."
     sudo -u "${APP_USER}" bash -lc "cd '${APP_DIR}' && npm run verify"
