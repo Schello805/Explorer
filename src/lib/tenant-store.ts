@@ -5,7 +5,7 @@ import net from "node:net";
 import path from "node:path";
 import postgres from "postgres";
 import { applyBillingPlan } from "@/lib/billing";
-import { sendMail } from "@/lib/mail";
+import { appUrl, sendMail, tenantAdminUrl, tenantPublicUrl } from "@/lib/mail";
 import { createDefaultStationTemplates, tenantDefaults } from "@/lib/tenant-defaults";
 import type { AuditEntry, FeedbackMessage, PrivacyRequest, Station, Tenant } from "@/lib/types";
 
@@ -255,7 +255,6 @@ export async function createTenantInstance(input: {
 
   const shouldSendVerificationEmail = input.sendVerificationEmail !== false;
   const verificationToken = crypto.randomUUID();
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
   const tenantId = crypto.randomUUID();
   const tenant: Tenant = normalizeTenant({
     ...structuredClone(tenantDefaults),
@@ -318,22 +317,14 @@ export async function createTenantInstance(input: {
     } finally {
       await sql.end();
     }
-    if (shouldSendVerificationEmail) await sendMail({
-      to: input.ownerEmail,
-      subject: "Platzguide E-Mail bestätigen",
-      text: `Bitte bestätige deine Platzguide-Adresse: ${baseUrl}/api/auth/verify-email?token=${verificationToken}`
-    });
+    if (shouldSendVerificationEmail) await sendTenantVerificationMail(tenant, input.ownerEmail, verificationToken);
     return tenant;
   }
 
   const localTenants = await readLocalTenants();
   localTenants.push(tenant);
   await writeLocalTenants(localTenants);
-  if (shouldSendVerificationEmail) await sendMail({
-    to: input.ownerEmail,
-    subject: "Platzguide E-Mail bestätigen",
-    text: `Bitte bestätige deine Platzguide-Adresse: ${baseUrl}/api/auth/verify-email?token=${verificationToken}`
-  });
+  if (shouldSendVerificationEmail) await sendTenantVerificationMail(tenant, input.ownerEmail, verificationToken);
   return tenant;
 }
 
@@ -350,9 +341,116 @@ export async function verifyTenantUserEmail(token: string) {
     delete user.emailVerificationExpiresAt;
     tenant.auditLog = [audit(tenant.id, user.email, "verify-email", "tenant-user", user.id), ...tenant.auditLog].slice(0, 100);
     await saveTenantConfiguration(tenant.id, tenant, user.email);
+    await sendTenantWelcomeMail(tenant, user.email);
     return { tenant, user };
   }
   throw new Error("Verification token not found");
+}
+
+export async function requestTenantPasswordReset(email: string) {
+  const normalizedEmail = email.toLowerCase();
+  const tenants = await listTenants();
+  for (const tenant of tenants) {
+    const user = tenant.users.find((candidate) => candidate.email.toLowerCase() === normalizedEmail);
+    if (!user) continue;
+    const token = crypto.randomUUID();
+    user.passwordResetToken = token;
+    user.passwordResetExpiresAt = new Date(Date.now() + 1000 * 60 * 60).toISOString();
+    tenant.auditLog = [audit(tenant.id, user.email, "password-reset-request", "tenant-user", user.id), ...tenant.auditLog].slice(0, 100);
+    await saveTenantConfiguration(tenant.id, tenant, user.email);
+    await sendTenantPasswordResetMail(tenant, user.email, token);
+    return true;
+  }
+  return false;
+}
+
+export async function resetTenantUserPassword(token: string, passwordHash: string) {
+  const tenants = await listTenants();
+  for (const tenant of tenants) {
+    const user = tenant.users.find((candidate) => candidate.passwordResetToken === token);
+    if (!user) continue;
+    if (!user.passwordResetExpiresAt || new Date(user.passwordResetExpiresAt).getTime() < Date.now()) {
+      throw new Error("Password reset token expired");
+    }
+    user.passwordHash = passwordHash;
+    delete user.passwordResetToken;
+    delete user.passwordResetExpiresAt;
+    tenant.auditLog = [audit(tenant.id, user.email, "password-reset", "tenant-user", user.id), ...tenant.auditLog].slice(0, 100);
+    await saveTenantConfiguration(tenant.id, tenant, user.email);
+    await sendTenantPasswordChangedMail(tenant, user.email);
+    return { tenant, user };
+  }
+  throw new Error("Password reset token not found");
+}
+
+async function sendTenantVerificationMail(tenant: Tenant, email: string, token: string) {
+  const verifyUrl = appUrl(`/api/auth/verify-email?token=${encodeURIComponent(token)}`);
+  await sendMail({
+    to: email,
+    subject: `Platzguide bestätigen · ${tenant.name}`,
+    eyebrow: "Registrierung",
+    title: "Bestätige deine E-Mail-Adresse.",
+    intro: `Dein Platzguide für ${tenant.name} wurde vorbereitet.\n\nBitte bestätige jetzt deine E-Mail-Adresse. Danach kannst du deinen Campingplatz im Adminbereich einrichten.`,
+    text: `Dein Platzguide für ${tenant.name} wurde vorbereitet.\n\nBitte bestätige deine E-Mail-Adresse: ${verifyUrl}`,
+    actionLabel: "E-Mail bestätigen",
+    actionUrl: verifyUrl,
+    rows: [
+      { label: "Campingplatz", value: tenant.name },
+      { label: "Platzguide-Link", value: tenantPublicUrl(tenant.slug) },
+      { label: "Adminbereich", value: tenantAdminUrl(tenant.slug) }
+    ],
+    footerNote: "Wenn du diese Registrierung nicht gestartet hast, kannst du diese E-Mail ignorieren."
+  });
+}
+
+async function sendTenantWelcomeMail(tenant: Tenant, email: string) {
+  await sendMail({
+    to: email,
+    subject: `Willkommen bei Platzguide · ${tenant.name}`,
+    eyebrow: "Bereit",
+    title: "Dein Zugang ist bestätigt.",
+    intro: `Willkommen bei Platzguide.\n\nDu kannst jetzt Branding, Kartengrundlagen, Stationen, Rechtstexte und Veröffentlichung für ${tenant.name} pflegen.`,
+    text: `Dein Zugang ist bestätigt.\n\nAdminbereich: ${tenantAdminUrl(tenant.slug)}\nBesucheransicht: ${tenantPublicUrl(tenant.slug)}`,
+    actionLabel: "Adminbereich öffnen",
+    actionUrl: tenantAdminUrl(tenant.slug),
+    rows: [
+      { label: "Campingplatz", value: tenant.name },
+      { label: "Besucheransicht", value: tenantPublicUrl(tenant.slug) }
+    ]
+  });
+}
+
+async function sendTenantPasswordResetMail(tenant: Tenant, email: string, token: string) {
+  const resetUrl = appUrl(`/admin/login?reset=${encodeURIComponent(token)}`);
+  await sendMail({
+    to: email,
+    subject: `Passwort zurücksetzen · ${tenant.name}`,
+    eyebrow: "Sicherheit",
+    title: "Setze dein Passwort zurück.",
+    intro: `Für deinen Platzguide-Zugang wurde ein neues Passwort angefordert.\n\nDer Link ist 60 Minuten gültig. Wenn du das nicht warst, ignoriere diese E-Mail einfach.`,
+    text: `Passwort zurücksetzen: ${resetUrl}\n\nDer Link ist 60 Minuten gültig.`,
+    actionLabel: "Passwort neu setzen",
+    actionUrl: resetUrl,
+    rows: [
+      { label: "Campingplatz", value: tenant.name },
+      { label: "Adminbereich", value: tenantAdminUrl(tenant.slug) }
+    ],
+    footerNote: "Aus Sicherheitsgründen läuft dieser Link nach 60 Minuten ab."
+  });
+}
+
+async function sendTenantPasswordChangedMail(tenant: Tenant, email: string) {
+  await sendMail({
+    to: email,
+    subject: `Passwort geändert · ${tenant.name}`,
+    eyebrow: "Sicherheit",
+    title: "Dein Passwort wurde geändert.",
+    intro: `Das Passwort für deinen Platzguide-Zugang wurde erfolgreich geändert.\n\nWenn du das nicht warst, melde dich bitte sofort beim Plattformbetreiber.`,
+    text: `Das Passwort für ${tenant.name} wurde geändert.\n\nAdminbereich: ${tenantAdminUrl(tenant.slug)}`,
+    actionLabel: "Zum Adminbereich",
+    actionUrl: tenantAdminUrl(tenant.slug),
+    rows: [{ label: "Campingplatz", value: tenant.name }]
+  });
 }
 
 export async function saveStation(tenantId: string, station: Station, actorEmail: string) {

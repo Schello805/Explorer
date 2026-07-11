@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { canManageTenant, verifyAdminSession } from "@/lib/auth";
 import { resolveAdminTenant } from "@/lib/admin-tenant-auth";
-import { sendMail } from "@/lib/mail";
+import { sendMail, tenantAdminUrl, tenantPublicUrl } from "@/lib/mail";
 import { listTenants } from "@/lib/tenant-store";
 
 const testMailSchema = z.object({
@@ -43,7 +43,19 @@ export async function POST(request: Request) {
   await sendMail({
     to: uniqueRecipients.join(","),
     subject: `Platzguide Testmail · ${authorization.tenant.name}`,
-    text: `Das ist eine Testmail für ${authorization.tenant.name}.\n\nSMTP ist global auf der Plattform konfiguriert. Diese Mail wurde ausschließlich an Mandanten-Admins gesendet.\n\nAusgelöst von: ${authorization.session.email}\nZeitpunkt: ${new Date().toISOString()}`
+    eyebrow: "SMTP-Test",
+    title: "Dein Mailversand funktioniert.",
+    intro: `Diese Testmail wurde erfolgreich über die globalen SMTP-Einstellungen von Platzguide versendet.\n\nE-Mails gehen ausschließlich an Admins des jeweiligen Mandanten. Gäste erhalten keine Systemmails.`,
+    text: `Diese Testmail wurde erfolgreich für ${authorization.tenant.name} versendet.\n\nAdminbereich: ${tenantAdminUrl(authorization.tenant.slug)}\nBesucheransicht: ${tenantPublicUrl(authorization.tenant.slug)}\n\nAusgelöst von: ${authorization.session.email}\nZeitpunkt: ${new Date().toISOString()}`,
+    actionLabel: "Adminbereich öffnen",
+    actionUrl: tenantAdminUrl(authorization.tenant.slug),
+    rows: [
+      { label: "Campingplatz", value: authorization.tenant.name },
+      { label: "Besucheransicht", value: tenantPublicUrl(authorization.tenant.slug) },
+      { label: "Ausgelöst von", value: authorization.session.email },
+      { label: "Zeitpunkt", value: new Date().toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" }) }
+    ],
+    footerNote: "Diese Testmail bestätigt nur die Plattform-SMTP-Konfiguration."
   });
 
   return NextResponse.json({ ok: true, recipients: uniqueRecipients.length });

@@ -91,6 +91,8 @@ export type TenantUser = {
   emailVerifiedAt?: string;
   emailVerificationToken?: string;
   emailVerificationExpiresAt?: string;
+  passwordResetToken?: string;
+  passwordResetExpiresAt?: string;
   createdAt: string;
 };
 
