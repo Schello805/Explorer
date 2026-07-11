@@ -308,7 +308,7 @@ function SetupAssistant({ tenant, stations, onNavigate }: { tenant: Tenant; stat
     { id: "tenants", label: "Karte oder Platzplan", done: tenant.map.configured !== false },
     { id: "stations", label: "Stationen aktivieren", done: activeStations.length > 0 },
     { id: "legal", label: "Rechtstexte prüfen", done: Boolean(tenant.legal.imprint && tenant.legal.privacy && tenant.legal.cookies) },
-    { id: "integrations", label: "Absender & Module prüfen", done: Boolean(tenant.integrations.mail.fromEmail || tenant.email.senderEmail) },
+    { id: "integrations", label: "Benachrichtigungen prüfen", done: true },
     { id: "billing", label: "Veröffentlichung freigeben", done: tenant.billing.publicEnabled }
   ];
   const doneCount = steps.filter((step) => step.done).length;
@@ -460,15 +460,14 @@ function Integrations({ tenant, saving, platformAdmin, onSave }: { tenant: Tenan
     setMailTest(response.ok ? `Testmail an ${payload.recipients ?? 0} Mandanten-Admin(s) gesendet.` : payload.error ?? "Testmail fehlgeschlagen.");
   }
   return <div className="space-y-6">
-    <SettingsCard title="E-Mail-Benachrichtigungen" description="SMTP ist global auf der Plattform konfiguriert. E-Mails gehen nur an Admins dieses Mandanten. Gäste erhalten keine E-Mails.">
-      <Field label="Absender-E-Mail" value={draft.integrations.mail.fromEmail} onChange={(fromEmail) => setDraft({ ...draft, integrations: { ...draft.integrations, mail: { ...draft.integrations.mail, fromEmail, provider: "global-smtp" } } })} />
-      <Field label="Absender-Name" value={draft.integrations.mail.fromName} onChange={(fromName) => setDraft({ ...draft, integrations: { ...draft.integrations, mail: { ...draft.integrations.mail, fromName, provider: "global-smtp" } } })} />
+    <SettingsCard title="E-Mail-Benachrichtigungen" description="E-Mails werden immer vom zentralen Platzguide-System gesendet. Mandanten können SMTP und Absender nicht ändern.">
       <div className="rounded-xl bg-[#f7f7f4] p-3 text-sm leading-6 text-black/55">
         <p><strong>Empfänger:</strong> Mandanten-Admins mit Rolle Owner oder Editor.</p>
+        <p><strong>Absender:</strong> immer das zentrale System aus der Server-Konfiguration.</p>
         <p><strong>Gäste:</strong> keine E-Mails; spätere Hinweise laufen maximal über Push-Mitteilungen nach Einwilligung.</p>
-        {platformAdmin && <p><strong>SMTP:</strong> Host, Port, Benutzer und Passwort liegen nur in der Server-Umgebung.</p>}
+        {platformAdmin && <p><strong>SMTP:</strong> Host, Port, Benutzer, Passwort, Absendername und Absenderadresse liegen nur in der Server-Umgebung.</p>}
       </div>
-      <div className="flex flex-wrap gap-2"><button type="button" onClick={sendTestMail} className="rounded-xl border px-4 py-3 text-sm font-bold">Testmail an Mandanten-Admins senden</button><Save saving={saving} onClick={() => onSave(draft)} /></div>
+      <div className="flex flex-wrap gap-2"><button type="button" onClick={sendTestMail} className="rounded-xl border px-4 py-3 text-sm font-bold">Testmail an Mandanten-Admins senden</button></div>
       {mailTest && <p className="rounded-xl bg-[#eff3ec] p-3 text-sm font-bold text-[#286551]">{mailTest}</p>}
     </SettingsCard>
     <SettingsCard title="Captcha & Self-Service" description="Turnstile oder hCaptcha schützt öffentliche Registrierung.">
@@ -677,8 +676,6 @@ function tooltipForLabel(label: string) {
     "Cookie-Hinweise": "Hinweise zu notwendigen und optionalen Cookies.",
     "AGB / Nutzungsbedingungen": "Nutzungsbedingungen für den jeweiligen Platzguide oder Dienst.",
     "Provider": "Auswahl des genutzten Diensttyps.",
-    "Absender-E-Mail": "E-Mail-Adresse, die als Absender ausgehender Mails erscheint.",
-    "Absender-Name": "Anzeigename für ausgehende E-Mails.",
     "Captcha-Provider": "Dienst gegen automatische Bot-Registrierungen.",
     "Öffentlicher Site-Key": "Öffentlicher Captcha-Schlüssel für das Frontend.",
     "Analytics-Provider": "Statistikdienst für diesen Campingplatz. Matomo wird erst nach Einwilligung geladen.",

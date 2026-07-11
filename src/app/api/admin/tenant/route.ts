@@ -60,9 +60,7 @@ const tenantSchema = z.object({
   }),
   integrations: z.object({
     mail: z.object({
-      provider: z.literal("global-smtp"),
-      fromEmail: z.string().email(),
-      fromName: z.string().max(120)
+      provider: z.literal("global-smtp")
     }),
     captcha: z.object({ provider: z.enum(["turnstile", "hcaptcha", "disabled"]), siteKey: z.string().max(500), requiredForSignup: z.boolean() }),
     storage: z.object({ provider: z.enum(["local", "s3", "external-url"]), maxUploadMb: z.number().min(1).max(100), allowedTypes: z.array(z.string().max(120)).min(1) }),
@@ -107,7 +105,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Mandantenzugriff verweigert" }, { status: 403 });
   }
   const platformAdmin = authorization.session.role === "platform-admin" && authorization.session.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-  const safeTenant = platformAdmin ? parsed.data : restrictTenantAdminWrite(parsed.data as typeof targetTenant, targetTenant);
+  const safeTenant = platformAdmin
+    ? { ...parsed.data, email: targetTenant.email, integrations: { ...parsed.data.integrations, mail: targetTenant.integrations.mail } }
+    : restrictTenantAdminWrite(parsed.data as typeof targetTenant, targetTenant);
   const tenant = await saveTenantConfiguration(targetTenant.id, safeTenant as typeof targetTenant, authorization.session.email);
   return NextResponse.json(tenant);
 }
@@ -121,15 +121,12 @@ function restrictTenantAdminWrite(nextTenant: TenantPayload, currentTenant: Tena
     slug: currentTenant.slug,
     hosts: currentTenant.hosts,
     archivedAt: currentTenant.archivedAt,
+    email: currentTenant.email,
     billing: currentTenant.billing,
     features: currentTenant.features,
     integrations: {
       ...currentTenant.integrations,
-      mail: {
-        ...currentTenant.integrations.mail,
-        fromEmail: nextTenant.integrations.mail.fromEmail,
-        fromName: nextTenant.integrations.mail.fromName
-      }
+      mail: currentTenant.integrations.mail
     },
     users: currentTenant.users,
     auditLog: currentTenant.auditLog,

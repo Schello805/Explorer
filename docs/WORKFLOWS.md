@@ -62,13 +62,13 @@ Der öffentliche Platzguide-Link bleibt für anonyme Besucher gesperrt, bis im A
 - Kategorien, Stationen, Bilder, Öffnungszeiten und Status pflegen
 - Gästemappe, Veranstaltungen, Rundgänge und Feedback verwalten, soweit die
   Module für den Mandanten freigeschaltet sind
-- Absendername/-adresse für Benachrichtigungen pflegen und Testmail an die
-  eigenen Mandanten-Admins senden
+- Testmail an die eigenen Mandanten-Admins senden
 - Eigene Inhalte rechtlich prüfen lassen
 - Gästehinweise und Notfallkontakte aktuell halten
 - Nicht erlaubt: Paket/Billing ändern, Veröffentlichung erzwingen,
-  Plattform-SMTP ändern, andere Mandanten sehen, Module selbst freischalten,
-  Speicherlimits/Backups/Datenbank/Captcha verändern oder Mandanten löschen
+  Plattform-SMTP oder Absender ändern, andere Mandanten sehen, Module selbst
+  freischalten, Speicherlimits/Backups/Datenbank/Captcha verändern oder
+  Mandanten löschen
 
 ## Besucher
 

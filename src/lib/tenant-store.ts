@@ -90,10 +90,8 @@ function normalizeTenant(tenant: Tenant): Tenant {
 }
 
 function normalizeMailIntegration(mail: Partial<Tenant["integrations"]["mail"]> | Record<string, unknown> | undefined): Tenant["integrations"]["mail"] {
+  void mail;
   return {
-    ...tenantDefaults.integrations.mail,
-    fromEmail: typeof mail?.fromEmail === "string" ? mail.fromEmail : tenantDefaults.integrations.mail.fromEmail,
-    fromName: typeof mail?.fromName === "string" ? mail.fromName : tenantDefaults.integrations.mail.fromName,
     provider: "global-smtp"
   };
 }
