@@ -481,8 +481,13 @@ function Integrations({ tenant, saving, platformAdmin, onSave }: { tenant: Tenan
       {draft.tracking.matomoUrl && <a href={draft.tracking.matomoUrl} target="_blank" rel="noreferrer" className="inline-flex w-fit rounded-xl border border-black/10 px-4 py-3 text-sm font-bold">Matomo öffnen</a>}
       <p className="rounded-xl bg-[#f7f7f4] p-3 text-xs leading-5 text-black/55">Wichtig: Matomo muss separat betrieben oder gebucht werden. Hier wird nur die Verbindung je Mandant verwaltet.</p>
     </SettingsCard>
-    <SettingsCard title="Storage, Datenbank & Backup" description="Betriebsparameter für Uploads, PostgreSQL und Sicherungen.">
-      <Select label="Storage" value={draft.integrations.storage.provider} options={["local", "s3", "external-url"]} onChange={(provider) => setDraft({ ...draft, integrations: { ...draft.integrations, storage: { ...draft.integrations.storage, provider: provider as Tenant["integrations"]["storage"]["provider"] } } })} />
+    <SettingsCard title="Dateiablage, Datenbank & Backup" description="Betriebsparameter für Uploads, PostgreSQL und Sicherungen.">
+      <div className="rounded-xl bg-[#f7f7f4] p-4 text-sm leading-6 text-black/65"><strong className="text-[#1b302a]">Wichtig:</strong> Mandanten, Stationen, Einstellungen, Audit-Log und Metadaten liegen in PostgreSQL. Die Dateiablage betrifft nur hochgeladene Bilder, PDFs und Videos; bei „Server-Dateisystem“ werden diese Dateien lokal auf dem Server gespeichert und tenantgetrennt referenziert.</div>
+      <label className="block min-w-0 text-sm font-bold"><LabelText label="Dateiablage für Uploads" tooltip="Speicherort für hochgeladene Medien. Die eigentlichen App-Daten liegen weiterhin in PostgreSQL." /><select title="Speicherort für hochgeladene Medien. Die eigentlichen App-Daten liegen weiterhin in PostgreSQL." aria-label="Dateiablage für Uploads" value={draft.integrations.storage.provider} onChange={(event) => setDraft({ ...draft, integrations: { ...draft.integrations, storage: { ...draft.integrations.storage, provider: event.target.value as Tenant["integrations"]["storage"]["provider"] } } })} className="mt-2 w-full rounded-xl border border-black/10 bg-[#fafaf8] px-4 py-3 outline-none">
+        <option value="local">Server-Dateisystem, tenantgetrennt</option>
+        <option value="s3">S3-kompatibler Objektspeicher</option>
+        <option value="external-url">Externe Medien-URLs</option>
+      </select></label>
       <Field label="Max. Upload MB" value={String(draft.integrations.storage.maxUploadMb)} onChange={(maxUploadMb) => setDraft({ ...draft, integrations: { ...draft.integrations, storage: { ...draft.integrations.storage, maxUploadMb: Number(maxUploadMb) } } })} />
       <Area label="Erlaubte MIME-Typen" value={draft.integrations.storage.allowedTypes.join("\n")} onChange={(value) => setDraft({ ...draft, integrations: { ...draft.integrations, storage: { ...draft.integrations.storage, allowedTypes: value.split("\n").map((item) => item.trim()).filter(Boolean) } } })} />
       <Select label="Datenbank" value={draft.integrations.database.provider} options={["postgresql"]} onChange={() => setDraft({ ...draft, integrations: { ...draft.integrations, database: { ...draft.integrations.database, provider: "postgresql" } } })} />
@@ -693,7 +698,7 @@ function tooltipForLabel(label: string) {
     "Analytics-Provider": "Statistikdienst für diesen Campingplatz. Matomo wird erst nach Einwilligung geladen.",
     "Matomo-URL": "Basisadresse deiner Matomo-Installation, z. B. https://analytics.example.de.",
     "Matomo-Site-ID": "Die Website-ID aus Matomo für genau diesen Campingplatz.",
-    "Storage": "Speicherart für Uploads und Medien.",
+    "Dateiablage für Uploads": "Speicherort für hochgeladene Medien. Die eigentlichen App-Daten liegen weiterhin in PostgreSQL.",
     "Max. Upload MB": "Maximale Größe pro Datei in Megabyte.",
     "Erlaubte MIME-Typen": "Eine erlaubte Dateiart pro Zeile, z. B. image/jpeg.",
     "Datenbank": "Produktiv verwendetes Datenbanksystem.",
