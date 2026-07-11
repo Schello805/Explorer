@@ -1,4 +1,5 @@
 import { AdminConsole } from "@/components/admin-console";
+import { PlatformAdminConsole } from "@/components/platform-admin-console";
 import { SystemError } from "@/components/system-error";
 import { ADMIN_EMAIL, canViewTenant, verifyAdminSession } from "@/lib/auth";
 import { listTenants } from "@/lib/tenant-store";
@@ -25,7 +26,10 @@ export default async function AdminPage() {
     : tenants.filter((candidate) => canViewTenant(session, candidate.id));
   const tenant = visibleTenants[0];
   if (!tenant) {
-    return <SystemError title="Noch kein Campingplatz angelegt" message="Das System ist leer und enthält keine Demo-Daten. Lege zuerst einen Mandanten über die Startseite oder den Self-Service an." />;
+    if (session.role === "platform-admin" && session.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+      return <PlatformAdminConsole adminEmail={session.email} tenants={visibleTenants} />;
+    }
+    return <SystemError title="Noch kein Campingplatz zugeordnet" message="Deinem Zugang ist noch kein Campingplatz zugeordnet." />;
   }
   return <AdminConsole tenant={tenant} tenants={visibleTenants} adminEmail={session.email} />;
 }

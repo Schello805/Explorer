@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Activity, Bell, BookOpen, CalendarDays, Caravan, CheckCircle2, ChevronRight, CreditCard, Download, FileText, Gift, Globe2, HelpCircle, ImageIcon, LayoutDashboard, LifeBuoy, MapPinned, Menu, MessageSquareWarning, Palette, Plus, Search, Settings, ShieldCheck, Trash2, Users, X } from "lucide-react";
+import { Activity, Bell, BookOpen, CalendarDays, Caravan, CheckCircle2, ChevronRight, CreditCard, Database, Download, FileText, Gift, Globe2, HelpCircle, ImageIcon, LayoutDashboard, LifeBuoy, Mail, MapPinned, Menu, MessageSquareWarning, Palette, Plus, Search, Server, Settings, ShieldCheck, Trash2, Users, X } from "lucide-react";
 import { applyBillingPlan, billingPlans, formatEuro, storageUsedMb } from "@/lib/billing";
 import type { Category, EventItem, GuestGuideItem, MediaAsset, Reward, Station, Tenant, Tour } from "@/lib/types";
 import { cn, statusLabel } from "@/lib/utils";
 import { StationLocationPicker } from "@/components/station-location-picker";
 import { StationImport } from "@/components/station-import";
+import { CreateTenantForm } from "@/components/platform-admin-console";
 
 const platformLogo = "/icons/platzguide-logo.png";
 
@@ -39,6 +40,8 @@ export function AdminConsole({ tenant, tenants, adminEmail }: { tenant: Tenant; 
   const [stations, setStations] = useState(tenant.stations);
   const [editing, setEditing] = useState<Station | null>(null);
   const [saving, setSaving] = useState(false);
+  const isPlatformAdmin = adminEmail.toLowerCase() === "admin@schellenberger.biz";
+  const visibleNavigation = isPlatformAdmin ? [{ id: "platform", label: "Plattform", icon: Server }, ...navigation] : navigation;
 
   async function removeStation(id: string) {
     if (!confirm("Station wirklich löschen?")) return;
@@ -124,15 +127,16 @@ export function AdminConsole({ tenant, tenants, adminEmail }: { tenant: Tenant; 
     {menuOpen && <button aria-label="Menü schließen" onClick={() => setMenuOpen(false)} className="fixed inset-0 z-20 bg-black/35 lg:hidden" />}
     <aside className={cn("fixed inset-y-0 left-0 z-30 flex w-60 flex-col overflow-y-auto overflow-x-hidden bg-[#173c32] p-4 text-white transition-transform lg:translate-x-0", menuOpen ? "translate-x-0" : "-translate-x-full")}>
       <div className="flex items-center justify-between"><div className="flex items-center gap-3"><span className="grid h-12 w-12 place-items-center rounded-xl bg-white/95 p-1.5 shadow-sm"><Image src={platformLogo} alt="Platzguide" width={40} height={40} className="h-full w-full object-contain" priority /></span><div><p className="font-display text-xl">Platzguide</p><p className="text-[10px] uppercase tracking-widest text-white/45">Plattform Admin</p></div></div><button className="lg:hidden" onClick={() => setMenuOpen(false)}><X /></button></div>
-      <nav className="mt-6 space-y-1">{navigation.map((item) => <button key={item.id} onClick={() => { setSection(item.id); setMenuOpen(false); }} className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-bold transition", section === item.id ? "bg-white text-[#173c32]" : "text-white/65 hover:bg-white/10 hover:text-white")}><item.icon size={18} />{item.label}</button>)}</nav>
+      <nav className="mt-6 space-y-1">{visibleNavigation.map((item) => <button key={item.id} onClick={() => { setSection(item.id); setMenuOpen(false); }} className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-bold transition", section === item.id ? "bg-white text-[#173c32]" : "text-white/65 hover:bg-white/10 hover:text-white")}><item.icon size={18} />{item.label}</button>)}</nav>
       <div className="mt-auto shrink-0 rounded-xl bg-white/5 p-3"><p className="truncate text-xs font-bold">{adminEmail}</p><p className="mt-1 text-[10px] uppercase tracking-wider text-white/35">Plattform-Administrator</p><form action="/api/auth/logout" method="post"><button className="mt-3 text-xs text-[#e8b65f]">Sicher abmelden</button></form></div>
     </aside>
 
     <main className="min-w-0 overflow-x-hidden lg:ml-60">
       <header className="sticky top-0 z-20 flex min-h-16 flex-wrap items-center justify-between gap-3 border-b border-black/5 bg-[#f2f3ef]/90 px-[5%] py-2 backdrop-blur-xl">
-        <button aria-label="Menü öffnen" className="shrink-0 lg:hidden" onClick={() => setMenuOpen(true)}><Menu /></button><div className="hidden min-w-0 sm:block"><p className="text-xs font-bold uppercase tracking-widest text-[#1b302a]/40">Plattformverwaltung</p><h1 className="truncate font-display text-2xl">{navigation.find((item) => item.id === section)?.label}</h1></div><div className="flex min-w-0 flex-1 justify-end gap-2"><select title="Wähle aus, welchen Campingplatz du gerade ansehen oder bearbeiten möchtest." aria-label="Mandant wählen" value={currentTenant.id} onChange={(event) => { const nextTenant = availableTenants.find((item) => item.id === event.target.value); if (!nextTenant) return; setCurrentTenant(nextTenant); setStations(nextTenant.stations); setEditing(null); }} className="min-w-0 max-w-[46vw] rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm font-bold"><option value="" disabled>Mandant wählen</option>{availableTenants.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><a href={`/c/${currentTenant.slug}`} target="_blank" className="rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm font-bold"><Globe2 size={16} className="sm:mr-2 sm:inline" /><span className="hidden sm:inline">Besucheransicht</span></a><button aria-label="Benachrichtigungen" className="rounded-xl border border-black/10 bg-white p-2.5"><Bell size={18} /></button></div>
+        <button aria-label="Menü öffnen" className="shrink-0 lg:hidden" onClick={() => setMenuOpen(true)}><Menu /></button><div className="hidden min-w-0 sm:block"><p className="text-xs font-bold uppercase tracking-widest text-[#1b302a]/40">Plattformverwaltung</p><h1 className="truncate font-display text-2xl">{visibleNavigation.find((item) => item.id === section)?.label}</h1></div><div className="flex min-w-0 flex-1 justify-end gap-2"><select title="Wähle aus, welchen Campingplatz du gerade ansehen oder bearbeiten möchtest." aria-label="Mandant wählen" value={currentTenant.id} onChange={(event) => { const nextTenant = availableTenants.find((item) => item.id === event.target.value); if (!nextTenant) return; setCurrentTenant(nextTenant); setStations(nextTenant.stations); setEditing(null); }} className="min-w-0 max-w-[46vw] rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm font-bold"><option value="" disabled>Mandant wählen</option>{availableTenants.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><a href={`/c/${currentTenant.slug}`} target="_blank" className="rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm font-bold"><Globe2 size={16} className="sm:mr-2 sm:inline" /><span className="hidden sm:inline">Besucheransicht</span></a><button aria-label="Benachrichtigungen" className="rounded-xl border border-black/10 bg-white p-2.5"><Bell size={18} /></button></div>
       </header>
       <div className="mx-auto min-w-0 w-[90%] py-5">
+        {section === "platform" && <PlatformSection tenants={availableTenants} adminEmail={adminEmail} />}
         {section === "overview" && <Overview key={currentTenant.id} tenant={currentTenant} stations={stations} stationCount={stations.filter((station) => !station.isTemplate).length} templateCount={stations.filter((station) => station.isTemplate).length} onNavigate={setSection} />}
         {section === "stations" && <Stations key={currentTenant.id} tenant={currentTenant} stations={stations} onEdit={setEditing} onRemove={removeStation} onCreate={() => setEditing(blankStation(currentTenant.id))} onImport={importStations} />}
         {section === "categories" && <Categories key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
@@ -176,6 +180,62 @@ function Overview({ tenant, stations, stationCount, templateCount, onNavigate }:
       </section>
     </div>
   </div>;
+}
+
+function PlatformSection({ tenants, adminEmail }: { tenants: Tenant[]; adminEmail: string }) {
+  const auditEntries = tenants.flatMap((tenant) => tenant.auditLog.map((entry) => ({ ...entry, tenantName: tenant.name }))).slice(0, 20);
+  const archivedCount = tenants.filter((tenant) => tenant.archivedAt).length;
+  const publicCount = tenants.filter((tenant) => tenant.billing.publicEnabled && tenant.billing.status === "active").length;
+  return <div className="animate-enter space-y-6">
+    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+      <div><p className="text-sm text-[#1b302a]/55">Angemeldet als {adminEmail}</p><h2 className="mt-1 font-display text-4xl">Plattformverwaltung</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-black/55">Hier verwaltest du das Projekt selbst: Mandantenstatus, Betriebschecks, SMTP-Hinweise, Logs und Auditübersicht.</p></div>
+      <a href="/api/health" target="_blank" className="rounded-xl bg-[#173c32] px-4 py-3 text-sm font-bold text-white">Healthcheck öffnen</a>
+    </div>
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <Metric label="Mandanten" value={String(tenants.length)} note="Gesamt" icon={<Users />} />
+      <Metric label="Öffentlich" value={String(publicCount)} note="Aktive Besucher-Apps" icon={<Globe2 />} />
+      <Metric label="Archiviert" value={String(archivedCount)} note="Gesperrt, Daten erhalten" icon={<Database />} />
+      <Metric label="System" value="Online" note="Service erreichbar" icon={<Activity />} />
+    </div>
+    <div className="grid gap-6 xl:grid-cols-2">
+      <SettingsCard title="Globale Betriebsinfos" description="Serverweite Einstellungen liegen bewusst nicht als Klartext im Browser.">
+        <InfoRow icon={<Mail />} title="SMTP" text="Globale SMTP-Zugangsdaten setzt du in .env.local. Mandantenspezifische Absenderdaten pflegst du unter Integrationen." />
+        <InfoRow icon={<ShieldCheck />} title="Datenisolierung" text="Alle Mandantendaten sind tenantgebunden. PostgreSQL-RLS wird serverseitig erzwungen." />
+        <InfoRow icon={<Server />} title="Updates" text="Updates laufen über scripts/update-ubuntu.sh mit Backup, Migration, Build, Healthcheck und Rollback." />
+      </SettingsCard>
+      <SettingsCard title="Wichtige Befehle" description="Diese Befehle führst du direkt auf dem Server aus.">
+        <Command label="Logs live ansehen" command="journalctl -u platzguide -f" />
+        <Command label="Service-Status" command="systemctl status platzguide" />
+        <Command label="Update starten" command="sudo RUN_VERIFY=false bash /opt/platzguide/scripts/update-ubuntu.sh" />
+        <Command label="Healthcheck lokal" command="curl -fsS http://127.0.0.1:3000/api/health" />
+      </SettingsCard>
+      <SettingsCard title="Mandanten" description="Schneller Überblick über Zahlung, Veröffentlichung und Archivstatus.">
+        {tenants.length === 0 && <p className="rounded-xl bg-[#f7f7f4] p-4 text-sm text-black/55">Noch keine Mandanten vorhanden.</p>}
+        <div className="space-y-2">{tenants.map((tenant) => <div key={tenant.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-black/10 p-3 text-sm">
+          <div className="min-w-0"><p className="truncate font-bold">{tenant.name}</p><p className="truncate text-xs text-black/45">/c/{tenant.slug}</p></div>
+          <div className="flex flex-wrap gap-2"><BillingBadge tenant={tenant} />{tenant.archivedAt && <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">Archiviert</span>}</div>
+        </div>)}</div>
+      </SettingsCard>
+      <SettingsCard title="Neuen Campingplatz anlegen" description="Plattform-Admin erstellt Mandanten ohne öffentliche Registrierung.">
+        <CreateTenantForm compact />
+      </SettingsCard>
+      <SettingsCard title="Auditlog" description="Letzte protokollierte Änderungen mandantenübergreifend.">
+        {auditEntries.length === 0 && <p className="rounded-xl bg-[#f7f7f4] p-4 text-sm text-black/55">Noch keine Audit-Einträge vorhanden.</p>}
+        <div className="space-y-2">{auditEntries.map((entry) => <div key={`${entry.id}-${entry.createdAt}`} className="rounded-xl border border-black/10 p-3 text-sm">
+          <div className="flex flex-wrap justify-between gap-2"><p className="font-bold">{entry.action}</p><p className="text-xs text-black/45">{formatStableDate(entry.createdAt)}</p></div>
+          <p className="mt-1 text-xs text-black/55">{entry.tenantName} · {entry.entityType} · {entry.actorEmail}</p>
+        </div>)}</div>
+      </SettingsCard>
+    </div>
+  </div>;
+}
+
+function InfoRow({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
+  return <div className="flex gap-3 rounded-xl border border-black/5 p-3"><span className="mt-0.5 text-[#286551]">{icon}</span><div><p className="font-bold">{title}</p><p className="mt-1 text-sm leading-5 text-black/50">{text}</p></div></div>;
+}
+
+function Command({ label, command }: { label: string; command: string }) {
+  return <div className="rounded-xl bg-[#173c32] p-3 text-white"><p className="text-xs font-bold uppercase tracking-widest text-white/45">{label}</p><code className="mt-2 block break-all text-sm">{command}</code></div>;
 }
 
 function SetupAssistant({ tenant, stations, onNavigate }: { tenant: Tenant; stations: Station[]; onNavigate: (id: string) => void }) {

@@ -230,7 +230,15 @@ export async function deleteTenantPermanently(tenantId: string, actorEmail: stri
   await writeLocalTenants(nextTenants);
 }
 
-export async function createTenantInstance(input: { name: string; slug: string; ownerEmail: string; ownerPasswordHash?: string }) {
+export async function createTenantInstance(input: {
+  name: string;
+  slug: string;
+  ownerEmail: string;
+  ownerPasswordHash?: string;
+  actorEmail?: string;
+  emailVerified?: boolean;
+  sendVerificationEmail?: boolean;
+}) {
   const slug = input.slug.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
   if (slug.length < 2) throw new Error("Invalid slug");
   const tenants = await listTenants();
@@ -238,6 +246,7 @@ export async function createTenantInstance(input: { name: string; slug: string; 
     throw new Error("Slug already exists");
   }
 
+  const shouldSendVerificationEmail = input.sendVerificationEmail !== false;
   const verificationToken = crypto.randomUUID();
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
   const tenantId = crypto.randomUUID();
@@ -269,15 +278,16 @@ export async function createTenantInstance(input: { name: string; slug: string; 
       email: input.ownerEmail.toLowerCase(),
       role: "tenant-owner",
       passwordHash: input.ownerPasswordHash,
-      emailVerificationToken: verificationToken,
-      emailVerificationExpiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(),
+      emailVerifiedAt: input.emailVerified ? new Date().toISOString() : undefined,
+      emailVerificationToken: input.emailVerified ? undefined : verificationToken,
+      emailVerificationExpiresAt: input.emailVerified ? undefined : new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(),
       createdAt: new Date().toISOString()
     }],
     privacyRequests: [],
     auditLog: [{
       id: crypto.randomUUID(),
       tenantId: "",
-      actorEmail: input.ownerEmail,
+      actorEmail: input.actorEmail ?? input.ownerEmail,
       action: "create",
       entityType: "tenant",
       entityId: "",
@@ -300,7 +310,7 @@ export async function createTenantInstance(input: { name: string; slug: string; 
     } finally {
       await sql.end();
     }
-    await sendMail({
+    if (shouldSendVerificationEmail) await sendMail({
       to: input.ownerEmail,
       subject: "Platzguide E-Mail bestätigen",
       text: `Bitte bestätige deine Platzguide-Adresse: ${baseUrl}/api/auth/verify-email?token=${verificationToken}`
@@ -311,7 +321,7 @@ export async function createTenantInstance(input: { name: string; slug: string; 
   const localTenants = await readLocalTenants();
   localTenants.push(tenant);
   await writeLocalTenants(localTenants);
-  await sendMail({
+  if (shouldSendVerificationEmail) await sendMail({
     to: input.ownerEmail,
     subject: "Platzguide E-Mail bestätigen",
     text: `Bitte bestätige deine Platzguide-Adresse: ${baseUrl}/api/auth/verify-email?token=${verificationToken}`
