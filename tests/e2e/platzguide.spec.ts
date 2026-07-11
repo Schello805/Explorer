@@ -26,7 +26,7 @@ test("platform admin can preview and publish a tenant manually", async ({ page, 
   await expect(page.getByRole("main").getByText("Camping Publishplatz")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Orte auf dem Platz" })).toBeVisible();
 
-  await page.goto("/admin");
+  await page.goto("/admin/tenant");
   await page.getByLabel("Mandant wählen").selectOption({ label: "Camping Publishplatz" });
   await page.getByRole("button", { name: /Abo & Veröffentlichung/i }).click();
   await expect(page.getByRole("heading", { name: "Pakete" })).toBeVisible();
@@ -53,6 +53,7 @@ test("mobile admin and visitor views stay within viewport", async ({ page, isMob
   await expect(page.getByText("Der sichtbare Name deines Campingplatz-Guides")).toBeVisible();
 
   await loginAsPlatformAdmin(page);
+  await page.goto("/admin/tenant");
   await expect(page.getByLabel("Menü öffnen")).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
@@ -64,8 +65,7 @@ test("mobile admin and visitor views stay within viewport", async ({ page, isMob
 test("platform admin can open system logs, audit and cleanup tools", async ({ page, isMobile }) => {
   test.skip(isMobile, "system tools are covered on desktop");
   await loginAsPlatformAdmin(page);
-  await page.getByRole("button", { name: "Plattform" }).click();
-  await expect(page.getByRole("heading", { name: "Plattformverwaltung" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Platzguide Admin" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Systemlogs" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Upload-Cleanup" })).toBeVisible();
   await page.getByRole("button", { name: "Logs aktualisieren" }).click();
@@ -79,7 +79,7 @@ async function loginAsPlatformAdmin(page: import("@playwright/test").Page) {
   await page.locator('input[name="email"]').fill("admin@schellenberger.biz");
   await page.locator('input[name="password"]').fill("playwright-admin");
   await Promise.all([
-    page.waitForURL(/\/admin$/),
+    page.waitForURL(/\/admin\/platform$/),
     page.getByRole("button", { name: /Sicher anmelden/i }).click()
   ]);
   await page.waitForLoadState("domcontentloaded");

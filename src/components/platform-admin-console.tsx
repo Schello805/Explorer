@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Activity, AlertTriangle, CheckCircle2, Database, Eye, EyeOff, Mail, Plus, Server, ShieldCheck, Terminal, Users } from "lucide-react";
-import type { Tenant } from "@/lib/types";
+import type { AuditEntry, Tenant } from "@/lib/types";
 
 const platformLogo = "/icons/platzguide-logo.png";
+type PlatformAuditEntry = AuditEntry & { tenantName: string; tenantSlug?: string };
 
 function slugify(value: string) {
   return value.toLowerCase().trim().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
@@ -14,6 +15,52 @@ function slugify(value: string) {
 
 export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: string; tenants: Tenant[] }) {
   const [mailConfigured, setMailConfigured] = useState(false);
+  const auditEntries: PlatformAuditEntry[] = tenants.flatMap((tenant) => tenant.auditLog.map((entry) => ({ ...entry, tenantName: tenant.name, tenantSlug: tenant.slug }))).slice(0, 20);
+  const [systemLogs, setSystemLogs] = useState<string[]>([]);
+  const [auditLines, setAuditLines] = useState(auditEntries);
+  const [cleanup, setCleanup] = useState<{ candidates: { url: string; sizeBytes: number }[]; reclaimableBytes: number; dryRun: boolean; deleted: number } | null>(null);
+  const [systemMessage, setSystemMessage] = useState("");
+
+  const loadSystemLogs = useCallback(async () => {
+    const response = await fetch("/api/admin/system/logs?lines=80");
+    const payload = await response.json() as { lines?: string[]; warning?: string };
+    setSystemLogs(payload.lines ?? []);
+    if (payload.warning) setSystemMessage(payload.warning);
+  }, []);
+
+  const loadAudit = useCallback(async () => {
+    const response = await fetch("/api/admin/system/audit");
+    if (!response.ok) return;
+    const payload = await response.json() as { entries: PlatformAuditEntry[] };
+    setAuditLines(payload.entries);
+  }, []);
+
+  const previewCleanup = useCallback(async () => {
+    const response = await fetch("/api/admin/system/cleanup");
+    if (!response.ok) return;
+    setCleanup(await response.json());
+  }, []);
+
+  async function runCleanup() {
+    if (!cleanup?.candidates.length) return;
+    if (!confirm(`${cleanup.candidates.length} ungenutzte Upload-Dateien endgültig löschen?`)) return;
+    const response = await fetch("/api/admin/system/cleanup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dryRun: false })
+    });
+    if (!response.ok) return alert("Upload-Cleanup konnte nicht ausgeführt werden.");
+    const payload = await response.json() as typeof cleanup;
+    setCleanup(payload);
+    setSystemMessage(`${payload.deleted} Upload-Dateien gelöscht.`);
+  }
+
+  async function checkMonitoring() {
+    const response = await fetch("/api/admin/system/monitoring");
+    const payload = await response.json().catch(() => null) as { ok?: boolean; error?: string; latencyMs?: number } | null;
+    setSystemMessage(payload?.ok ? `Monitoring OK · ${payload.latencyMs ?? "?"} ms` : `Monitoring meldet Fehler: ${payload?.error ?? response.status}`);
+  }
+
   return <div className="min-h-screen bg-[#f2f3ef] text-[#1b302a]">
     <aside className="border-b border-white/10 bg-[#173c32] p-4 text-white lg:fixed lg:inset-y-0 lg:left-0 lg:w-64 lg:border-b-0">
       <a href="https://platzguide.de" className="flex min-w-0 items-center gap-3">
@@ -26,7 +73,7 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
         <PlatformNavLink href="#einrichtung" label="Globale Einrichtung" icon={<Server size={18} />} />
         <PlatformNavLink href="#smtp" label="SMTP & E-Mail" icon={<Mail size={18} />} />
         <PlatformNavLink href="#werkzeuge" label="Werkzeuge" icon={<Terminal size={18} />} />
-        <PlatformNavLink href="#logs" label="Logs & Audit" icon={<AlertTriangle size={18} />} />
+        <PlatformNavLink href="#logs" label="Systemlogs" icon={<AlertTriangle size={18} />} />
         {tenants.length > 0
           ? <Link href="/admin/tenant" className="mt-5 flex items-center gap-3 rounded-xl bg-white px-3 py-3 text-sm font-bold text-[#173c32]"><Database size={18} />Mandantenverwaltung</Link>
           : <p className="mt-5 rounded-xl bg-white/5 px-3 py-3 text-xs font-bold leading-5 text-white/45">Mandantenverwaltung erscheint nach dem ersten Campingplatz.</p>}
@@ -95,14 +142,39 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
 
         <MailSettingsCard onConfiguredChange={setMailConfigured} />
 
-        <AdminCard id="logs" title="Fehlerlogs & Auditlog" icon={<AlertTriangle />}>
-          <p className="text-sm leading-6 text-black/55">Systemfehler liest du aktuell über `journalctl`. Mandanten-Auditlogs erscheinen, sobald mindestens ein Campingplatz existiert, in dessen Adminbereich. Der nächste sinnvolle Ausbauschritt wäre eine eigene Webansicht für Systemlogs und Auditlog-Filter.</p>
-          <Link href="/api/health" target="_blank" className="inline-flex w-fit rounded-xl border border-black/10 px-4 py-3 text-sm font-bold">Healthcheck öffnen</Link>
+        <AdminCard id="logs" title="Systemlogs" icon={<AlertTriangle />}>
+          <p className="text-sm leading-6 text-black/55">Live-Auszug aus dem Systemdienst. Falls der Server keinen Zugriff auf `journalctl` erlaubt, zeigt die Ansicht eine verständliche Meldung statt eines Absturzes.</p>
+          <div className="flex flex-wrap gap-2"><button onClick={loadSystemLogs} className="rounded-xl border border-black/10 px-4 py-3 text-sm font-bold">Logs aktualisieren</button><button onClick={checkMonitoring} className="rounded-xl border border-black/10 px-4 py-3 text-sm font-bold">Monitoring prüfen</button><Link href="/api/health" target="_blank" className="rounded-xl border border-black/10 px-4 py-3 text-sm font-bold">Healthcheck öffnen</Link></div>
+          {systemMessage && <p className="rounded-xl bg-[#f7f7f4] p-3 text-sm font-bold text-[#286551]">{systemMessage}</p>}
+          <pre className="max-h-80 overflow-auto rounded-xl bg-[#101f1a] p-3 text-xs leading-5 text-white/80">{systemLogs.length ? systemLogs.join("\n") : "Noch keine Logs geladen."}</pre>
+        </AdminCard>
+
+        <AdminCard title="Upload-Cleanup" icon={<Database />}>
+          <p className="text-sm leading-6 text-black/55">Findet Upload-Dateien, die in keinem Mandanten mehr referenziert sind. Gelöscht wird erst nach Rückfrage.</p>
+          <div className="rounded-xl bg-[#f7f7f4] p-4 text-sm">
+            <p><strong>{cleanup?.candidates.length ?? 0}</strong> ungenutzte Dateien · {Math.round((cleanup?.reclaimableBytes ?? 0) / 1024 / 1024 * 10) / 10} MB freigebbar</p>
+            <div className="mt-3 flex flex-wrap gap-2"><button onClick={previewCleanup} className="rounded-xl border border-black/10 px-4 py-3 text-sm font-bold">Erneut prüfen</button><button onClick={runCleanup} disabled={!cleanup?.candidates.length} className="rounded-xl bg-red-700 px-4 py-3 text-sm font-bold text-white disabled:opacity-40">Ungenutzte löschen</button></div>
+          </div>
+          <div className="max-h-44 overflow-auto rounded-xl border border-black/10 p-3 text-xs text-black/55">{cleanup?.candidates.slice(0, 20).map((item) => <p key={item.url} className="break-all">{item.url}</p>) || "Keine Kandidaten."}</div>
+        </AdminCard>
+
+        <AdminCard title="Auditlog" icon={<ShieldCheck />}>
+          <p className="text-sm leading-6 text-black/55">Mandantenübergreifende Übersicht der letzten protokollierten Änderungen.</p>
+          <button onClick={loadAudit} className="rounded-xl border border-black/10 px-4 py-3 text-sm font-bold">Auditlog aktualisieren</button>
+          {auditLines.length === 0 && <p className="rounded-xl bg-[#f7f7f4] p-4 text-sm text-black/55">Noch keine Audit-Einträge vorhanden.</p>}
+          <div className="space-y-2">{auditLines.map((entry) => <div key={`${entry.id}-${entry.createdAt}`} className="rounded-xl border border-black/10 p-3 text-sm">
+            <div className="flex flex-wrap justify-between gap-2"><p className="font-bold">{entry.action}</p><p className="text-xs text-black/45">{formatPlatformDate(entry.createdAt)}</p></div>
+            <p className="mt-1 text-xs text-black/55">{entry.tenantName} · {entry.entityType} · {entry.actorEmail}</p>
+          </div>)}</div>
         </AdminCard>
       </div>
     </section>
     </main>
   </div>;
+}
+
+function formatPlatformDate(value: string) {
+  return new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
 function PlatformNavLink({ href, label, icon }: { href: string; label: string; icon: React.ReactNode }) {
