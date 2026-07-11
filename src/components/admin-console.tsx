@@ -9,6 +9,7 @@ import { cn, statusLabel } from "@/lib/utils";
 import { StationLocationPicker } from "@/components/station-location-picker";
 import { StationImport } from "@/components/station-import";
 import { CreateTenantForm } from "@/components/platform-admin-console";
+import { CampAreaPicker } from "@/components/camp-area-picker";
 
 const platformLogo = "/icons/platzguide-logo.png";
 type PlatformAuditEntry = AuditEntry & { tenantName: string; tenantSlug?: string };
@@ -404,14 +405,9 @@ function TenantSettings({ tenant, saving, platformAdmin, onLifecycle, onSave }: 
       <Field label="Notfallkontakt" value={draft.contact.emergency} onChange={(emergency) => setDraft({ ...draft, contact: { ...draft.contact, emergency } })} />
       <Save saving={saving} onClick={save} />
     </SettingsCard>
-    <SettingsCard title="Kartengrundlagen" description="Freie Basiskarte, optionales regionales Luftbild und eigener Platzplan.">
-      <div className="rounded-xl bg-emerald-50 p-4 text-sm leading-6 text-emerald-900"><strong>Empfohlen:</strong> OpenFreeMap für Wege und Orientierung. Ergänzend kann ein lizenzierter Luftbild-WMS oder ein eigener Lageplan eingeblendet werden.</div>
-      <Field label="Kartenstil-URL" value={draft.map.styleUrl} onChange={(styleUrl) => setDraft({ ...draft, map: { ...draft.map, configured: true, styleUrl } })} />
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Field label="Mittelpunkt Längengrad" value={String(draft.map.center[0])} onChange={(longitude) => setDraft({ ...draft, map: { ...draft.map, configured: true, center: [Number(longitude), draft.map.center[1]] } })} />
-        <Field label="Mittelpunkt Breitengrad" value={String(draft.map.center[1])} onChange={(latitude) => setDraft({ ...draft, map: { ...draft.map, configured: true, center: [draft.map.center[0], Number(latitude)] } })} />
-        <Field label="Start-Zoom" value={String(draft.map.zoom)} onChange={(zoom) => setDraft({ ...draft, map: { ...draft.map, configured: true, zoom: Number(zoom) } })} />
-      </div>
+    <SettingsCard title="Kartengrundlagen" description="Das Kernfeature: freie OpenFreeMap-Basiskarte, grafisch markierte Campingplatzfläche und optional eigener Lageplan.">
+      <div className="rounded-xl bg-emerald-50 p-4 text-sm leading-6 text-emerald-900"><strong>Standard:</strong> Platzguide nutzt OpenFreeMap/OSM als freie Basiskarte. Der Betreiber markiert seinen Campingplatz als Rechteck; daraus werden Mittelpunkt, Zoom und Besucherkarte sauber abgeleitet.</div>
+      <CampAreaPicker mapConfig={draft.map} onChange={(map) => setDraft({ ...draft, map })} />
       <Field label="Luftbild-Tile/WMS-URL (optional)" value={draft.map.aerialTiles?.[0] ?? ""} onChange={(tile) => setDraft({ ...draft, map: { ...draft.map, configured: true, aerialTiles: tile ? [tile] : undefined } })} />
       <Field label="Luftbild-Quellenangabe" value={draft.map.aerialAttribution ?? ""} onChange={(aerialAttribution) => setDraft({ ...draft, map: { ...draft.map, aerialAttribution } })} />
       <Field label="Platzplan-Bild-URL" value={draft.map.sitePlan?.imageUrl ?? ""} onChange={(imageUrl) => setDraft({ ...draft, map: { ...draft.map, configured: Boolean(imageUrl) || draft.map.configured, sitePlan: imageUrl ? draft.map.sitePlan ?? { imageUrl, coordinates: [[draft.map.center[0] - 0.001, draft.map.center[1] + 0.001], [draft.map.center[0] + 0.001, draft.map.center[1] + 0.001], [draft.map.center[0] + 0.001, draft.map.center[1] - 0.001], [draft.map.center[0] - 0.001, draft.map.center[1] - 0.001]], attribution: "Eigener Lageplan" } : undefined } })} />

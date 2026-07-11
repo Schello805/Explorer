@@ -21,6 +21,10 @@ const tenantSchema = z.object({
     zoom: z.number().min(1).max(22),
     styleUrl: z.string().url(),
     configured: z.boolean().optional(),
+    bounds: z.tuple([
+      z.tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)]),
+      z.tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)])
+    ]).optional(),
     aerialTiles: z.array(z.string()).optional(),
     aerialAttribution: z.string().optional(),
     sitePlan: z.object({

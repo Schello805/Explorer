@@ -81,6 +81,10 @@ export function CampMap({
 
       map.on("load", () => {
         loaded = true;
+        if (getMapStyle(tenant.map.styleUrl) !== rasterMapStyle) {
+          visibleTiles = true;
+          setTilesVisible(true);
+        }
         window.clearTimeout(fallbackTimer);
         setFailed(false);
         map.resize();
@@ -105,6 +109,21 @@ export function CampMap({
             source: "site-plan",
             type: "raster",
             paint: { "raster-opacity": 0.92 }
+          });
+        }
+        if (hasValidBounds(tenant.map.bounds)) {
+          map.addSource("camp-area", { type: "geojson", data: boundsFeature(tenant.map.bounds) });
+          map.addLayer({
+            id: "camp-area-fill",
+            source: "camp-area",
+            type: "fill",
+            paint: { "fill-color": "#195f4c", "fill-opacity": 0.12 }
+          });
+          map.addLayer({
+            id: "camp-area-outline",
+            source: "camp-area",
+            type: "line",
+            paint: { "line-color": "#195f4c", "line-width": 2, "line-dasharray": [2, 1] }
           });
         }
 
@@ -241,7 +260,7 @@ function StaticTilePreview({ center, zoom }: { center: [number, number]; zoom: n
 }
 
 function getMapStyle(styleUrl: string) {
-  if (!styleUrl || styleUrl.includes("openfreemap.org")) return rasterMapStyle;
+  if (!styleUrl) return rasterMapStyle;
   return styleUrl;
 }
 
@@ -264,6 +283,20 @@ function stationCenter(stations: Station[]): [number, number] | null {
 
 function hasValidSitePlan(sitePlan: Tenant["map"]["sitePlan"]): sitePlan is NonNullable<Tenant["map"]["sitePlan"]> {
   return Boolean(sitePlan?.imageUrl && sitePlan.coordinates.every(hasLngLat));
+}
+
+function hasValidBounds(bounds: Tenant["map"]["bounds"]): bounds is NonNullable<Tenant["map"]["bounds"]> {
+  return Boolean(bounds && bounds.every(hasLngLat));
+}
+
+function boundsFeature(bounds: NonNullable<Tenant["map"]["bounds"]>) {
+  const [[west, south], [east, north]] = bounds;
+  const coordinates = [[west, north], [east, north], [east, south], [west, south], [west, north]];
+  return {
+    type: "Feature" as const,
+    properties: {},
+    geometry: { type: "Polygon" as const, coordinates: [coordinates] }
+  };
 }
 
 function projectStation(station: Station, center: [number, number]) {

@@ -52,6 +52,22 @@ export function StationLocationPicker({ mapConfig, longitude, latitude, onChange
         compact: true,
         customAttribution: "© OpenStreetMap-Mitwirkende · OpenFreeMap"
       }), "bottom-left");
+      map.on("load", () => {
+        if (!hasValidBounds(mapConfig.bounds)) return;
+        map.addSource("camp-area", { type: "geojson", data: boundsFeature(mapConfig.bounds) });
+        map.addLayer({
+          id: "camp-area-fill",
+          source: "camp-area",
+          type: "fill",
+          paint: { "fill-color": "#195f4c", "fill-opacity": 0.10 }
+        });
+        map.addLayer({
+          id: "camp-area-outline",
+          source: "camp-area",
+          type: "line",
+          paint: { "line-color": "#195f4c", "line-width": 2, "line-dasharray": [2, 1] }
+        });
+      });
       const marker = new maplibregl.Marker({ color: "#c44f34", draggable: true })
         .setLngLat(initialPositionRef.current)
         .addTo(map);
@@ -119,6 +135,24 @@ export function StationLocationPicker({ mapConfig, longitude, latitude, onChange
 }
 
 function getMapStyle(styleUrl: string) {
-  if (!styleUrl || styleUrl.includes("openfreemap.org")) return rasterMapStyle;
+  if (!styleUrl) return rasterMapStyle;
   return styleUrl;
+}
+
+function hasLngLat(value: unknown): value is [number, number] {
+  return Array.isArray(value) && value.length === 2 && value.every(Number.isFinite);
+}
+
+function hasValidBounds(bounds: Tenant["map"]["bounds"]): bounds is NonNullable<Tenant["map"]["bounds"]> {
+  return Boolean(bounds && bounds.every(hasLngLat));
+}
+
+function boundsFeature(bounds: NonNullable<Tenant["map"]["bounds"]>) {
+  const [[west, south], [east, north]] = bounds;
+  const coordinates = [[west, north], [east, north], [east, south], [west, south], [west, north]];
+  return {
+    type: "Feature" as const,
+    properties: {},
+    geometry: { type: "Polygon" as const, coordinates: [coordinates] }
+  };
 }

@@ -17,7 +17,8 @@ export const tenantDefaults: Omit<Tenant, "id" | "slug" | "hosts" | "name" | "us
     center: [10.0, 51.0],
     zoom: 6,
     styleUrl: "https://tiles.openfreemap.org/styles/liberty",
-    configured: false
+    configured: false,
+    bounds: undefined
   },
   contact: {
     phone: "",

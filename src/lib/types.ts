@@ -134,6 +134,7 @@ export type Tenant = {
     zoom: number;
     styleUrl: string;
     configured?: boolean;
+    bounds?: [[number, number], [number, number]];
     aerialTiles?: string[];
     aerialAttribution?: string;
     sitePlan?: {

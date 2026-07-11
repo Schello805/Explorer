@@ -270,7 +270,8 @@ export async function createTenantInstance(input: {
       center: [10.5605, 49.1643],
       zoom: 15,
       styleUrl: "https://tiles.openfreemap.org/styles/liberty",
-      configured: false
+      configured: false,
+      bounds: undefined
     },
     stations: createDefaultStationTemplates(tenantId),
     media: [],
