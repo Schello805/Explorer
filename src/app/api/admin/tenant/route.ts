@@ -1,7 +1,7 @@
 import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { ADMIN_EMAIL, canManageTenant, verifyAdminSession } from "@/lib/auth";
+import { canManageTenant, isPlatformAdminSession, verifyAdminSession } from "@/lib/auth";
 import { resolveAdminTenant } from "@/lib/admin-tenant-auth";
 import { listTenants, saveTenantConfiguration } from "@/lib/tenant-store";
 
@@ -110,7 +110,7 @@ export async function POST(request: Request) {
   if (!targetTenant || !canManageTenant(authorization.session, targetTenant.id)) {
     return NextResponse.json({ error: "Mandantenzugriff verweigert" }, { status: 403 });
   }
-  const platformAdmin = authorization.session.role === "platform-admin" && authorization.session.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  const platformAdmin = isPlatformAdminSession(authorization.session);
   const safeTenant = platformAdmin
     ? { ...parsed.data, email: targetTenant.email, integrations: { ...parsed.data.integrations, mail: targetTenant.integrations.mail } }
     : restrictTenantAdminWrite(parsed.data as typeof targetTenant, targetTenant);

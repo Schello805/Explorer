@@ -51,11 +51,19 @@ export function canAccessAdmin(session: AppSession) {
 }
 
 export function canManageTenant(session: AppSession, tenantId: string) {
-  if (session.role === "platform-admin" && session.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) return true;
+  if (session.role === "platform-admin" && session.email.toLowerCase() === getAdminEmail().toLowerCase()) return true;
   return Boolean(session.tenantId === tenantId && (session.role === "tenant-owner" || session.role === "tenant-editor"));
 }
 
 export function canViewTenant(session: AppSession, tenantId: string) {
   if (canManageTenant(session, tenantId)) return true;
   return session.tenantId === tenantId && session.role === "tenant-viewer";
+}
+
+export function getAdminEmail() {
+  return process.env.ADMIN_EMAIL ?? "admin@schellenberger.biz";
+}
+
+export function isPlatformAdminSession(session: AppSession | null | undefined) {
+  return Boolean(session?.role === "platform-admin" && session.email.toLowerCase() === getAdminEmail().toLowerCase());
 }

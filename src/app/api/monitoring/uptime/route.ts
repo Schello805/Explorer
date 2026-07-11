@@ -2,7 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { ADMIN_EMAIL } from "@/lib/auth";
+import { getAdminEmail } from "@/lib/auth";
 import { sendMail } from "@/lib/mail";
 import { listTenants } from "@/lib/tenant-store";
 
@@ -49,7 +49,7 @@ async function sendAlertIfNeeded(message: string) {
   if (!shouldSend) return;
   await writeAlertState({ healthy: false, lastAlertAt: new Date().toISOString(), lastError: message });
   await sendMail({
-    to: ADMIN_EMAIL,
+    to: getAdminEmail(),
     subject: "Platzguide Monitoring-Alarm",
     text: `Der Uptime-Check ist fehlgeschlagen.\n\nFehler: ${message}\nZeitpunkt: ${new Date().toISOString()}\nRevision: ${process.env.NEXT_PUBLIC_APP_REVISION ?? "dev"}`
   });

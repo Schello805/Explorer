@@ -71,6 +71,7 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
         <PlatformNavLink href="#plattform" label="Übersicht" icon={<Activity size={18} />} />
         <PlatformNavLink href="#mandanten" label="Mandanten" icon={<Users size={18} />} />
         <PlatformNavLink href="#einrichtung" label="Globale Einrichtung" icon={<Server size={18} />} />
+        <PlatformNavLink href="#profil" label="Profil" icon={<ShieldCheck size={18} />} />
         <PlatformNavLink href="#smtp" label="SMTP & E-Mail" icon={<Mail size={18} />} />
         <PlatformNavLink href="#werkzeuge" label="Werkzeuge" icon={<Terminal size={18} />} />
         <PlatformNavLink href="#logs" label="Systemlogs" icon={<AlertTriangle size={18} />} />
@@ -140,6 +141,8 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
           <Command label="Healthcheck" command="curl -fsS http://127.0.0.1:3000/api/health" />
         </AdminCard>
 
+        <PlatformAccountCard adminEmail={adminEmail} />
+
         <MailSettingsCard onConfiguredChange={setMailConfigured} />
 
         <AdminCard id="logs" title="Systemlogs" icon={<AlertTriangle />}>
@@ -171,6 +174,50 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
     </section>
     </main>
   </div>;
+}
+
+function PlatformAccountCard({ adminEmail }: { adminEmail: string }) {
+  const [email, setEmail] = useState(adminEmail);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [showPasswords, setShowPasswords] = useState(false);
+  const [state, setState] = useState({ loading: false, message: "", error: "" });
+
+  async function saveAccount(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setState({ loading: true, message: "", error: "" });
+    const response = await fetch("/api/admin/account", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, currentPassword, newPassword })
+    });
+    const payload = await response.json().catch(() => null) as { error?: string; email?: string } | null;
+    if (!response.ok) {
+      setState({ loading: false, message: "", error: payload?.error ?? "Profil konnte nicht gespeichert werden." });
+      return;
+    }
+    setEmail(payload?.email ?? email);
+    setCurrentPassword("");
+    setNewPassword("");
+    setState({ loading: false, message: "Profil gespeichert. Deine Session wurde aktualisiert.", error: "" });
+  }
+
+  return <AdminCard id="profil" title="Profil & Zugang" icon={<ShieldCheck />}>
+    <p className="text-sm leading-6 text-black/55">Diese Zugangsdaten gelten nur für den zentralen Superadmin. Änderungen werden in `.env.local` gespeichert und die aktuelle Session wird sofort erneuert.</p>
+    <form onSubmit={saveAccount} className="space-y-3">
+      <MailInput label="Login-E-Mail" type="email" value={email} onChange={setEmail} required />
+      <label className="text-sm font-bold">Aktuelles Passwort
+        <span className="mt-1 flex rounded-xl border border-black/10 bg-white">
+          <input type={showPasswords ? "text" : "password"} value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} className="min-w-0 flex-1 rounded-xl px-3 py-3 outline-none" required minLength={8} />
+          <button title="Passwörter anzeigen oder verbergen." type="button" onClick={() => setShowPasswords((value) => !value)} className="px-3 text-[#286551]">{showPasswords ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+        </span>
+      </label>
+      <MailInput label="Neues Passwort" type={showPasswords ? "text" : "password"} value={newPassword} onChange={setNewPassword} placeholder="Leer lassen = Passwort behalten" />
+      <button disabled={state.loading} className="rounded-xl bg-[#173c32] px-5 py-3 text-sm font-bold text-white disabled:opacity-60">{state.loading ? "Speichert …" : "Profil speichern"}</button>
+      {state.message && <p className="rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{state.message}</p>}
+      {state.error && <p className="rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{state.error}</p>}
+    </form>
+  </AdminCard>;
 }
 
 function formatPlatformDate(value: string) {

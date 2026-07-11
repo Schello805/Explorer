@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { PlatformAdminConsole } from "@/components/platform-admin-console";
 import { SystemError } from "@/components/system-error";
-import { ADMIN_EMAIL, verifyAdminSession } from "@/lib/auth";
+import { isPlatformAdminSession, verifyAdminSession } from "@/lib/auth";
 import { listTenants } from "@/lib/tenant-store";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +13,7 @@ export default async function PlatformAdminPage() {
     cookieStore.get("platzguide_session")?.value ?? cookieStore.get("explorer_session")?.value
   );
   if (!session) redirect("/admin/login");
-  if (session.role !== "platform-admin" || session.email.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) redirect("/admin/tenant");
+  if (!isPlatformAdminSession(session)) redirect("/admin/tenant");
   let tenants;
   try {
     tenants = await listTenants();

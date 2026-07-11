@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Activity, Bell, BookOpen, CalendarDays, Caravan, CheckCircle2, ChevronRight, CreditCard, Download, FileText, Gift, Globe2, HelpCircle, ImageIcon, LayoutDashboard, LifeBuoy, MapPinned, Menu, MessageSquareWarning, Palette, Plus, Search, Server, Settings, ShieldCheck, Trash2, Users, X } from "lucide-react";
+import { Activity, Bell, BookOpen, CalendarDays, Caravan, CheckCircle2, ChevronRight, CreditCard, Download, Eye, EyeOff, FileText, Gift, Globe2, HelpCircle, ImageIcon, LayoutDashboard, LifeBuoy, MapPinned, Menu, MessageSquareWarning, Palette, Plus, Search, Server, Settings, ShieldCheck, Trash2, Users, X } from "lucide-react";
 import { applyBillingPlan, billingPlans, formatEuro, storageUsedMb } from "@/lib/billing";
 import type { Category, EventItem, GuestGuideItem, MediaAsset, OccupancyStatus, PushMessage, Reward, Station, Tenant, Tour } from "@/lib/types";
 import { cn, statusLabel } from "@/lib/utils";
@@ -35,7 +35,7 @@ const navigation = [
   { id: "profile", label: "Profil", icon: Users }
 ];
 
-export function AdminConsole({ tenant, tenants, adminEmail }: { tenant: Tenant; tenants: Tenant[]; adminEmail: string }) {
+export function AdminConsole({ tenant, tenants, adminEmail, isPlatformAdmin = false }: { tenant: Tenant; tenants: Tenant[]; adminEmail: string; isPlatformAdmin?: boolean }) {
   const [section, setSection] = useState("overview");
   const [menuOpen, setMenuOpen] = useState(false);
   const [availableTenants, setAvailableTenants] = useState(tenants);
@@ -43,7 +43,6 @@ export function AdminConsole({ tenant, tenants, adminEmail }: { tenant: Tenant; 
   const [stations, setStations] = useState(tenant.stations);
   const [editing, setEditing] = useState<Station | null>(null);
   const [saving, setSaving] = useState(false);
-  const isPlatformAdmin = adminEmail.toLowerCase() === "admin@schellenberger.biz";
   const tenantAdminHiddenSections = new Set(["modules", "billing", "security"]);
   const platformNavigation = isPlatformAdmin
     ? navigation.filter((item) => tenantAdminHiddenSections.has(item.id))
@@ -151,7 +150,7 @@ export function AdminConsole({ tenant, tenants, adminEmail }: { tenant: Tenant; 
         {section === "overview" && <Overview key={currentTenant.id} tenant={currentTenant} stations={stations} stationCount={stations.filter((station) => !station.isTemplate).length} templateCount={stations.filter((station) => station.isTemplate).length} onNavigate={setSection} />}
         {section === "stations" && <Stations key={currentTenant.id} tenant={currentTenant} stations={stations} onEdit={setEditing} onRemove={removeStation} onCreate={() => setEditing(blankStation(currentTenant.id))} onImport={importStations} />}
         {section === "categories" && <Categories key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
-        {section === "tenants" && <TenantSettings key={currentTenant.id} tenant={currentTenant} saving={saving} platformAdmin={adminEmail.toLowerCase() === "admin@schellenberger.biz"} onLifecycle={updateTenantLifecycle} onSave={saveTenant} />}
+        {section === "tenants" && <TenantSettings key={currentTenant.id} tenant={currentTenant} saving={saving} platformAdmin={isPlatformAdmin} onLifecycle={updateTenantLifecycle} onSave={saveTenant} />}
         {section === "branding" && <Branding key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "legal" && <Legal key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "modules" && <Modules key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
@@ -581,6 +580,31 @@ function formatStableDate(value: string) {
   return value.slice(0, 16).replace("T", " ");
 }
 function Profile({ tenant, adminEmail }: { tenant: Tenant; adminEmail: string }) {
+  const [email, setEmail] = useState(adminEmail);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [showPasswords, setShowPasswords] = useState(false);
+  const [state, setState] = useState({ loading: false, message: "", error: "" });
+
+  async function saveAccount(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setState({ loading: true, message: "", error: "" });
+    const response = await fetch("/api/admin/account", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, currentPassword, newPassword })
+    });
+    const payload = await response.json().catch(() => null) as { error?: string; email?: string } | null;
+    if (!response.ok) {
+      setState({ loading: false, message: "", error: payload?.error ?? "Profil konnte nicht gespeichert werden." });
+      return;
+    }
+    setEmail(payload?.email ?? email);
+    setCurrentPassword("");
+    setNewPassword("");
+    setState({ loading: false, message: "Profil gespeichert. Deine Session wurde aktualisiert.", error: "" });
+  }
+
   async function requestDeletion() {
     if (!confirm("Löschanfrage für diesen Mandanten erstellen?")) return;
     const response = await fetch("/api/admin/privacy", {
@@ -591,8 +615,15 @@ function Profile({ tenant, adminEmail }: { tenant: Tenant; adminEmail: string })
     alert(response.ok ? "Löschanfrage wurde protokolliert." : "Löschanfrage fehlgeschlagen.");
   }
   return <div className="grid gap-6 xl:grid-cols-2">
-    <SettingsCard title="Profil" description="Zugriff und Verantwortlichkeit für diesen Campingplatz.">
-      <p className="rounded-xl bg-[#f7f7f4] p-4 text-sm"><strong>{adminEmail}</strong><br />Plattform- oder Betreiberzugang</p>
+    <SettingsCard title="Profil & Zugang" description="Ändere deine Login-E-Mail oder setze ein neues Passwort. Zur Sicherheit ist immer dein aktuelles Passwort nötig.">
+      <form onSubmit={saveAccount} className="space-y-4">
+        <Field label="Login-E-Mail" value={email} onChange={setEmail} />
+        <label className="block min-w-0 text-sm font-bold"><LabelText label="Aktuelles Passwort" tooltip="Erforderlich, um E-Mail oder Passwort zu ändern." /><div className="mt-2 flex rounded-xl border border-black/10 bg-[#fafaf8]"><input title="Erforderlich, um E-Mail oder Passwort zu ändern." aria-label="Aktuelles Passwort" type={showPasswords ? "text" : "password"} value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} className="min-w-0 flex-1 bg-transparent px-4 py-3 outline-none" required minLength={8} /><button title="Passwörter anzeigen oder verbergen." type="button" onClick={() => setShowPasswords((value) => !value)} className="px-3 text-[#286551]">{showPasswords ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></label>
+        <label className="block min-w-0 text-sm font-bold"><LabelText label="Neues Passwort" tooltip="Optional. Leer lassen, wenn nur die E-Mail geändert werden soll. Mindestens 12 Zeichen." /><input title="Optional. Leer lassen, wenn nur die E-Mail geändert werden soll. Mindestens 12 Zeichen." aria-label="Neues Passwort" type={showPasswords ? "text" : "password"} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} minLength={12} placeholder="Leer lassen = Passwort behalten" className="mt-2 w-full rounded-xl border border-black/10 bg-[#fafaf8] px-4 py-3 outline-none" /></label>
+        <button disabled={state.loading} className="rounded-xl bg-[#173c32] px-5 py-3 text-sm font-bold text-white disabled:opacity-60">{state.loading ? "Speichert …" : "Profil speichern"}</button>
+        {state.message && <p className="rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{state.message}</p>}
+        {state.error && <p className="rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{state.error}</p>}
+      </form>
       <p className="text-sm text-black/55">Mandant: {tenant.name}<br />Tenant-ID: <span className="break-all">{tenant.id}</span></p>
     </SettingsCard>
     <SettingsCard title="Datenschutz" description="Export und Löschanfragen werden protokolliert.">
