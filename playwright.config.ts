@@ -19,7 +19,7 @@ export default defineConfig({
   webServer: {
     command: [
       "npm run build",
-      `PLAYWRIGHT_TEST=1 ALLOW_LOCAL_DATA_FALLBACK=true PLATZGUIDE_DATA_DIR=.playwright-data AUTH_SECRET=playwright-secret-with-more-than-thirty-two-characters ADMIN_EMAIL=admin@schellenberger.biz ADMIN_PASSWORD_HASH='$2b$10$oeJJYUyJWdzlhC8VwTW7BumvWisycj5UJpP99P/J90jpsDvVs6G1a' AUTH_COOKIE_SECURE=false NEXT_PUBLIC_BASE_URL=${baseURL} npm start -- --hostname 127.0.0.1 --port ${port}`
+      `DATABASE_URL= PLAYWRIGHT_TEST=1 ALLOW_LOCAL_DATA_FALLBACK=true PLATZGUIDE_DATA_DIR=.playwright-data AUTH_SECRET=playwright-secret-with-more-than-thirty-two-characters ADMIN_EMAIL=admin@schellenberger.biz ADMIN_PASSWORD_HASH='$2b$10$oeJJYUyJWdzlhC8VwTW7BumvWisycj5UJpP99P/J90jpsDvVs6G1a' AUTH_COOKIE_SECURE=false NEXT_PUBLIC_BASE_URL=${baseURL} npm start -- --hostname 127.0.0.1 --port ${port}`
     ].join(" && "),
     url: `${baseURL}/api/health`,
     reuseExistingServer: !process.env.CI,

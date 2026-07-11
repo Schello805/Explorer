@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { canManageTenant, canViewTenant } from "@/lib/auth";
 import { applyBillingPlan } from "@/lib/billing";
 import { rateLimit } from "@/lib/rate-limit";
-import { onlyTenantRecords, resolveTenant } from "@/lib/tenant-resolver";
+import { isPlatformHost, onlyTenantRecords, resolveTenant } from "@/lib/tenant-resolver";
 import { createDefaultStationTemplates, tenantDefaults } from "@/lib/tenant-defaults";
 import type { Tenant } from "@/lib/types";
 
@@ -25,6 +25,19 @@ describe("tenant isolation", () => {
 
   it("does not invent a tenant when none exists", () => {
     expect(resolveTenant("localhost:3000", [])).toBeUndefined();
+  });
+
+  it("does not expose the first tenant on unknown platform domains", () => {
+    const tenants = [
+      testTenant({ id: "tenant-a", slug: "platz-a", hosts: ["platz-a.localhost"], name: "Platz A" })
+    ];
+    expect(resolveTenant("platzguide.de", tenants)).toBeUndefined();
+    expect(resolveTenant("unknown.example.org", tenants)).toBeUndefined();
+  });
+
+  it("treats the main product domain as the platform landing page", () => {
+    expect(isPlatformHost("platzguide.de")).toBe(true);
+    expect(isPlatformHost("www.platzguide.de")).toBe(true);
   });
 
   it("never returns records from another tenant", () => {

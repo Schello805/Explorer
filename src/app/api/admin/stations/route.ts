@@ -2,7 +2,7 @@ import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { canManageTenant, verifyAdminSession } from "@/lib/auth";
-import { resolveTenant } from "@/lib/tenant-resolver";
+import { resolveAdminTenant } from "@/lib/admin-tenant-auth";
 import { deleteStation, listTenants, saveStation } from "@/lib/tenant-store";
 
 const stationSchema = z.object({
@@ -31,10 +31,7 @@ async function authorize() {
   const requestHeaders = await headers();
   const host = requestHeaders.get("host") ?? "localhost";
   const tenants = await listTenants();
-  const normalized = host.split(":")[0];
-  const tenant = tenants.find((candidate) => candidate.hosts.includes(normalized))
-    ?? tenants.find((candidate) => candidate.slug === normalized.split(".")[0])
-    ?? resolveTenant(host, tenants);
+  const tenant = resolveAdminTenant(host, tenants, session);
   if (!tenant) return null;
   return canManageTenant(session, tenant.id) ? { session, tenant, tenants } : null;
 }

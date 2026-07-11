@@ -3,7 +3,7 @@ import path from "node:path";
 import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { canManageTenant, verifyAdminSession } from "@/lib/auth";
-import { resolveTenant } from "@/lib/tenant-resolver";
+import { resolveAdminTenant } from "@/lib/admin-tenant-auth";
 import { listTenants, saveTenantConfiguration } from "@/lib/tenant-store";
 
 const fallbackTypes = ["image/png", "image/jpeg", "image/webp", "application/pdf", "video/mp4", "video/webm"];
@@ -17,10 +17,7 @@ async function authorize(requestedTenantId?: string) {
   const requestHeaders = await headers();
   const host = requestHeaders.get("host") ?? "localhost";
   const tenants = await listTenants();
-  const normalized = host.split(":")[0];
-  const tenant = tenants.find((candidate) => candidate.hosts.includes(normalized))
-    ?? tenants.find((candidate) => candidate.slug === normalized.split(".")[0])
-    ?? resolveTenant(host, tenants);
+  const tenant = resolveAdminTenant(host, tenants, session);
   const targetTenant = requestedTenantId ? tenants.find((candidate) => candidate.id === requestedTenantId) : tenant;
   return targetTenant && canManageTenant(session, targetTenant.id) ? { session, tenant: targetTenant } : null;
 }

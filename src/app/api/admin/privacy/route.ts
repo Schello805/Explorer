@@ -1,7 +1,7 @@
 import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { canManageTenant, canViewTenant, verifyAdminSession } from "@/lib/auth";
-import { resolveTenant } from "@/lib/tenant-resolver";
+import { resolveAdminTenant } from "@/lib/admin-tenant-auth";
 import { createPrivacyRequest, exportTenantData, listTenants, markTenantForDeletion } from "@/lib/tenant-store";
 
 async function authorize() {
@@ -13,10 +13,7 @@ async function authorize() {
   const requestHeaders = await headers();
   const host = requestHeaders.get("host") ?? "localhost";
   const tenants = await listTenants();
-  const normalized = host.split(":")[0];
-  const tenant = tenants.find((candidate) => candidate.hosts.includes(normalized))
-    ?? tenants.find((candidate) => candidate.slug === normalized.split(".")[0])
-    ?? resolveTenant(host, tenants);
+  const tenant = resolveAdminTenant(host, tenants, session, "view");
   if (!tenant) return null;
   return { session, tenant, tenants };
 }
