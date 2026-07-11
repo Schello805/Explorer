@@ -52,6 +52,26 @@ export type Reward = {
   active: boolean;
 };
 
+export type PushMessage = {
+  id: string;
+  tenantId: string;
+  title: string;
+  body: string;
+  audience: "all" | "guests";
+  active: boolean;
+  createdAt: string;
+};
+
+export type OccupancyStatus = {
+  id: string;
+  tenantId: string;
+  label: string;
+  status: "free" | "busy" | "full" | "closed";
+  note: string;
+  active: boolean;
+  updatedAt: string;
+};
+
 export type GuestGuideItem = {
   id: string;
   tenantId: string;
@@ -183,6 +203,8 @@ export type Tenant = {
   events: EventItem[];
   tours: Tour[];
   rewards: Reward[];
+  pushMessages: PushMessage[];
+  occupancyStatuses: OccupancyStatus[];
   guestGuide: GuestGuideItem[];
   feedback: FeedbackMessage[];
   auditLog: AuditEntry[];

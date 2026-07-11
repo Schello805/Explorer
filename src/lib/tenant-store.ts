@@ -80,6 +80,8 @@ function normalizeTenant(tenant: Tenant): Tenant {
     events: tenant.events ?? [],
     tours: tenant.tours ?? [],
     rewards: tenant.rewards ?? [],
+    pushMessages: tenant.pushMessages ?? [],
+    occupancyStatuses: tenant.occupancyStatuses ?? [],
     guestGuide: tenant.guestGuide ?? [],
     feedback: tenant.feedback ?? [],
     auditLog: tenant.auditLog ?? [],
@@ -277,6 +279,8 @@ export async function createTenantInstance(input: {
     events: [],
     tours: [],
     rewards: [],
+    pushMessages: [],
+    occupancyStatuses: [],
     guestGuide: [],
     feedback: [],
     users: [{

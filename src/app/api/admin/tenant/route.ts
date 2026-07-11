@@ -78,6 +78,8 @@ const tenantSchema = z.object({
   events: z.array(z.unknown()),
   tours: z.array(z.unknown()),
   rewards: z.array(z.unknown()),
+  pushMessages: z.array(z.unknown()).optional(),
+  occupancyStatuses: z.array(z.unknown()).optional(),
   guestGuide: z.array(z.unknown()),
   feedback: z.array(z.unknown()),
   auditLog: z.array(z.unknown()),

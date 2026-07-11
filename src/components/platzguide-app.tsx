@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import Image from "next/image";
-import { BookOpen, CalendarDays, CheckCircle2, ChevronRight, Compass, Gift, Heart, Info, List, Map, MessageSquareWarning, Navigation, Route, Search, ShieldAlert, SlidersHorizontal, X } from "lucide-react";
+import { Activity, Bell, BookOpen, CalendarDays, CheckCircle2, ChevronRight, Compass, Gift, Heart, Info, List, Map, MessageSquareWarning, Navigation, Route, Search, ShieldAlert, SlidersHorizontal, X } from "lucide-react";
 import type { Station, Tenant } from "@/lib/types";
 import { cn, statusLabel } from "@/lib/utils";
 import { CampMap } from "@/components/camp-map";
@@ -114,6 +114,12 @@ export function PlatzguideApp({ tenant, basePath = "" }: { tenant: Tenant; baseP
       </section>
 
       <section className="mx-auto grid w-[90%] gap-4 py-2 md:grid-cols-2">
+        {tenant.features.push && (tenant.pushMessages ?? []).filter((message) => message.active).length > 0 && <ModuleCard icon={<Bell />} title="Aktuelle Mitteilungen">
+          {(tenant.pushMessages ?? []).filter((message) => message.active).map((message) => <CompactItem key={message.id} title={message.title} text={message.body} />)}
+        </ModuleCard>}
+        {tenant.features.occupancy && (tenant.occupancyStatuses ?? []).filter((item) => item.active).length > 0 && <ModuleCard icon={<Activity />} title="Status vor Ort">
+          {(tenant.occupancyStatuses ?? []).filter((item) => item.active).map((item) => <CompactItem key={item.id} title={`${item.label} · ${occupancyLabel[item.status]}`} text={item.note || `Aktualisiert: ${formatStableDate(item.updatedAt)}`} />)}
+        </ModuleCard>}
         {tenant.features.events && tenant.events.filter((event) => event.active).length > 0 && <ModuleCard icon={<CalendarDays />} title="Veranstaltungen">
           {tenant.events.filter((event) => event.active).map((event) => <CompactItem key={event.id} title={event.title} text={`${formatStableDate(event.startsAt)} · ${event.location}`} />)}
         </ModuleCard>}
@@ -160,6 +166,13 @@ function ModuleCard({ icon, title, children }: { icon: React.ReactNode; title: s
 function CompactItem({ title, text }: { title: string; text: string }) {
   return <article className="rounded-xl bg-[#f7f4ed] p-3"><h3 className="font-bold">{title}</h3><p className="mt-1 text-sm leading-5 text-[#18332b]/60">{text}</p></article>;
 }
+
+const occupancyLabel = {
+  free: "Frei",
+  busy: "Gut besucht",
+  full: "Voll",
+  closed: "Geschlossen"
+};
 
 function StationSheet({ station, favorite, checkedIn, checkinsEnabled, onCheckin, onFavorite, onClose }: { station: Station; favorite: boolean; checkedIn: boolean; checkinsEnabled?: boolean; onCheckin: () => void; onFavorite: () => void; onClose: () => void }) {
   return <div className="fixed inset-0 z-40 flex items-end bg-black/35 p-2 sm:items-center sm:justify-center" onClick={onClose}><article onClick={(event) => event.stopPropagation()} className="animate-enter max-h-[90vh] w-full max-w-lg overflow-auto rounded-[2rem] bg-white shadow-2xl"><div className="relative h-52" style={{ background: station.image }}><button onClick={onClose} aria-label="Schließen" className="absolute right-4 top-4 rounded-full bg-white p-2 shadow"><X /></button></div><div className="p-6"><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-widest text-[var(--primary)]">{statusLabel[station.status]}</p><h2 className="mt-1 font-display text-3xl">{station.name}</h2></div><button onClick={onFavorite} className="rounded-full border p-3"><Heart fill={favorite ? "currentColor" : "none"} className={favorite ? "text-red-500" : ""} /></button></div><p className="mt-4 leading-7 text-[#18332b]/70">{station.description}</p><div className="mt-5 rounded-2xl bg-[var(--surface)] p-4 text-sm"><strong>Öffnungszeiten</strong><p className="mt-1 text-[#18332b]/65">{station.openingHours}</p></div><div className="mt-5 grid gap-2 sm:grid-cols-2"><a href={`https://www.openstreetmap.org/directions?to=${station.latitude},${station.longitude}`} target="_blank" rel="noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-5 py-3.5 font-bold text-white"><Navigation size={19} /> Navigation</a>{checkinsEnabled && <button onClick={onCheckin} className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--primary)] px-5 py-3.5 font-bold text-[var(--primary)]"><CheckCircle2 size={19} /> {checkedIn ? "Eingecheckt" : "Check-in"}</button>}</div></div></article></div>;

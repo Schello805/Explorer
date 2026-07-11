@@ -141,6 +141,8 @@ Es gilt deutsches Recht. Sollten einzelne Regelungen unwirksam sein, bleibt die 
   events: [],
   tours: [],
   rewards: [],
+  pushMessages: [],
+  occupancyStatuses: [],
   guestGuide: [],
   feedback: [],
   privacyRequests: []

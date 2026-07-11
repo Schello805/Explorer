@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Activity, Bell, BookOpen, CalendarDays, Caravan, CheckCircle2, ChevronRight, CreditCard, Database, Download, FileText, Gift, Globe2, HelpCircle, ImageIcon, LayoutDashboard, LifeBuoy, Mail, MapPinned, Menu, MessageSquareWarning, Palette, Plus, Search, Server, Settings, ShieldCheck, Trash2, Users, X } from "lucide-react";
 import { applyBillingPlan, billingPlans, formatEuro, storageUsedMb } from "@/lib/billing";
-import type { AuditEntry, Category, EventItem, GuestGuideItem, MediaAsset, Reward, Station, Tenant, Tour } from "@/lib/types";
+import type { AuditEntry, Category, EventItem, GuestGuideItem, MediaAsset, OccupancyStatus, PushMessage, Reward, Station, Tenant, Tour } from "@/lib/types";
 import { cn, statusLabel } from "@/lib/utils";
 import { StationLocationPicker } from "@/components/station-location-picker";
 import { StationImport } from "@/components/station-import";
@@ -24,6 +24,8 @@ const navigation = [
   { id: "events", label: "Veranstaltungen", icon: CalendarDays },
   { id: "tours", label: "Rundgänge", icon: MapPinned },
   { id: "rewards", label: "Platzguide-Pass", icon: Gift },
+  { id: "push", label: "Mitteilungen", icon: Bell },
+  { id: "occupancy", label: "Statusanzeigen", icon: Activity },
   { id: "guide", label: "Gästemappe", icon: BookOpen },
   { id: "feedback", label: "Feedback", icon: MessageSquareWarning },
   { id: "legal", label: "Recht & Datenschutz", icon: FileText },
@@ -44,9 +46,11 @@ export function AdminConsole({ tenant, tenants, adminEmail }: { tenant: Tenant; 
   const [saving, setSaving] = useState(false);
   const isPlatformAdmin = adminEmail.toLowerCase() === "admin@schellenberger.biz";
   const tenantAdminHiddenSections = new Set(["modules", "billing", "security"]);
-  const visibleNavigation = isPlatformAdmin
-    ? [{ id: "platform", label: "Plattform", icon: Server }, ...navigation]
-    : navigation.filter((item) => !tenantAdminHiddenSections.has(item.id));
+  const platformNavigation = isPlatformAdmin
+    ? [{ id: "platform", label: "Plattform", icon: Server }, ...navigation.filter((item) => tenantAdminHiddenSections.has(item.id))]
+    : [];
+  const tenantNavigation = navigation.filter((item) => !tenantAdminHiddenSections.has(item.id));
+  const visibleNavigation = [...platformNavigation, ...tenantNavigation];
 
   async function removeStation(id: string) {
     if (!confirm("Station wirklich löschen?")) return;
@@ -132,8 +136,11 @@ export function AdminConsole({ tenant, tenants, adminEmail }: { tenant: Tenant; 
     {menuOpen && <button aria-label="Menü schließen" onClick={() => setMenuOpen(false)} className="fixed inset-0 z-20 bg-black/35 lg:hidden" />}
     <aside className={cn("fixed inset-y-0 left-0 z-30 flex w-60 flex-col overflow-y-auto overflow-x-hidden bg-[#173c32] p-4 text-white transition-transform lg:translate-x-0", menuOpen ? "translate-x-0" : "-translate-x-full")}>
       <div className="flex items-center justify-between"><a href="https://platzguide.de" className="flex min-w-0 items-center gap-3"><span className="grid h-12 w-12 place-items-center rounded-xl bg-white/95 p-1.5 shadow-sm"><Image src={platformLogo} alt="Platzguide" width={40} height={40} className="h-full w-full object-contain" priority /></span><div className="min-w-0"><p className="font-display text-xl">Platzguide</p><p className="text-[10px] uppercase tracking-widest text-white/45">Plattform Admin</p></div></a><button className="lg:hidden" onClick={() => setMenuOpen(false)}><X /></button></div>
-      <nav className="mt-6 space-y-1">{visibleNavigation.map((item) => <button key={item.id} onClick={() => { setSection(item.id); setMenuOpen(false); }} className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-bold transition", section === item.id ? "bg-white text-[#173c32]" : "text-white/65 hover:bg-white/10 hover:text-white")}><item.icon size={18} />{item.label}</button>)}</nav>
-      <div className="mt-auto shrink-0 rounded-xl bg-white/5 p-3"><p className="truncate text-xs font-bold">{adminEmail}</p><p className="mt-1 text-[10px] uppercase tracking-wider text-white/35">Plattform-Administrator</p><form action="/api/auth/logout" method="post"><button className="mt-3 text-xs text-[#e8b65f]">Sicher abmelden</button></form></div>
+      <nav className="mt-6 space-y-5">
+        {platformNavigation.length > 0 && <NavGroup title="Nur Superadmin" items={platformNavigation} section={section} onSelect={(id) => { setSection(id); setMenuOpen(false); }} />}
+        <NavGroup title="Mandantenverwaltung" items={tenantNavigation} section={section} onSelect={(id) => { setSection(id); setMenuOpen(false); }} />
+      </nav>
+      <div className="mt-auto shrink-0 rounded-xl bg-white/5 p-3"><p className="truncate text-xs font-bold">{adminEmail}</p><p className="mt-1 text-[10px] uppercase tracking-wider text-white/35">{isPlatformAdmin ? "Superadmin" : "Mandantenadmin"}</p><form action="/api/auth/logout" method="post"><button className="mt-3 text-xs text-[#e8b65f]">Sicher abmelden</button></form></div>
     </aside>
 
     <main className="min-w-0 overflow-x-hidden lg:ml-60">
@@ -154,6 +161,8 @@ export function AdminConsole({ tenant, tenants, adminEmail }: { tenant: Tenant; 
         {section === "events" && <Events key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "tours" && <Tours key={currentTenant.id} tenant={currentTenant} stations={stations} saving={saving} onSave={saveTenant} />}
         {section === "rewards" && <Rewards key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
+        {section === "push" && <PushMessages key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
+        {section === "occupancy" && <Occupancy key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "guide" && <GuestGuide key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "feedback" && <Feedback key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "profile" && <Profile tenant={currentTenant} adminEmail={adminEmail} />}
@@ -162,6 +171,13 @@ export function AdminConsole({ tenant, tenants, adminEmail }: { tenant: Tenant; 
       </div>
     </main>
     {editing && <StationEditor station={editing} categories={currentTenant.categories} mapConfig={currentTenant.map} onClose={() => setEditing(null)} onSave={persistStation} />}
+  </div>;
+}
+
+function NavGroup({ title, items, section, onSelect }: { title: string; items: typeof navigation; section: string; onSelect: (id: string) => void }) {
+  return <div>
+    <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[.18em] text-white/35">{title}</p>
+    <div className="space-y-1">{items.map((item) => <button key={item.id} onClick={() => onSelect(item.id)} className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-bold transition", section === item.id ? "bg-white text-[#173c32]" : "text-white/65 hover:bg-white/10 hover:text-white")}><item.icon size={18} />{item.label}</button>)}</div>
   </div>;
 }
 
@@ -450,8 +466,8 @@ function Modules({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; 
     { id: "rewards", label: "Platzguide-Pass", state: "Basis funktionsfähig", note: "Belohnungen anhand gesammelter Check-ins anzeigen.", details: "Betreiber können Belohnungen mit benötigter Check-in-Anzahl pflegen. Besucher sehen ihren lokalen Check-in-Zähler und verfügbare Belohnungen. Eine automatische Einlösung, Gutscheincodes oder Personalprüfung ist noch nicht enthalten." },
     { id: "guestGuide", label: "Digitale Gästemappe", state: "Funktionsfähig", note: "Mandantengebundene Infos für Gäste.", details: "Betreiber pflegen kurze Gästeinfos mit Titel, Text und Sortierung. Aktive Inhalte erscheinen in der Besucher-App, sobald das Modul aktiviert ist. Typische Inhalte sind WLAN, Ruhezeiten, Anreise, Brötchenservice oder Notfallinfos." },
     { id: "feedback", label: "Feedback & Fehlermeldungen", state: "Funktionsfähig", note: "Meldungen von Besuchern empfangen.", details: "Besucher können eine kurze Meldung senden. Die Meldung wird mandantengebunden gespeichert und im Adminbereich mit Status Neu, Geprüft oder Erledigt verwaltet. Anhänge, Kategorien und automatische E-Mail-Benachrichtigungen sind noch nicht erweitert." },
-    { id: "push", label: "Push-Mitteilungen", state: "Vorbereitet", note: "Noch nicht produktiv versandfähig.", details: "Das Modul ist als Schalter vorbereitet. Für echten Versand fehlen noch Web-Push-Schlüssel, Einwilligungsdialog, Geräte-Abos, Versand-API und Abmeldeverwaltung. Bis dahin sollte es nicht als produktive Funktion beworben werden." },
-    { id: "occupancy", label: "Belegungs-/Statusanzeigen", state: "Vorbereitet", note: "Noch keine öffentliche Anzeige.", details: "Das Modul ist als Feature-Schalter vorbereitet. Es gibt aktuell noch kein Datenmodell für Belegung, Ampelstatus, Sensorwerte oder manuelle Statuskarten in der Besucher-App. Für später geplant: Statusfelder pro Bereich oder Einrichtung." }
+    { id: "push", label: "Mitteilungen", state: "Basis funktionsfähig", note: "Aktuelle Hinweise in der Besucher-App anzeigen.", details: "Betreiber können Mitteilungen mit Titel und Text pflegen. Aktive Mitteilungen erscheinen direkt in der Besucher-App. Echter nativer Geräte-Push mit Abos, Web-Push-Schlüsseln und Versandwarteschlange ist weiterhin ein späterer Ausbau." },
+    { id: "occupancy", label: "Belegungs-/Statusanzeigen", state: "Basis funktionsfähig", note: "Manuelle Ampelanzeigen veröffentlichen.", details: "Betreiber können Bereiche oder Services mit Status Frei, Gut besucht, Voll oder Geschlossen pflegen. Aktive Einträge erscheinen in der Besucher-App. Sensoren, automatische Zähler oder externe Datenquellen sind noch nicht angebunden." }
   ];
   return <SettingsCard title="Funktionsmodule" description="Funktionen lassen sich je Campingplatz aktivieren. Die aufklappbaren Infos sagen klar, was heute wirklich enthalten ist.">
     <div className="space-y-3">{modules.map((module) => {
@@ -633,6 +649,34 @@ function Rewards({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; 
   const add = () => setDraft({ ...draft, rewards: [{ id: crypto.randomUUID(), tenantId: draft.id, title: "Neue Belohnung", description: "", requiredCheckins: 3, active: true }, ...draft.rewards] });
   const update = (id: string, changes: Partial<Reward>) => setDraft({ ...draft, rewards: draft.rewards.map((item) => item.id === id ? { ...item, ...changes } : item) });
   return <SettingsCard title="Platzguide-Pass" description="Belohnungen für QR- oder GPS-Check-ins vorbereiten."><ModuleListHeader onAdd={add} saving={saving} onSave={() => onSave(draft)} />{draft.rewards.map((reward) => <AdminItem key={reward.id} active={reward.active} onToggle={(active) => update(reward.id, { active })} onRemove={() => setDraft({ ...draft, rewards: draft.rewards.filter((item) => item.id !== reward.id) })}><Field label="Titel" value={reward.title} onChange={(title) => update(reward.id, { title })} /><Field label="Benötigte Check-ins" value={String(reward.requiredCheckins)} onChange={(requiredCheckins) => update(reward.id, { requiredCheckins: Number(requiredCheckins) })} /><Area label="Beschreibung" value={reward.description} onChange={(description) => update(reward.id, { description })} /></AdminItem>)}</SettingsCard>;
+}
+function PushMessages({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) {
+  const [draft, setDraft] = useState(tenant);
+  const add = () => setDraft({ ...draft, pushMessages: [{ id: crypto.randomUUID(), tenantId: draft.id, title: "Neue Mitteilung", body: "", audience: "guests", active: true, createdAt: new Date().toISOString() }, ...(draft.pushMessages ?? [])] });
+  const update = (id: string, changes: Partial<PushMessage>) => setDraft({ ...draft, pushMessages: (draft.pushMessages ?? []).map((item) => item.id === id ? { ...item, ...changes } : item) });
+  return <SettingsCard title="Mitteilungen" description="Aktuelle Hinweise in der Besucher-App anzeigen. Web-Push-Versand kann später darauf aufbauen.">
+    <p className="rounded-xl bg-[#f7f7f4] p-3 text-sm leading-6 text-black/55">Diese Funktion zeigt Mitteilungen direkt in der Besucher-App an. Es werden noch keine nativen Geräte-Pushs versendet.</p>
+    <ModuleListHeader onAdd={add} saving={saving} onSave={() => onSave(draft)} />
+    {(draft.pushMessages ?? []).map((message) => <AdminItem key={message.id} active={message.active} onToggle={(active) => update(message.id, { active })} onRemove={() => setDraft({ ...draft, pushMessages: (draft.pushMessages ?? []).filter((item) => item.id !== message.id) })}>
+      <Field label="Titel" value={message.title} onChange={(title) => update(message.id, { title })} />
+      <Area label="Text" value={message.body} onChange={(body) => update(message.id, { body })} />
+      <Select label="Zielgruppe" value={message.audience} options={["guests", "all"]} onChange={(audience) => update(message.id, { audience: audience as PushMessage["audience"] })} />
+    </AdminItem>)}
+  </SettingsCard>;
+}
+function Occupancy({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) {
+  const [draft, setDraft] = useState(tenant);
+  const add = () => setDraft({ ...draft, occupancyStatuses: [{ id: crypto.randomUUID(), tenantId: draft.id, label: "Schwimmbad", status: "free", note: "Aktuell frei", active: true, updatedAt: new Date().toISOString() }, ...(draft.occupancyStatuses ?? [])] });
+  const update = (id: string, changes: Partial<OccupancyStatus>) => setDraft({ ...draft, occupancyStatuses: (draft.occupancyStatuses ?? []).map((item) => item.id === id ? { ...item, ...changes, updatedAt: new Date().toISOString() } : item) });
+  return <SettingsCard title="Belegungs- & Statusanzeigen" description="Manuelle Ampelanzeigen für Bereiche, Einrichtungen oder Services.">
+    <p className="rounded-xl bg-[#f7f7f4] p-3 text-sm leading-6 text-black/55">Damit kann ein Betreiber einfache Zustände wie frei, gut besucht, voll oder geschlossen veröffentlichen. Sensoren oder automatische Belegungsdaten sind noch nicht angebunden.</p>
+    <ModuleListHeader onAdd={add} saving={saving} onSave={() => onSave(draft)} />
+    {(draft.occupancyStatuses ?? []).map((status) => <AdminItem key={status.id} active={status.active} onToggle={(active) => update(status.id, { active })} onRemove={() => setDraft({ ...draft, occupancyStatuses: (draft.occupancyStatuses ?? []).filter((item) => item.id !== status.id) })}>
+      <Field label="Name" value={status.label} onChange={(label) => update(status.id, { label })} />
+      <Select label="Status" value={status.status} options={["free", "busy", "full", "closed"]} onChange={(value) => update(status.id, { status: value as OccupancyStatus["status"] })} />
+      <Area label="Hinweis" value={status.note} onChange={(note) => update(status.id, { note })} />
+    </AdminItem>)}
+  </SettingsCard>;
 }
 function GuestGuide({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) {
   const [draft, setDraft] = useState(tenant);
