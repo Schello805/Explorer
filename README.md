@@ -61,10 +61,9 @@ Details und Optionen stehen in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 ## Revisionen
 
 `.github/workflows/ci.yml` setzt bei jedem Push
-`NEXT_PUBLIC_APP_REVISION` auf `<branch>.<GitHub run number>`. Die Build-Zeit-
-Variable erscheint automatisch im Footer. Ein Hosting-Deployment sollte
-denselben Wert übernehmen; bei Vercel kann alternativ die Commit-ID als
-Umgebungsvariable gemappt werden.
+`NEXT_PUBLIC_APP_REVISION` auf eine numerische Vor-1.0-Version wie `0.152`.
+Das Ubuntu-Updatescript setzt denselben Stil aus der Git-Commit-Anzahl. Die
+Build-Zeit-Variable erscheint automatisch im Footer.
 
 ## Produktionshinweise
 

@@ -64,12 +64,18 @@ env_public_base_url() {
   printf 'http://127.0.0.1:%s' "${port}"
 }
 
+app_revision() {
+  local count
+  count="$(git -C "${APP_DIR}" rev-list --count HEAD 2>/dev/null || printf '0')"
+  printf '0.%s' "${count}"
+}
+
 print_summary() {
   local port base_url revision service_state total_duration
   port="$(env_value PORT)"
   port="${port:-3000}"
   base_url="$(env_public_base_url)"
-  revision="$(git -C "${APP_DIR}" rev-parse --short HEAD 2>/dev/null || printf "unbekannt")"
+  revision="$(app_revision)"
   service_state="$(systemctl is-active "${APP_NAME}.service" 2>/dev/null || printf "unbekannt")"
   total_duration="$(elapsed_seconds "${UPDATE_STARTED_AT}")"
 
@@ -137,9 +143,49 @@ env_value() {
   grep -E "^${key}=" "${APP_DIR}/.env.local" 2>/dev/null | tail -n 1 | cut -d= -f2- || true
 }
 
+append_env_if_missing() {
+  local key="$1"
+  local value="$2"
+  if ! grep -q "^${key}=" "${APP_DIR}/.env.local"; then
+    printf '%s=%s\n' "${key}" "${value}" >> "${APP_DIR}/.env.local"
+    return 0
+  fi
+  return 1
+}
+
+repair_runtime_env() {
+  local changed=false
+  append_env_if_missing "MAIL_FROM" "noreply@platzguide.de" && changed=true
+  append_env_if_missing "MAIL_FROM_NAME" "Platzguide" && changed=true
+  append_env_if_missing "MAIL_LOGO_URL" "$(env_public_base_url)/icons/platzguide-logo.png" && changed=true
+  append_env_if_missing "SMTP_HOST" "" && changed=true
+  append_env_if_missing "SMTP_PORT" "587" && changed=true
+  append_env_if_missing "SMTP_SECURE" "false" && changed=true
+  append_env_if_missing "SMTP_USER" "" && changed=true
+  append_env_if_missing "SMTP_PASSWORD" "" && changed=true
+  append_env_if_missing "MONITORING_SECRET" "$(openssl rand -base64 48 | tr -d '\n')" && changed=true
+  append_env_if_missing "MAINTENANCE_SECRET" "$(openssl rand -base64 48 | tr -d '\n')" && changed=true
+
+  if grep -q '^MAIL_PROVIDER=' "${APP_DIR}/.env.local"; then
+    warn "MAIL_PROVIDER ist veraltet und wird ignoriert. Platzguide sendet ausschließlich über SMTP_*."
+  fi
+  if [[ -z "$(env_value SMTP_HOST)" ]]; then
+    warn "SMTP ist noch nicht vollständig konfiguriert: SMTP_HOST fehlt. E-Mails werden bis dahin fehlschlagen."
+  fi
+  if [[ "$(env_value NEXT_PUBLIC_BASE_URL)" == http://localhost* || "$(env_value NEXT_PUBLIC_BASE_URL)" == http://127.0.0.1* ]]; then
+    warn "NEXT_PUBLIC_BASE_URL zeigt auf localhost. Für Produktion bitte auf https://platzguide.de setzen."
+  fi
+  if [[ "${changed}" == "true" ]]; then
+    chown "${APP_USER}:${APP_USER}" "${APP_DIR}/.env.local"
+    chmod 600 "${APP_DIR}/.env.local"
+    ok "Fehlende SMTP-/Wartungsvariablen in .env.local ergänzt."
+  fi
+}
+
 require_environment() {
   local missing=()
   [[ -f "${APP_DIR}/.env.local" ]] || fail ".env.local fehlt. Stelle sie aus /var/backups/platzguide wieder her."
+  repair_runtime_env
   [[ -n "$(env_value DATABASE_URL)" ]] || missing+=("DATABASE_URL")
   [[ -n "$(env_value AUTH_SECRET)" ]] || missing+=("AUTH_SECRET")
   [[ -n "$(env_value ADMIN_PASSWORD_HASH)" ]] || missing+=("ADMIN_PASSWORD_HASH")
@@ -196,7 +242,7 @@ fetch_update() {
 needs_rebuild() {
   local current_revision env_revision
   [[ "${FORCE_REBUILD}" == "true" ]] && return 0
-  current_revision="$(git -C "${APP_DIR}" rev-parse --short HEAD)"
+  current_revision="$(app_revision)"
   env_revision="$(grep -E '^NEXT_PUBLIC_APP_REVISION=' "${APP_DIR}/.env.local" 2>/dev/null | cut -d= -f2 || true)"
   [[ "${env_revision}" != "${current_revision}" ]]
 }
@@ -354,7 +400,7 @@ install_and_build() {
 
 write_revision() {
   local revision
-  revision="$(git -C "${APP_DIR}" rev-parse --short HEAD)"
+  revision="$(app_revision)"
   if [[ -f "${APP_DIR}/.env.local" ]]; then
     if grep -q '^NEXT_PUBLIC_APP_REVISION=' "${APP_DIR}/.env.local"; then
       sed -i "s/^NEXT_PUBLIC_APP_REVISION=.*/NEXT_PUBLIC_APP_REVISION=${revision}/" "${APP_DIR}/.env.local"

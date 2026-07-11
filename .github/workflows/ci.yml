@@ -26,7 +26,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
-      NEXT_PUBLIC_APP_REVISION: ${{ github.ref_name }}.${{ github.run_number }}
+      NEXT_PUBLIC_APP_REVISION: 0.${{ github.run_number }}
       NEXT_PUBLIC_GITHUB_URL: https://github.com/Schello805/Explorer
       AUTH_SECRET: ci-only-secret-with-at-least-thirty-two-characters
       ADMIN_EMAIL: admin@schellenberger.biz

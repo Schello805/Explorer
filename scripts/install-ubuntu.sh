@@ -71,6 +71,12 @@ generate_password() {
   openssl rand -base64 24 | tr -d '\n'
 }
 
+app_revision() {
+  local count
+  count="$(git -C "${APP_DIR}" rev-list --count HEAD 2>/dev/null || printf '0')"
+  printf '0.%s' "${count}"
+}
+
 detect_primary_ip() {
   hostname -I 2>/dev/null | awk '{print $1}'
 }
@@ -226,7 +232,7 @@ ADMIN_PASSWORD_HASH=${password_hash}
 AUTH_SECRET=${AUTH_SECRET}
 MONITORING_SECRET=${MONITORING_SECRET}
 MAINTENANCE_SECRET=${MAINTENANCE_SECRET}
-NEXT_PUBLIC_APP_REVISION=$(git -C "${APP_DIR}" rev-parse --short HEAD)
+NEXT_PUBLIC_APP_REVISION=$(app_revision)
 NEXT_PUBLIC_GITHUB_URL=${GITHUB_URL}
 DATABASE_URL=${DATABASE_URL}
 ALLOW_LOCAL_DATA_FALLBACK=false

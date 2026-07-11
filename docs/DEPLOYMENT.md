@@ -23,6 +23,10 @@ keine Provider-spezifischen APIs, sondern ausschließlich `SMTP_HOST`,
 `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM`,
 `MAIL_FROM_NAME` und optional `MAIL_LOGO_URL`.
 
+Alte Variablen wie `MAIL_PROVIDER`, `MAIL_WEBHOOK_URL`, `RESEND_API_KEY`,
+`BREVO_API_KEY` oder `MAILGUN_API_KEY` werden ignoriert. Ohne `SMTP_HOST` und
+`MAIL_FROM` kann Platzguide keine E-Mails versenden.
+
 Öffentliche Registrierung sollte zusätzlich per Captcha geschützt werden:
 
 - `CAPTCHA_PROVIDER=turnstile`
@@ -115,9 +119,9 @@ Unbekannte Hosts müssen vor Produktion auf eine neutrale Plattformseite führen
 
 ## Revision
 
-Der CI-Workflow erzeugt bei jedem Push eine höhere GitHub-Run-Nummer. Das
-Deployment muss den verifizierten Build-Artefakt verwenden oder
-`NEXT_PUBLIC_APP_REVISION` identisch setzen.
+Die öffentliche Revision ist eine numerische Vor-1.0-Version, z. B. `0.152`.
+GitHub Actions setzt dafür `0.<run_number>`, das Ubuntu-Updatescript setzt
+`0.<git-commit-anzahl>`. Es werden keine Git-Hashes im Footer angezeigt.
 
 ## Ubuntu-Installation
 
