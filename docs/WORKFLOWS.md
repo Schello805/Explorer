@@ -32,7 +32,7 @@ Der öffentliche Platzguide-Link bleibt für anonyme Besucher gesperrt, bis im A
 ## Aufgaben Plattform-Admin
 
 - Installation, Updates, Backups, Restore und Monitoring betreiben
-- PostgreSQL, RLS, SMTP, Captcha, DNS und Reverse Proxy verwalten
+- PostgreSQL, RLS, globales SMTP, Captcha, DNS und Reverse Proxy verwalten
 - Mandanten anlegen, archivieren, reaktivieren oder endgültig löschen
 - Mandantenübergreifend nach Datensätzen filtern
 - Deployment-Checks prüfen und Rollbacks auslösen oder kontrollieren
@@ -51,17 +51,24 @@ Der öffentliche Platzguide-Link bleibt für anonyme Besucher gesperrt, bis im A
 - Stationen können erstellt, bearbeitet, importiert, als Vorlage deaktiviert
   und gelöscht werden.
 - Kategorien, Medien, Veranstaltungen, Rundgänge, Belohnungen, Gästemappe,
-  Rechtstexte, Module, Integrationen, Billing und Feedback werden
-  mandantengebunden gespeichert und bearbeitet.
+  Rechtstexte und Feedback werden mandantengebunden gespeichert und bearbeitet.
+- Module, Billing, Speicherlimits, Veröffentlichung, Captcha, Datenbank,
+  Backup und globale SMTP-Zugangsdaten bleiben Plattform-Admin-Aufgaben.
 
 ## Aufgaben Betreiber / Mandanten-Admin
 
 - Eigene App-Daten pflegen: Name, Logo, Farben, Kontakt und Rechtstexte
 - Kartenmittelpunkt, Luftbild oder Platzplan konfigurieren
 - Kategorien, Stationen, Bilder, Öffnungszeiten und Status pflegen
-- Gästemappe, Veranstaltungen, Rundgänge, Feedback und Module verwalten
+- Gästemappe, Veranstaltungen, Rundgänge und Feedback verwalten, soweit die
+  Module für den Mandanten freigeschaltet sind
+- Absendername/-adresse für Benachrichtigungen pflegen und Testmail an die
+  eigenen Mandanten-Admins senden
 - Eigene Inhalte rechtlich prüfen lassen
 - Gästehinweise und Notfallkontakte aktuell halten
+- Nicht erlaubt: Paket/Billing ändern, Veröffentlichung erzwingen,
+  Plattform-SMTP ändern, andere Mandanten sehen, Module selbst freischalten,
+  Speicherlimits/Backups/Datenbank/Captcha verändern oder Mandanten löschen
 
 ## Besucher
 

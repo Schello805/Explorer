@@ -118,7 +118,7 @@ Es gilt deutsches Recht. Sollten einzelne Regelungen unwirksam sein, bleibt die 
     customDomainEnabled: false
   },
   integrations: {
-    mail: { provider: "smtp", fromEmail: "info@schellenberger.biz", fromName: "Platzguide", smtpHost: "", smtpPort: 587, smtpSecure: false, smtpUser: "" },
+    mail: { provider: "global-smtp", fromEmail: "info@schellenberger.biz", fromName: "Platzguide" },
     captcha: { provider: "disabled", siteKey: "", requiredForSignup: true },
     storage: { provider: "local", maxUploadMb: 100, allowedTypes: ["image/png", "image/jpeg", "image/webp", "application/pdf", "video/mp4", "video/webm"] },
     database: { provider: "postgresql", rlsRequired: true },

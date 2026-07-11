@@ -167,7 +167,7 @@ export type Tenant = {
     customDomainEnabled: boolean;
   };
   integrations: {
-    mail: { provider: "smtp"; fromEmail: string; fromName: string; smtpHost: string; smtpPort: number; smtpSecure: boolean; smtpUser: string };
+    mail: { provider: "global-smtp"; fromEmail: string; fromName: string };
     captcha: { provider: "turnstile" | "hcaptcha" | "disabled"; siteKey: string; requiredForSignup: boolean };
     storage: { provider: "local" | "s3" | "external-url"; maxUploadMb: number; allowedTypes: string[] };
     database: { provider: "postgresql"; rlsRequired: boolean };

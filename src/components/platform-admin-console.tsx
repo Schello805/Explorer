@@ -38,7 +38,7 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
         <div>
           <p className="text-xs font-bold uppercase tracking-[.18em] text-[#286551]/70">Noch leer</p>
           <h2 className="mt-2 font-display text-4xl">Noch kein Campingplatz angelegt.</h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-black/55">Lege hier den ersten Mandanten an. Danach erscheint die normale Verwaltungsoberfläche mit Stationen, Branding, Rechtstexten, SMTP, Analytics, Billing und Freigabe.</p>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-black/55">Lege hier den ersten Mandanten an. Danach erscheint die normale Verwaltungsoberfläche mit Stationen, Branding, Rechtstexten, Analytics, Billing und Veröffentlichung.</p>
         </div>
         <CreateTenantForm />
       </section>}
@@ -59,7 +59,7 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
           <ChecklistItem done label="Admin-Login aktiv" text="Du bist als Plattform-Admin angemeldet." />
           <ChecklistItem done label="PostgreSQL angebunden" text="Mandantendaten werden aus der Produktionsdatenbank geladen." />
           <ChecklistItem done label="Mandantentrennung vorbereitet" text="Datenzugriffe laufen tenantgebunden und RLS-geschützt." />
-          <ChecklistItem done={smtpConfigured} label="SMTP konfigurieren" text="SMTP-Werte werden serverseitig in .env.local gesetzt und pro Mandant im Bereich Integrationen gepflegt." />
+          <ChecklistItem done={smtpConfigured} label="SMTP konfigurieren" text="SMTP-Werte werden ausschließlich serverseitig in .env.local gesetzt. Mandanten speichern keine SMTP-Serverdaten." />
         </AdminCard>
 
         <AdminCard title="Admin-Werkzeuge" icon={<Terminal />}>
@@ -70,7 +70,7 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
         </AdminCard>
 
         <AdminCard title="SMTP & E-Mail" icon={<Mail />}>
-          <p className="text-sm leading-6 text-black/55">Globale SMTP-Zugangsdaten gehören aus Sicherheitsgründen nicht als Klartext in die Weboberfläche. Trage sie auf dem Server in `.env.local` ein. Absendername, Absenderadresse und Mandanten-Einstellungen pflegst du danach pro Campingplatz unter `Integrationen`.</p>
+          <p className="text-sm leading-6 text-black/55">Globale SMTP-Zugangsdaten gehören aus Sicherheitsgründen nicht als Klartext in die Weboberfläche. Trage sie auf dem Server in `.env.local` ein. E-Mails werden nur an Admins des jeweiligen Mandanten gesendet; Gäste erhalten maximal Push-Mitteilungen.</p>
           <div className="rounded-xl bg-[#f7f7f4] p-3 text-xs leading-5 text-black/55">Benötigt: `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM`, `MAIL_FROM_NAME`.</div>
         </AdminCard>
 

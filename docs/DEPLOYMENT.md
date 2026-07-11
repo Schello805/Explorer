@@ -22,6 +22,10 @@ Für Betreiber-Registrierungen muss SMTP eingerichtet sein. Platzguide nutzt
 keine Provider-spezifischen APIs, sondern ausschließlich `SMTP_HOST`,
 `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM`,
 `MAIL_FROM_NAME` und optional `MAIL_LOGO_URL`.
+Diese SMTP-Zugangsdaten gelten global für die Plattform und werden nicht pro
+Mandant gespeichert. Mandanten können nur Absendername und Absenderadresse für
+ihre Benachrichtigungen pflegen. E-Mails gehen ausschließlich an
+Mandanten-Admins; Besucher erhalten keine E-Mails.
 
 Alte Variablen wie `MAIL_PROVIDER`, `MAIL_WEBHOOK_URL`, `RESEND_API_KEY`,
 `BREVO_API_KEY` oder `MAILGUN_API_KEY` werden ignoriert. Ohne `SMTP_HOST` und

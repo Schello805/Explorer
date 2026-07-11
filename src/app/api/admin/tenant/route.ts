@@ -1,7 +1,7 @@
 import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { canManageTenant, verifyAdminSession } from "@/lib/auth";
+import { ADMIN_EMAIL, canManageTenant, verifyAdminSession } from "@/lib/auth";
 import { resolveAdminTenant } from "@/lib/admin-tenant-auth";
 import { listTenants, saveTenantConfiguration } from "@/lib/tenant-store";
 
@@ -60,13 +60,9 @@ const tenantSchema = z.object({
   }),
   integrations: z.object({
     mail: z.object({
-      provider: z.literal("smtp"),
+      provider: z.literal("global-smtp"),
       fromEmail: z.string().email(),
-      fromName: z.string().max(120),
-      smtpHost: z.string().max(255),
-      smtpPort: z.number().min(1).max(65535),
-      smtpSecure: z.boolean(),
-      smtpUser: z.string().max(255)
+      fromName: z.string().max(120)
     }),
     captcha: z.object({ provider: z.enum(["turnstile", "hcaptcha", "disabled"]), siteKey: z.string().max(500), requiredForSignup: z.boolean() }),
     storage: z.object({ provider: z.enum(["local", "s3", "external-url"]), maxUploadMb: z.number().min(1).max(100), allowedTypes: z.array(z.string().max(120)).min(1) }),
@@ -110,6 +106,33 @@ export async function POST(request: Request) {
   if (!targetTenant || !canManageTenant(authorization.session, targetTenant.id)) {
     return NextResponse.json({ error: "Mandantenzugriff verweigert" }, { status: 403 });
   }
-  const tenant = await saveTenantConfiguration(targetTenant.id, parsed.data as typeof targetTenant, authorization.session.email);
+  const platformAdmin = authorization.session.role === "platform-admin" && authorization.session.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  const safeTenant = platformAdmin ? parsed.data : restrictTenantAdminWrite(parsed.data as typeof targetTenant, targetTenant);
+  const tenant = await saveTenantConfiguration(targetTenant.id, safeTenant as typeof targetTenant, authorization.session.email);
   return NextResponse.json(tenant);
+}
+
+type TenantPayload = z.infer<typeof tenantSchema>;
+
+function restrictTenantAdminWrite(nextTenant: TenantPayload, currentTenant: TenantPayload) {
+  return {
+    ...nextTenant,
+    id: currentTenant.id,
+    slug: currentTenant.slug,
+    hosts: currentTenant.hosts,
+    archivedAt: currentTenant.archivedAt,
+    billing: currentTenant.billing,
+    features: currentTenant.features,
+    integrations: {
+      ...currentTenant.integrations,
+      mail: {
+        ...currentTenant.integrations.mail,
+        fromEmail: nextTenant.integrations.mail.fromEmail,
+        fromName: nextTenant.integrations.mail.fromName
+      }
+    },
+    users: currentTenant.users,
+    auditLog: currentTenant.auditLog,
+    privacyRequests: currentTenant.privacyRequests
+  };
 }

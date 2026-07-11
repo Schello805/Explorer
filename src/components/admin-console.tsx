@@ -42,7 +42,10 @@ export function AdminConsole({ tenant, tenants, adminEmail }: { tenant: Tenant; 
   const [editing, setEditing] = useState<Station | null>(null);
   const [saving, setSaving] = useState(false);
   const isPlatformAdmin = adminEmail.toLowerCase() === "admin@schellenberger.biz";
-  const visibleNavigation = isPlatformAdmin ? [{ id: "platform", label: "Plattform", icon: Server }, ...navigation] : navigation;
+  const tenantAdminHiddenSections = new Set(["modules", "billing", "security"]);
+  const visibleNavigation = isPlatformAdmin
+    ? [{ id: "platform", label: "Plattform", icon: Server }, ...navigation]
+    : navigation.filter((item) => !tenantAdminHiddenSections.has(item.id));
 
   async function removeStation(id: string) {
     if (!confirm("Station wirklich löschen?")) return;
@@ -145,7 +148,7 @@ export function AdminConsole({ tenant, tenants, adminEmail }: { tenant: Tenant; 
         {section === "branding" && <Branding key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "legal" && <Legal key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "modules" && <Modules key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
-        {section === "integrations" && <Integrations key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
+        {section === "integrations" && <Integrations key={currentTenant.id} tenant={currentTenant} saving={saving} platformAdmin={isPlatformAdmin} onSave={saveTenant} />}
         {section === "billing" && <Billing key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "events" && <Events key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "tours" && <Tours key={currentTenant.id} tenant={currentTenant} stations={stations} saving={saving} onSave={saveTenant} />}
@@ -234,7 +237,7 @@ function PlatformSection({ tenants, adminEmail }: { tenants: Tenant[]; adminEmai
 
   return <div className="animate-enter space-y-6">
     <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-      <div><p className="text-sm text-[#1b302a]/55">Angemeldet als {adminEmail}</p><h2 className="mt-1 font-display text-4xl">Plattformverwaltung</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-black/55">Hier verwaltest du das Projekt selbst: Mandantenstatus, Betriebschecks, SMTP-Hinweise, Logs und Auditübersicht.</p></div>
+      <div><p className="text-sm text-[#1b302a]/55">Angemeldet als {adminEmail}</p><h2 className="mt-1 font-display text-4xl">Plattformverwaltung</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-black/55">Hier verwaltest du das Projekt selbst: Mandantenstatus, Betriebschecks, globales SMTP, Logs und Auditübersicht.</p></div>
       <a href="/api/health" target="_blank" className="rounded-xl bg-[#173c32] px-4 py-3 text-sm font-bold text-white">Healthcheck öffnen</a>
     </div>
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -245,7 +248,7 @@ function PlatformSection({ tenants, adminEmail }: { tenants: Tenant[]; adminEmai
     </div>
     <div className="grid gap-6 xl:grid-cols-2">
       <SettingsCard title="Globale Betriebsinfos" description="Serverweite Einstellungen liegen bewusst nicht als Klartext im Browser.">
-        <InfoRow icon={<Mail />} title="SMTP" text="Globale SMTP-Zugangsdaten setzt du in .env.local. Mandantenspezifische Absenderdaten pflegst du unter Integrationen." />
+        <InfoRow icon={<Mail />} title="SMTP" text="Globale SMTP-Zugangsdaten setzt du ausschließlich in .env.local. Mandanten speichern keine SMTP-Serverdaten." />
         <InfoRow icon={<ShieldCheck />} title="Datenisolierung" text="Alle Mandantendaten sind tenantgebunden. PostgreSQL-RLS wird serverseitig erzwungen." />
         <InfoRow icon={<Server />} title="Updates" text="Updates laufen über scripts/update-ubuntu.sh mit Backup, Migration, Build, Healthcheck und Rollback." />
       </SettingsCard>
@@ -305,7 +308,7 @@ function SetupAssistant({ tenant, stations, onNavigate }: { tenant: Tenant; stat
     { id: "tenants", label: "Karte oder Platzplan", done: tenant.map.configured !== false },
     { id: "stations", label: "Stationen aktivieren", done: activeStations.length > 0 },
     { id: "legal", label: "Rechtstexte prüfen", done: Boolean(tenant.legal.imprint && tenant.legal.privacy && tenant.legal.cookies) },
-    { id: "integrations", label: "SMTP & Module prüfen", done: Boolean(tenant.integrations.mail.smtpHost || tenant.email.senderEmail) },
+    { id: "integrations", label: "Absender & Module prüfen", done: Boolean(tenant.integrations.mail.fromEmail || tenant.email.senderEmail) },
     { id: "billing", label: "Veröffentlichung freigeben", done: tenant.billing.publicEnabled }
   ];
   const doneCount = steps.filter((step) => step.done).length;
@@ -443,17 +446,30 @@ function TenantSettings({ tenant, saving, platformAdmin, onLifecycle, onSave }: 
 function Branding({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) { const [draft, setDraft] = useState(tenant); return <SettingsCard title="Erscheinungsbild" description="Farben und Texte werden nur für diesen Mandanten ausgespielt."><Field label="Claim" value={draft.tagline} onChange={(tagline) => setDraft({ ...draft, tagline })} /><Field label="Logo-Kürzel" value={draft.logoMark} onChange={(logoMark) => setDraft({ ...draft, logoMark })} /><div className="grid gap-4 sm:grid-cols-3"><Color label="Primärfarbe" value={draft.theme.primary} onChange={(primary) => setDraft({ ...draft, theme: { ...draft.theme, primary } })} /><Color label="Akzentfarbe" value={draft.theme.secondary} onChange={(secondary) => setDraft({ ...draft, theme: { ...draft.theme, secondary } })} /><Color label="Hintergrund" value={draft.theme.surface} onChange={(surface) => setDraft({ ...draft, theme: { ...draft.theme, surface } })} /></div><Save saving={saving} onClick={() => onSave(draft)} /></SettingsCard>; }
 function Legal({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) { const [draft, setDraft] = useState(tenant); return <SettingsCard title="Rechtstexte" description="Jeder Campingplatz benötigt eigene, rechtlich geprüfte Angaben."><Area label="Impressum" value={draft.legal.imprint} onChange={(imprint) => setDraft({ ...draft, legal: { ...draft.legal, imprint } })} /><Area label="Datenschutz" value={draft.legal.privacy} onChange={(privacy) => setDraft({ ...draft, legal: { ...draft.legal, privacy } })} /><Area label="Cookie-Hinweise" value={draft.legal.cookies} onChange={(cookies) => setDraft({ ...draft, legal: { ...draft.legal, cookies } })} /><Area label="AGB / Nutzungsbedingungen" value={draft.legal.terms} onChange={(terms) => setDraft({ ...draft, legal: { ...draft.legal, terms } })} /><Save saving={saving} onClick={() => onSave(draft)} /></SettingsCard>; }
 function Modules({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) { const [draft, setDraft] = useState(tenant); const modules = [["Rundgänge", "tours", "Für Besucher-App und Verwaltung freischalten"], ["Check-ins & QR-Code", "checkins", "Für Besucher-App und Verwaltung freischalten"], ["Veranstaltungen", "events", "Für Besucher-App und Verwaltung freischalten"], ["Feedback", "feedback", "Für Besucher-App und Verwaltung freischalten"], ["Platzguide-Pass", "rewards", "Für Besucher-App und Verwaltung freischalten"], ["Push-Mitteilungen", "push", "Aktiviert vorbereitete Push-Funktionen, sobald Push-Schlüssel eingerichtet sind"], ["Belegungs-/Statusanzeigen", "occupancy", "Für Besucher-App und Verwaltung freischalten"], ["Digitale Gästemappe", "guestGuide", "Mandantengebundene Inhalte für Gäste"]]; return <SettingsCard title="Funktionsmodule" description="Funktionen lassen sich je Campingplatz aktivieren.">{modules.map(([label, id, note]) => <label key={id} className="flex min-w-0 items-center justify-between gap-4 border-b border-black/5 py-4"><div className="min-w-0"><p className="break-words font-bold">{label}</p><p className="text-xs text-black/45">{note}</p></div><input title={`${label} für diesen Campingplatz aktivieren oder deaktivieren.`} type="checkbox" checked={draft.features[id] ?? false} onChange={(event) => setDraft({ ...draft, features: { ...draft.features, [id]: event.target.checked } })} className="h-5 w-5 shrink-0 accent-[#286551]" /></label>)}<Save saving={saving} onClick={() => onSave(draft)} /></SettingsCard>; }
-function Integrations({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) {
+function Integrations({ tenant, saving, platformAdmin, onSave }: { tenant: Tenant; saving: boolean; platformAdmin: boolean; onSave: (tenant: Tenant) => void }) {
   const [draft, setDraft] = useState(tenant);
+  const [mailTest, setMailTest] = useState("");
+  async function sendTestMail() {
+    setMailTest("Sende Testmail …");
+    const response = await fetch("/api/admin/mail/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tenantId: draft.id })
+    });
+    const payload = await response.json().catch(() => ({})) as { error?: string; recipients?: number };
+    setMailTest(response.ok ? `Testmail an ${payload.recipients ?? 0} Mandanten-Admin(s) gesendet.` : payload.error ?? "Testmail fehlgeschlagen.");
+  }
   return <div className="space-y-6">
-    <SettingsCard title="Maildienst" description="Platzguide nutzt ausschließlich klassisches SMTP. Das Passwort bleibt als Server-Variable gespeichert.">
-      <Select label="Provider" value={draft.integrations.mail.provider} options={["smtp"]} onChange={() => setDraft({ ...draft, integrations: { ...draft.integrations, mail: { ...draft.integrations.mail, provider: "smtp" } } })} />
-      <Field label="Absender-E-Mail" value={draft.integrations.mail.fromEmail} onChange={(fromEmail) => setDraft({ ...draft, integrations: { ...draft.integrations, mail: { ...draft.integrations.mail, fromEmail } } })} />
-      <Field label="Absender-Name" value={draft.integrations.mail.fromName} onChange={(fromName) => setDraft({ ...draft, integrations: { ...draft.integrations, mail: { ...draft.integrations.mail, fromName } } })} />
-      <Field label="SMTP-Host" value={draft.integrations.mail.smtpHost} onChange={(smtpHost) => setDraft({ ...draft, integrations: { ...draft.integrations, mail: { ...draft.integrations.mail, smtpHost } } })} />
-      <Field label="SMTP-Port" value={String(draft.integrations.mail.smtpPort)} onChange={(smtpPort) => setDraft({ ...draft, integrations: { ...draft.integrations, mail: { ...draft.integrations.mail, smtpPort: Number(smtpPort) || 587 } } })} />
-      <Field label="SMTP-Benutzer" value={draft.integrations.mail.smtpUser} onChange={(smtpUser) => setDraft({ ...draft, integrations: { ...draft.integrations, mail: { ...draft.integrations.mail, smtpUser } } })} />
-      <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-3 text-sm font-bold"><span className="inline-flex items-center gap-1.5">TLS/SSL direkt verwenden<HelpBubble text="Aktivieren, wenn dein SMTP-Anbieter SSL auf Port 465 verlangt. Für Port 587 bleibt es meist aus." /></span><input title="Aktivieren, wenn dein SMTP-Anbieter SSL auf Port 465 verlangt. Für Port 587 bleibt es meist aus." type="checkbox" checked={draft.integrations.mail.smtpSecure} onChange={(event) => setDraft({ ...draft, integrations: { ...draft.integrations, mail: { ...draft.integrations.mail, smtpSecure: event.target.checked } } })} className="h-5 w-5 accent-[#286551]" /></label>
+    <SettingsCard title="E-Mail-Benachrichtigungen" description="SMTP ist global auf der Plattform konfiguriert. E-Mails gehen nur an Admins dieses Mandanten. Gäste erhalten keine E-Mails.">
+      <Field label="Absender-E-Mail" value={draft.integrations.mail.fromEmail} onChange={(fromEmail) => setDraft({ ...draft, integrations: { ...draft.integrations, mail: { ...draft.integrations.mail, fromEmail, provider: "global-smtp" } } })} />
+      <Field label="Absender-Name" value={draft.integrations.mail.fromName} onChange={(fromName) => setDraft({ ...draft, integrations: { ...draft.integrations, mail: { ...draft.integrations.mail, fromName, provider: "global-smtp" } } })} />
+      <div className="rounded-xl bg-[#f7f7f4] p-3 text-sm leading-6 text-black/55">
+        <p><strong>Empfänger:</strong> Mandanten-Admins mit Rolle Owner oder Editor.</p>
+        <p><strong>Gäste:</strong> keine E-Mails; spätere Hinweise laufen maximal über Push-Mitteilungen nach Einwilligung.</p>
+        {platformAdmin && <p><strong>SMTP:</strong> Host, Port, Benutzer und Passwort liegen nur in der Server-Umgebung.</p>}
+      </div>
+      <div className="flex flex-wrap gap-2"><button type="button" onClick={sendTestMail} className="rounded-xl border px-4 py-3 text-sm font-bold">Testmail an Mandanten-Admins senden</button><Save saving={saving} onClick={() => onSave(draft)} /></div>
+      {mailTest && <p className="rounded-xl bg-[#eff3ec] p-3 text-sm font-bold text-[#286551]">{mailTest}</p>}
     </SettingsCard>
     <SettingsCard title="Captcha & Self-Service" description="Turnstile oder hCaptcha schützt öffentliche Registrierung.">
       <Select label="Captcha-Provider" value={draft.integrations.captcha.provider} options={["disabled", "turnstile", "hcaptcha"]} onChange={(provider) => setDraft({ ...draft, integrations: { ...draft.integrations, captcha: { ...draft.integrations.captcha, provider: provider as Tenant["integrations"]["captcha"]["provider"] } } })} />
@@ -663,9 +679,6 @@ function tooltipForLabel(label: string) {
     "Provider": "Auswahl des genutzten Diensttyps.",
     "Absender-E-Mail": "E-Mail-Adresse, die als Absender ausgehender Mails erscheint.",
     "Absender-Name": "Anzeigename für ausgehende E-Mails.",
-    "SMTP-Host": "Serveradresse deines Mailpostfachs, z. B. smtp.example.de.",
-    "SMTP-Port": "SMTP-Port, meist 587 für STARTTLS oder 465 für SSL.",
-    "SMTP-Benutzer": "Benutzername des SMTP-Postfachs, oft die E-Mail-Adresse.",
     "Captcha-Provider": "Dienst gegen automatische Bot-Registrierungen.",
     "Öffentlicher Site-Key": "Öffentlicher Captcha-Schlüssel für das Frontend.",
     "Analytics-Provider": "Statistikdienst für diesen Campingplatz. Matomo wird erst nach Einwilligung geladen.",

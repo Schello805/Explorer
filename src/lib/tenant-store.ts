@@ -67,7 +67,7 @@ function normalizeTenant(tenant: Tenant): Tenant {
     email: { ...tenantDefaults.email, ...tenant.email },
     billing: { ...tenantDefaults.billing, ...tenant.billing },
     integrations: {
-      mail: { ...tenantDefaults.integrations.mail, ...tenant.integrations?.mail },
+      mail: normalizeMailIntegration(tenant.integrations?.mail),
       captcha: { ...tenantDefaults.integrations.captcha, ...tenant.integrations?.captcha },
       storage: { ...tenantDefaults.integrations.storage, ...tenant.integrations?.storage },
       database: { ...tenantDefaults.integrations.database, ...tenant.integrations?.database },
@@ -87,6 +87,15 @@ function normalizeTenant(tenant: Tenant): Tenant {
     privacyRequests: tenant.privacyRequests ?? []
   };
   return applyBillingPlan(normalized, normalized.billing.plan);
+}
+
+function normalizeMailIntegration(mail: Partial<Tenant["integrations"]["mail"]> | Record<string, unknown> | undefined): Tenant["integrations"]["mail"] {
+  return {
+    ...tenantDefaults.integrations.mail,
+    fromEmail: typeof mail?.fromEmail === "string" ? mail.fromEmail : tenantDefaults.integrations.mail.fromEmail,
+    fromName: typeof mail?.fromName === "string" ? mail.fromName : tenantDefaults.integrations.mail.fromName,
+    provider: "global-smtp"
+  };
 }
 
 function audit(tenantId: string, actorEmail: string, action: string, entityType: string, entityId: string): AuditEntry {
