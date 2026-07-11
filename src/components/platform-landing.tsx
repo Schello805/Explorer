@@ -60,7 +60,7 @@ export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey }
   const signupSteps = [
     { label: "Profil", done: Boolean(name && slug) },
     { label: "Admin", done: Boolean(ownerEmail && ownerPassword.length >= 12) },
-    { label: "Freigabe", done: Boolean(result) }
+    { label: "Livegang", done: Boolean(result) }
   ];
   const completedSteps = signupSteps.filter((step) => step.done).length;
   const revision = process.env.NEXT_PUBLIC_APP_REVISION ?? "dev";
@@ -84,11 +84,11 @@ export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey }
         <a href="https://platzguide.de" className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-bold text-[#195f4c] shadow-sm"><Image src={platformLogo} alt="" width={20} height={20} className="h-5 w-5 object-contain" /> Platzguide</a>
         <h1 className="mt-5 max-w-3xl break-words font-display text-[clamp(2.35rem,10vw,4.8rem)] leading-[1.02]">Dein digitaler Campingplatz-Guide in wenigen Minuten.</h1>
         <p className="mt-4 max-w-2xl text-base leading-7 text-[#18332b]/65">Platzguide ist die mobile-first PWA für Campingplätze: Stationen, Platzplan, Gästemappe, Events, Rechtstexte und Adminbereich — getrennt je Mandant und erreichbar über einen einfachen Platzguide-Link.</p>
-        <p className="mt-3 max-w-2xl rounded-xl bg-white/85 p-3 text-sm font-bold leading-6 text-[#195f4c]">Kostenlos einrichten und testen. Öffentlich sichtbar wird die Besucher-App erst nach deiner manuellen Freigabe.</p>
+        <p className="mt-3 max-w-2xl rounded-xl bg-white/85 p-3 text-sm font-bold leading-6 text-[#195f4c]">Kostenlos einrichten und testen. Sobald dein Platzguide bereit ist, kannst du ihn veröffentlichen.</p>
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
           <WorkflowStep number="1" title="Instanz erstellen" text="Name, Link-Kürzel und Adminzugang festlegen." />
           <WorkflowStep number="2" title="Platz einrichten" text="Stationen, Karte, Medien und Rechtstexte pflegen." />
-          <WorkflowStep number="3" title="Freischalten" text="Erst nach Zahlung/Freigabe öffentlich sichtbar." />
+          <WorkflowStep number="3" title="Live gehen" text="Veröffentlichen, wenn Inhalte und Paket bereit sind." />
         </div>
         <div className="mt-5 flex flex-wrap gap-3">
           <a href="#preise" className="rounded-xl bg-[#195f4c] px-5 py-3 text-sm font-bold text-white">Preise ansehen</a>
@@ -102,7 +102,7 @@ export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey }
           <span className="rounded-full bg-[#eef4ed] px-3 py-1 text-xs font-bold text-[#195f4c]">{completedSteps}/3</span>
         </div>
         <div className="mt-4 grid grid-cols-3 gap-2">{signupSteps.map((step) => <div key={step.label} className="rounded-xl bg-[#f7f4ed] p-2 text-xs font-bold"><CheckCircle2 size={15} className={step.done ? "text-emerald-600" : "text-black/20"} />{step.label}</div>)}</div>
-        <p className="mt-3 rounded-xl bg-[#f7f4ed] p-3 text-sm leading-5 text-[#18332b]/65">Du kannst alles vorbereiten und testen. Für anonyme Besucher bleibt der Platzguide-Link gesperrt, bis er manuell freigeschaltet wird.</p>
+        <p className="mt-3 rounded-xl bg-[#f7f4ed] p-3 text-sm leading-5 text-[#18332b]/65">Du kannst alles vorbereiten, prüfen und später mit deinem gewählten Paket veröffentlichen.</p>
         <div className="mt-5 space-y-4">
           <Field label="Name der App" tooltip="Der sichtbare Name deines Campingplatz-Guides, z. B. Camping Sonnental." value={name} onChange={setName} />
           <Field label="Link-Kürzel" tooltip="Kurzer, eindeutiger Link ohne Leerzeichen. Daraus wird platzguide.de/c/dein-kuerzel." value={slug} onChange={(value) => setSlug(value.toLowerCase().replace(/[^a-z0-9-]/g, ""))} prefix="/c/" />
@@ -116,21 +116,21 @@ export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey }
           </div>}
         </div>
         {error && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p>}
-        {result && <div className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900"><strong>Erstellt:</strong><br /><a className="font-bold underline" href={result.localUrl}>Platzguide öffnen</a><br />Öffentlicher Link nach Freigabe: {result.publicUrl}</div>}
+        {result && <div className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900"><strong>Erstellt:</strong><br /><a className="font-bold underline" href={result.localUrl}>Platzguide öffnen</a><br />Dein Platzguide-Link: {result.publicUrl}</div>}
         <button disabled={loading || !allowSignup} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#195f4c] px-5 py-3.5 font-bold text-white disabled:opacity-60">{loading ? "Wird erstellt …" : allowSignup ? "Instanz erstellen" : "Registrierung bald verfügbar"} <ArrowRight size={18} /></button>
       </form>
     </section>
     <section id="preise" className="mx-auto w-[min(90%,1180px)] scroll-mt-8 pb-12">
       <div className="rounded-[2rem] bg-[#18332b] p-5 text-white sm:p-8">
         <p className="text-xs font-bold uppercase tracking-[.18em] text-[#e8b65f]">Preise</p>
-        <h2 className="mt-2 font-display text-4xl">Einfach testen, manuell freischalten.</h2>
+        <h2 className="mt-2 font-display text-4xl">Einfach starten, flexibel wachsen.</h2>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-white/65">Monatlich kündbar, {yearlyDiscountPercent}% Jahresrabatt bei Jahreszahlung. Die optionale Einrichtung durch Michael kostet einmalig {formatEuro(setupServicePriceCents)}.</p>
         <div className="mt-6 grid gap-4 lg:grid-cols-2">
-          <PriceCard title="Starter" price={billingPlans.starter.monthlyPriceCents} badge="Für die meisten Plätze" lines={["100 MB Speicher für Bilder/kurze Medien", "Support innerhalb von 24 Stunden", "Platzguide-Link inklusive", "Öffentliche App nach manueller Freigabe"]} />
+          <PriceCard title="Starter" price={billingPlans.starter.monthlyPriceCents} badge="Für die meisten Plätze" lines={["100 MB Speicher für Bilder/kurze Medien", "Support innerhalb von 24 Stunden", "Platzguide-Link inklusive", "Veröffentlichung inklusive"]} />
           <PriceCard title="Pro" price={billingPlans.pro.monthlyPriceCents} badge="Für wachsende Teams" lines={["1 GB Speicher", "Support innerhalb von 6 Stunden", "Mehrere Admins und künftige Pro-Module", "Eigene Domain möglich"]} />
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <MiniFeature icon={<CreditCard />} title="Freischaltung durch dich" text="Der Platzguide wird erst öffentlich, wenn du ihn im Admin freigibst." />
+          <MiniFeature icon={<CreditCard />} title="Veröffentlichung steuern" text="Du entscheidest, wann dein Platzguide bereit für Gäste ist." />
           <MiniFeature icon={<LifeBuoy />} title="Support klar geregelt" text="Starter: 24h Reaktionszeit. Pro: 6h Reaktionszeit." />
         </div>
       </div>
@@ -153,7 +153,7 @@ export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey }
         <h2 className="mt-2 font-display text-[clamp(2rem,8vw,3.6rem)] leading-[1.02]">Platz für App-Bilder und Beispiele.</h2>
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           <ScreenshotSlot title="Besucher-App" text="Karte, Liste und Stationsdetails." />
-          <ScreenshotSlot title="Adminbereich" text="Stationen, Medien und Freigabe." />
+          <ScreenshotSlot title="Adminbereich" text="Stationen, Medien und Veröffentlichung." />
           <ScreenshotSlot title="Mobile Ansicht" text="Optimiert für Smartphone-Gäste." />
         </div>
       </div>

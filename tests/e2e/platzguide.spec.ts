@@ -1,14 +1,14 @@
 import { expect, test } from "@playwright/test";
 
-test("marketing page explains pricing and manual publishing", async ({ page }) => {
+test("marketing page explains pricing and publishing", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: /digitaler Campingplatz-Guide/i })).toBeVisible();
   await expect(page.getByText("Kostenlos einrichten und testen")).toBeVisible();
-  await expect(page.getByRole("heading", { name: /Einfach testen/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Einfach starten/i })).toBeVisible();
   await expect(page.getByText("4,99")).toBeVisible();
   await expect(page.getByText("Pro", { exact: true })).toBeVisible();
   await expect(page.getByText("19,99")).toBeVisible();
-  await expect(page.getByText("manueller Freigabe")).toBeVisible();
+  await expect(page.getByText("Veröffentlichung inklusive")).toBeVisible();
   await expect(page.getByRole("link", { name: "AGB" })).toBeVisible();
 });
 
