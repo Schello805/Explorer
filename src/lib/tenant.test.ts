@@ -16,7 +16,7 @@ function testTenant(input: Pick<Tenant, "id" | "slug" | "hosts" | "name">): Tena
 }
 
 describe("tenant isolation", () => {
-  it("resolves the tenant from its subdomain", () => {
+  it("resolves optional custom-domain host prefixes", () => {
     const tenants = [
       testTenant({ id: "tenant-a", slug: "platz-a", hosts: ["platz-a.localhost"], name: "Platz A" })
     ];

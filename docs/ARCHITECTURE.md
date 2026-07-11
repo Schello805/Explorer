@@ -3,7 +3,7 @@
 ## Leitentscheidungen
 
 1. **Ein deploybares System:** Keine Mandanten-Forks und keine individuellen Builds.
-2. **Host als Mandantenschlüssel:** Middleware löst Domain/Subdomain serverseitig auf.
+2. **Pfad als Mandantenschlüssel:** Standard-Mandanten laufen unter `/c/{slug}`; optionale eigene Domains bleiben möglich.
 3. **Defense in Depth:** Service-Filter plus PostgreSQL Row-Level Security.
 4. **Konfiguration statt Sondercode:** Farben, Module und Rechtstexte liegen am Mandanten.
 5. **Serverseitige Geheimnisse:** Auth- und Datenbankgeheimnisse gelangen nie ins Frontend.
@@ -34,7 +34,7 @@ ein externer OIDC-Anbieter mit MFA vorgesehen.
 
 1. Middleware schützt `/admin`.
 2. Serveraktionen prüfen die Session erneut.
-3. Der Tenant kommt ausschließlich aus dem verifizierten Host-Kontext.
+3. Der Tenant kommt aus dem verifizierten Pfadkontext `/c/{slug}` oder optional aus einer hinterlegten eigenen Domain.
 4. Jede Transaktion setzt `app.tenant_id`.
 5. PostgreSQL RLS blockiert alle fremden Datensätze.
 6. Storage-Pfade beginnen mit der Tenant-ID und werden serverseitig signiert.

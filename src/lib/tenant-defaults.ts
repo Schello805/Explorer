@@ -63,7 +63,7 @@ Stand: 2026
 Platzguide wird angeboten von Michael Schellenberger, Ziegeleistrasse 32, 91572 Bechhofen, E-Mail: info@schellenberger.biz.
 
 2. Leistungsbeschreibung
-Platzguide ist eine mandantenfähige Web-App/PWA für Campingplätze. Betreiber können eine eigene Instanz mit Subdomain, Branding, Stationen, Gästemappe, Rechtstexten, Medien und weiteren Modulen einrichten. Die öffentliche Besucher-App wird erst nach manueller Freigabe sichtbar.
+Platzguide ist eine mandantenfähige Web-App/PWA für Campingplätze. Betreiber können eine eigene Instanz mit Platzguide-Link, Branding, Stationen, Gästemappe, Rechtstexten, Medien und weiteren Modulen einrichten. Die öffentliche Besucher-App wird erst nach manueller Freigabe sichtbar.
 
 3. Registrierung und Zugang
 Betreiber sind verpflichtet, richtige Kontaktdaten anzugeben und Zugangsdaten vertraulich zu behandeln. Michael Schellenberger darf Zugänge sperren, wenn ein Missbrauch, Sicherheitsrisiko, Zahlungsverzug oder ein Verstoß gegen diese Bedingungen vorliegt.
@@ -72,7 +72,7 @@ Betreiber sind verpflichtet, richtige Kontaktdaten anzugeben und Zugangsdaten ve
 Starter kostet 4,99 € pro Monat und enthält 100 MB Speicher sowie Support innerhalb von 24 Stunden. Pro kostet 19,99 € pro Monat und enthält 1 GB Speicher, mehrere Admins bzw. künftige Pro-Module sowie Support innerhalb von 6 Stunden. Jahreszahlung kann mit Rabatt angeboten werden. Die Einrichtung als Service kostet optional einmalig 199,00 €. Verträge sind monatlich kündbar, sofern nichts anderes vereinbart wurde.
 
 5. Testphase und Veröffentlichung
-Betreiber können ihre Instanz vorbereiten und testen. Für anonyme Besucher wird die Subdomain erst öffentlich sichtbar, wenn die Freigabe durch den Plattform-Admin erfolgt und der Mandant nicht gesperrt ist.
+Betreiber können ihre Instanz vorbereiten und testen. Für anonyme Besucher wird der Platzguide-Link erst öffentlich sichtbar, wenn die Freigabe durch den Plattform-Admin erfolgt und der Mandant nicht gesperrt ist.
 
 6. Inhalte der Betreiber
 Betreiber sind für alle von ihnen eingestellten Inhalte, Bilder, Rechtstexte, Öffnungszeiten, Kontaktdaten und Informationen selbst verantwortlich. Sie dürfen nur Inhalte hochladen, an denen sie die erforderlichen Rechte besitzen.

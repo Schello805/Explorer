@@ -18,7 +18,7 @@ function testTenant(tenantId: string, slug: string, name: string): Tenant {
     ...structuredClone(tenantDefaults),
     id: tenantId,
     slug,
-    hosts: [`${slug}.localhost`],
+    hosts: [],
     name,
     tagline: "Testen ohne Veröffentlichung.",
     logoMark: "T",

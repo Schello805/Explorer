@@ -10,7 +10,7 @@ import { CampMap } from "@/components/camp-map";
 
 const platformLogo = "/icons/platzguide-logo.png";
 
-export function PlatzguideApp({ tenant }: { tenant: Tenant }) {
+export function PlatzguideApp({ tenant, basePath = "" }: { tenant: Tenant; basePath?: string }) {
   const [view, setView] = useState<"map" | "list">("list");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
@@ -42,7 +42,7 @@ export function PlatzguideApp({ tenant }: { tenant: Tenant }) {
     const response = await fetch("/api/feedback", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: feedback })
+      body: JSON.stringify({ message: feedback, tenantSlug: tenant.slug })
     });
     if (response.ok) {
       setFeedback("");
@@ -62,7 +62,7 @@ export function PlatzguideApp({ tenant }: { tenant: Tenant }) {
               </span>
               <div><p className="text-[11px] font-bold uppercase tracking-[.18em] text-white/60">Platzguide</p><p className="font-display text-xl">{tenant.name}</p></div>
             </div>
-            <a href="/hinweise" aria-label="Wichtige Hinweise" className="rounded-full bg-white/10 p-3"><Info size={20} /></a>
+            <a href={`${basePath}/hinweise`} aria-label="Wichtige Hinweise" className="rounded-full bg-white/10 p-3"><Info size={20} /></a>
           </div>
           <div className="mt-5">
             <p className="mb-1 flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-[var(--secondary)]"><Compass size={15} /> Vor Ort</p>
@@ -109,7 +109,7 @@ export function PlatzguideApp({ tenant }: { tenant: Tenant }) {
       <section className="mx-auto w-[90%] py-5">
         <div className="rounded-2xl bg-[#e8ddd0] p-5 sm:flex sm:items-center sm:justify-between">
           <div><p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#8a4b31]"><ShieldAlert size={17} /> Gut zu wissen</p><h2 className="mt-2 font-display text-3xl">Wichtige Hinweise & Notfall</h2><p className="mt-2 text-sm text-[#18332b]/65">Platzruhe, Regeln, ärztliche Hilfe und direkte Kontakte.</p></div>
-          <a href="/hinweise" className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#18332b] px-5 py-3 text-sm font-bold text-white sm:mt-0">Hinweise öffnen <ChevronRight size={18} /></a>
+          <a href={`${basePath}/hinweise`} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#18332b] px-5 py-3 text-sm font-bold text-white sm:mt-0">Hinweise öffnen <ChevronRight size={18} /></a>
         </div>
       </section>
 

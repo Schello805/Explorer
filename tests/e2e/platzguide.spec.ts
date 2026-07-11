@@ -13,7 +13,7 @@ test("marketing page explains pricing and manual publishing", async ({ page }) =
 });
 
 test("anonymous visitors cannot open an unpublished tenant", async ({ page }) => {
-  await page.goto("/?camp=testplatz");
+  await page.goto("/c/testplatz");
   await expect(page.getByRole("heading", { name: "Noch nicht veröffentlicht" })).toBeVisible();
   await expect(page.getByText("Besucher sehen ihn erst nach Freigabe")).toBeVisible();
 });
@@ -22,7 +22,7 @@ test("platform admin can preview and publish a tenant manually", async ({ page, 
   test.skip(isMobile, "publishing workflow is covered on desktop; mobile covers layout and navigation");
   await loginAsPlatformAdmin(page);
 
-  await page.goto("/?camp=publishplatz", { waitUntil: "domcontentloaded" });
+  await page.goto("/c/publishplatz", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("main").getByText("Camping Publishplatz")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Orte auf dem Platz" })).toBeVisible();
 
@@ -40,7 +40,7 @@ test("platform admin can preview and publish a tenant manually", async ({ page, 
   ]);
 
   await context.clearCookies();
-  await page.goto("/?camp=publishplatz");
+  await page.goto("/c/publishplatz");
   await expect(page.getByRole("main").getByText("Camping Publishplatz")).toBeVisible();
   await expect(page.getByText("Noch nicht veröffentlicht")).toHaveCount(0);
 });
@@ -54,7 +54,7 @@ test("mobile admin and visitor views stay within viewport", async ({ page, isMob
   await expect(page.getByLabel("Menü öffnen")).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
-  await page.goto("/?camp=testplatz");
+  await page.goto("/c/testplatz");
   await expect(page.getByRole("main").getByText("Camping Testplatz")).toBeVisible();
   await expectNoHorizontalOverflow(page);
 });

@@ -1,12 +1,8 @@
-import { ConsentBanner } from "@/components/consent-banner";
-import { PlatzguideApp } from "@/components/platzguide-app";
-import { Footer } from "@/components/footer";
-import { PlatformLanding } from "@/components/platform-landing";
-import { PwaRegister } from "@/components/pwa-register";
-import { SystemError } from "@/components/system-error";
-import { canManageTenant, verifyAdminSession } from "@/lib/auth";
 import { headers } from "next/headers";
-import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { PlatformLanding } from "@/components/platform-landing";
+import { SystemError } from "@/components/system-error";
+import { TenantExperience } from "@/components/tenant-experience";
 import { isPlatformHost, resolveTenant } from "@/lib/tenant-resolver";
 import { listTenants } from "@/lib/tenant-store";
 
@@ -14,6 +10,7 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<{ camp?: string }> }) {
   const params = await searchParams;
+  if (params.camp) redirect(`/c/${params.camp}`);
   const requestHeaders = await headers();
   const host = requestHeaders.get("x-tenant-host") ?? requestHeaders.get("host") ?? "localhost";
   let tenants;
@@ -23,34 +20,16 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     console.error("Platzguide Startseite konnte Mandanten nicht laden.", error);
     return <SystemError title="Datenbank nicht bereit" message="Die App konnte die Mandantendaten nicht laden. Bitte PostgreSQL-Verbindung und Migrationen prüfen." />;
   }
-  const queryTenant = params.camp ? tenants.find((candidate) => candidate.slug === params.camp) : undefined;
-  if (!queryTenant && isPlatformHost(host)) {
+  if (isPlatformHost(host)) {
     return <PlatformLanding
       allowSignup={process.env.ALLOW_PUBLIC_SIGNUP === "true"}
       captchaProvider={process.env.CAPTCHA_PROVIDER === "turnstile" || process.env.CAPTCHA_PROVIDER === "hcaptcha" ? process.env.CAPTCHA_PROVIDER : "disabled"}
       captchaSiteKey={process.env.NEXT_PUBLIC_CAPTCHA_SITE_KEY ?? ""}
     />;
   }
-  if (params.camp && !queryTenant) {
-    return <SystemError title="Campingplatz nicht gefunden" message="Für diesen Link ist kein Mandant angelegt. Bitte Subdomain oder Mandantenkürzel prüfen." />;
-  }
-  const tenant = queryTenant ?? resolveTenant(host, tenants);
+  const tenant = resolveTenant(host, tenants);
   if (!tenant) {
     return <SystemError title="Campingplatz nicht gefunden" message="Für diese Domain ist noch kein Mandant eingerichtet." />;
   }
-  if (!tenant.billing.publicEnabled || tenant.billing.status !== "active") {
-    const cookieStore = await cookies();
-    const session = await verifyAdminSession(
-      cookieStore.get("platzguide_session")?.value ?? cookieStore.get("explorer_session")?.value
-    );
-    if (!session || !canManageTenant(session, tenant.id)) {
-      return <SystemError title="Noch nicht veröffentlicht" message="Dieser Platzguide ist eingerichtet, aber noch nicht öffentlich freigeschaltet. Der Betreiber kann ihn im Adminbereich testen; Besucher sehen ihn erst nach Freigabe." />;
-    }
-  }
-  return <>
-    <PwaRegister />
-    <PlatzguideApp tenant={tenant} />
-    <Footer tenant={tenant} />
-    <ConsentBanner />
-  </>;
+  return <TenantExperience tenant={tenant} basePath="" />;
 }

@@ -10,7 +10,7 @@ const categorySchema = z.object({ id: z.string().min(1), name: z.string().min(1)
 const tenantSchema = z.object({
   id: uuid,
   slug: z.string().min(2).max(80).regex(/^[a-z0-9-]+$/),
-  hosts: z.array(z.string().min(1).max(255)).min(1),
+  hosts: z.array(z.string().min(1).max(255)),
   name: z.string().min(2).max(120),
   tagline: z.string().max(180),
   logoMark: z.string().min(1).max(4),

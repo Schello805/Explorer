@@ -4,9 +4,9 @@
 
 - Node.js-Hosting für Next.js
 - PostgreSQL 16 oder neuer
-- DNS mit Wildcard-Eintrag `*.app-domain.de`
+- DNS für die Hauptdomain, z. B. `platzguide.de`; Wildcard-DNS ist für Standard-Mandanten nicht nötig
 - Objektspeicher für Bilder (später)
-- TLS-Zertifikat für Haupt- und Wildcard-Domain
+- TLS-Zertifikat für die Hauptdomain, z. B. `platzguide.de` und `www.platzguide.de`
 
 ## Produktionsvariablen
 

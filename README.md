@@ -15,7 +15,7 @@ bleiben je Mandant getrennt.
 - Freie MapLibre-Karte mit Zoom, GPS und präzisen Stationsmarkern
 - Optionale regionale Luftbilder und eigener georeferenzierter Platzplan
 - Suche, Kategorien, Stationsdetails, Favoriten und externe Navigation
-- Individuelles Branding und Rechtstexte anhand der Domain/Subdomain
+- Individuelles Branding und Rechtstexte je Mandant unter `/c/{link-kuerzel}`
 - PWA-Manifest, Service Worker und Offline-Fallback
 - Separater Adminbereich unter `/admin`
 - Stationseditor sowie Einstellungen für Branding, Module und Rechtstexte
@@ -67,9 +67,10 @@ Umgebungsvariable gemappt werden.
 ## Produktionshinweise
 
 - Für kommerzielle Nutzung ist eine separate schriftliche Lizenz erforderlich.
-- Subdomains können per Wildcard-DNS automatisch funktionieren.
-- Für automatische echte DNS-Einträge ist später eine DNS-Provider-Anbindung
-  nötig.
+- Neue Mandanten laufen standardmäßig ohne Wildcard-DNS unter
+  `https://platzguide.de/c/{link-kuerzel}`.
+- Eigene Domains können später optional ergänzt und im Adminbereich beim
+  Mandanten hinterlegt werden.
 - SMTP, Captcha, Upload-Limit und Self-Service werden per Server-Konfiguration
   gesetzt; Details stehen in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 

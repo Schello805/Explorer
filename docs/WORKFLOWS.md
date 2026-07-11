@@ -3,7 +3,7 @@
 ## Neuer Kunde / Mandant
 
 1. Plattform-Admin legt den Mandanten im Adminbereich an oder gibt den Self-Service frei.
-2. Betreiber wählt Name, Subdomain und erste Admin-E-Mail.
+2. Betreiber wählt Name, Link-Kürzel und erste Admin-E-Mail.
 3. Betreiber bestätigt die E-Mail-Adresse.
 4. Betreiber pflegt Branding, Kontakt, Rechtstexte und Module.
 5. Betreiber setzt den Kartenmittelpunkt oder lädt einen Platzplan hoch.
@@ -16,7 +16,7 @@ Neue Mandanten starten bewusst ohne Demo-Daten und ohne aktivierte Platzkarte.
 Im Adminbereich werden typische Standardstationen als nicht öffentliche Vorlagen
 angelegt: Rezeption, Sanitärgebäude, Entsorgung, Spielplatz und Restaurant. Die
 Besucher-App zeigt diese Stationen erst, wenn der Betreiber sie aktiv freigibt.
-Die öffentliche Subdomain bleibt für anonyme Besucher gesperrt, bis im Adminbereich
+Der öffentliche Platzguide-Link bleibt für anonyme Besucher gesperrt, bis im Adminbereich
 `Abo & Veröffentlichung` aktiv freigeschaltet wurde.
 
 ## Pakete und Monetarisierung
@@ -49,6 +49,6 @@ Die öffentliche Subdomain bleibt für anonyme Besucher gesperrt, bis im Adminbe
 
 ## Besucher
 
-- Öffnen die App über Domain, Subdomain, QR-Code oder PWA-Icon
+- Öffnen die App über `platzguide.de/c/{link-kuerzel}`, QR-Code, PWA-Icon oder später optional eigene Domain
 - Suchen Stationen, nutzen Karte/Liste, Favoriten und optionale Check-ins
 - Sehen nur Inhalte des jeweiligen Campingplatzes

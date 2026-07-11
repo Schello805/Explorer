@@ -6,8 +6,8 @@ export function resolveTenant(host: string, availableTenants: Tenant[]): Tenant 
     candidate.hosts.includes(normalizedHost)
   );
   if (tenant) return tenant;
-  const subdomain = normalizedHost.split(".")[0];
-  return availableTenants.find((candidate) => candidate.slug === subdomain);
+  const hostPrefix = normalizedHost.split(".")[0];
+  return availableTenants.find((candidate) => candidate.slug === hostPrefix);
 }
 
 export function isPlatformHost(host: string): boolean {
@@ -15,7 +15,6 @@ export function isPlatformHost(host: string): boolean {
   const configuredPlatformHosts = [
     "platzguide.de",
     "www.platzguide.de",
-    "app-domain.de",
     ...(process.env.PLATZGUIDE_PLATFORM_HOSTS ?? "").split(",").map((entry) => entry.trim().toLowerCase()).filter(Boolean),
     getConfiguredBaseHost()
   ].filter(Boolean);

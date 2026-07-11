@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   const limited = rateLimit(`signup:${ip}`, 5, 60 * 60 * 1000);
   if (!limited.ok) return NextResponse.json({ error: "Zu viele Registrierungen. Bitte später erneut versuchen." }, { status: 429 });
   const parsed = tenantCreateSchema.safeParse(await request.json());
-  if (!parsed.success) return NextResponse.json({ error: "Bitte Name, Subdomain und E-Mail prüfen." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Bitte Name, Link-Kürzel und E-Mail prüfen." }, { status: 400 });
   const captchaOk = await verifyCaptcha(parsed.data.captchaToken, ip);
   if (!captchaOk) return NextResponse.json({ error: "Captcha-Prüfung fehlgeschlagen." }, { status: 403 });
   try {
@@ -34,12 +34,12 @@ export async function POST(request: Request) {
       id: tenant.id,
       name: tenant.name,
       slug: tenant.slug,
-      localUrl: `/?camp=${tenant.slug}`,
-      subdomain: `${tenant.slug}.app-domain.de`
+      localUrl: `/c/${tenant.slug}`,
+      publicUrl: `/c/${tenant.slug}`
     });
   } catch (error) {
     const message = error instanceof Error && error.message === "Slug already exists"
-      ? "Diese Subdomain ist schon vergeben."
+      ? "Dieses Link-Kürzel ist schon vergeben."
       : "Die Instanz konnte nicht erstellt werden.";
     return NextResponse.json({ error: message }, { status: 400 });
   }

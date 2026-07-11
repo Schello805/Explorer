@@ -59,6 +59,8 @@ export async function middleware(request: NextRequest) {
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-tenant-host", request.headers.get("host") ?? "localhost");
+  const tenantPathMatch = request.nextUrl.pathname.match(/^\/c\/([^/]+)/);
+  if (tenantPathMatch) requestHeaders.set("x-tenant-slug", tenantPathMatch[1]);
 
   if (request.nextUrl.pathname.startsWith("/admin") &&
       request.nextUrl.pathname !== "/admin/login") {

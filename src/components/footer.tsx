@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Tenant } from "@/lib/types";
 
-export function Footer({ tenant }: { tenant: Tenant }) {
+export function Footer({ tenant, basePath = "" }: { tenant: Tenant; basePath?: string }) {
   const revision = process.env.NEXT_PUBLIC_APP_REVISION ?? "dev";
   const githubUrl = process.env.NEXT_PUBLIC_GITHUB_URL ?? "https://github.com/Schello805/Explorer";
 
@@ -13,10 +13,10 @@ export function Footer({ tenant }: { tenant: Tenant }) {
           <p className="mt-2 max-w-md text-sm text-white/65">{tenant.tagline}</p>
         </div>
         <nav aria-label="Rechtliches" className="flex flex-wrap content-start gap-x-6 gap-y-3 text-sm md:justify-end">
-          <Link href="/rechtliches/impressum">Impressum</Link>
-          <Link href="/rechtliches/datenschutz">Datenschutz</Link>
-          <Link href="/rechtliches/cookies">Cookie-Hinweise</Link>
-          <Link href="/rechtliches/agb">AGB</Link>
+          <Link href={`${basePath}/rechtliches/impressum`}>Impressum</Link>
+          <Link href={`${basePath}/rechtliches/datenschutz`}>Datenschutz</Link>
+          <Link href={`${basePath}/rechtliches/cookies`}>Cookie-Hinweise</Link>
+          <Link href={`${basePath}/rechtliches/agb`}>AGB</Link>
           <button className="text-left" data-open-consent>Einwilligung ändern</button>
         </nav>
       </div>

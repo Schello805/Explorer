@@ -179,7 +179,7 @@ export async function createTenantInstance(input: { name: string; slug: string; 
   const slug = input.slug.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
   if (slug.length < 2) throw new Error("Invalid slug");
   const tenants = await listTenants();
-  if (tenants.some((tenant) => tenant.slug === slug || tenant.hosts.includes(`${slug}.localhost`))) {
+  if (tenants.some((tenant) => tenant.slug === slug)) {
     throw new Error("Slug already exists");
   }
 
@@ -190,7 +190,7 @@ export async function createTenantInstance(input: { name: string; slug: string; 
     ...structuredClone(tenantDefaults),
     id: tenantId,
     slug,
-    hosts: [`${slug}.localhost`, `${slug}.app-domain.de`],
+    hosts: [],
     name: input.name,
     tagline: "Mein digitaler Platzguide.",
     logoMark: input.name.trim().charAt(0).toUpperCase() || "C",

@@ -6,14 +6,14 @@ import { tenantDefaults } from "@/lib/tenant-defaults";
 export async function generateMetadata(): Promise<Metadata> {
   const tenant = await getTenant().catch(() => null);
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://platzguide.de";
-  const platformTitle = "Platzguide · Mobile Campingplatz-App mit Subdomain und Adminbereich";
+  const platformTitle = "Platzguide · Mobile Campingplatz-App mit Adminbereich";
   const platformDescription = "Platzguide ist die mobile-first PWA für Campingplätze: Karte, Stationen, Gästemappe, Events, Rechtstexte und mandantenfähiger Adminbereich.";
   return {
     metadataBase: new URL(baseUrl),
     title: tenant ? `${tenant.name} · Platzguide` : platformTitle,
     description: tenant?.tagline ?? platformDescription,
     alternates: { canonical: tenant ? "/" : baseUrl },
-    keywords: ["Campingplatz App", "Camping PWA", "digitale Gästemappe", "Campingplatz Karte", "Platzguide", "Subdomain Campingplatz"],
+    keywords: ["Campingplatz App", "Camping PWA", "digitale Gästemappe", "Campingplatz Karte", "Platzguide", "Campingplatz Verwaltung"],
     openGraph: {
       title: tenant ? `${tenant.name} · Platzguide` : platformTitle,
       description: tenant?.tagline ?? platformDescription,

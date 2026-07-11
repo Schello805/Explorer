@@ -93,7 +93,7 @@ export function AdminConsole({ tenant, tenants, adminEmail }: { tenant: Tenant; 
 
     <main className="min-w-0 overflow-x-hidden lg:ml-60">
       <header className="sticky top-0 z-20 flex min-h-16 flex-wrap items-center justify-between gap-3 border-b border-black/5 bg-[#f2f3ef]/90 px-[5%] py-2 backdrop-blur-xl">
-        <button aria-label="Menü öffnen" className="shrink-0 lg:hidden" onClick={() => setMenuOpen(true)}><Menu /></button><div className="hidden min-w-0 sm:block"><p className="text-xs font-bold uppercase tracking-widest text-[#1b302a]/40">Plattformverwaltung</p><h1 className="truncate font-display text-2xl">{navigation.find((item) => item.id === section)?.label}</h1></div><div className="flex min-w-0 flex-1 justify-end gap-2"><select aria-label="Mandant wählen" value={currentTenant.id} onChange={(event) => { const nextTenant = availableTenants.find((item) => item.id === event.target.value); if (!nextTenant) return; setCurrentTenant(nextTenant); setStations(nextTenant.stations); setEditing(null); }} className="min-w-0 max-w-[46vw] rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm font-bold"><option value="" disabled>Mandant wählen</option>{availableTenants.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><a href="/" target="_blank" className="rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm font-bold"><Globe2 size={16} className="sm:mr-2 sm:inline" /><span className="hidden sm:inline">Besucheransicht</span></a><button aria-label="Benachrichtigungen" className="rounded-xl border border-black/10 bg-white p-2.5"><Bell size={18} /></button></div>
+        <button aria-label="Menü öffnen" className="shrink-0 lg:hidden" onClick={() => setMenuOpen(true)}><Menu /></button><div className="hidden min-w-0 sm:block"><p className="text-xs font-bold uppercase tracking-widest text-[#1b302a]/40">Plattformverwaltung</p><h1 className="truncate font-display text-2xl">{navigation.find((item) => item.id === section)?.label}</h1></div><div className="flex min-w-0 flex-1 justify-end gap-2"><select aria-label="Mandant wählen" value={currentTenant.id} onChange={(event) => { const nextTenant = availableTenants.find((item) => item.id === event.target.value); if (!nextTenant) return; setCurrentTenant(nextTenant); setStations(nextTenant.stations); setEditing(null); }} className="min-w-0 max-w-[46vw] rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm font-bold"><option value="" disabled>Mandant wählen</option>{availableTenants.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><a href={`/c/${currentTenant.slug}`} target="_blank" className="rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm font-bold"><Globe2 size={16} className="sm:mr-2 sm:inline" /><span className="hidden sm:inline">Besucheransicht</span></a><button aria-label="Benachrichtigungen" className="rounded-xl border border-black/10 bg-white p-2.5"><Bell size={18} /></button></div>
       </header>
       <div className="mx-auto min-w-0 w-[90%] py-5">
         {section === "overview" && <Overview key={currentTenant.id} tenant={currentTenant} stations={stations} stationCount={stations.filter((station) => !station.isTemplate).length} templateCount={stations.filter((station) => station.isTemplate).length} onNavigate={setSection} />}
@@ -135,7 +135,7 @@ function Overview({ tenant, stations, stationCount, templateCount, onNavigate }:
       <SetupAssistant tenant={tenant} stations={stations} onNavigate={onNavigate} />
       <section className="rounded-2xl bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between"><h3 className="font-display text-2xl">Dein Campingplatz</h3><button onClick={() => onNavigate("tenants")} className="text-sm font-bold text-[#286551]">Verwalten <ChevronRight size={16} className="inline" /></button></div>
-        <div className="mt-5 flex items-center gap-4 rounded-2xl bg-[#eff3ec] p-4"><span className="grid h-14 w-14 place-items-center rounded-2xl bg-white p-1.5 shadow-sm"><Image src={platformLogo} alt="Platzguide" width={44} height={44} className="h-full w-full object-contain" /></span><div className="min-w-0"><p className="truncate font-bold">{tenant.name}</p><p className="truncate text-sm text-[#1b302a]/50">{tenant.slug}.app-domain.de</p></div><BillingBadge tenant={tenant} /></div>
+        <div className="mt-5 flex items-center gap-4 rounded-2xl bg-[#eff3ec] p-4"><span className="grid h-14 w-14 place-items-center rounded-2xl bg-white p-1.5 shadow-sm"><Image src={platformLogo} alt="Platzguide" width={44} height={44} className="h-full w-full object-contain" /></span><div className="min-w-0"><p className="truncate font-bold">{tenant.name}</p><p className="truncate text-sm text-[#1b302a]/50">/c/{tenant.slug}</p></div><BillingBadge tenant={tenant} /></div>
       </section>
     </div>
   </div>;
@@ -144,7 +144,7 @@ function Overview({ tenant, stations, stationCount, templateCount, onNavigate }:
 function SetupAssistant({ tenant, stations, onNavigate }: { tenant: Tenant; stations: Station[]; onNavigate: (id: string) => void }) {
   const activeStations = stations.filter((station) => !station.isTemplate);
   const steps = [
-    { id: "tenants", label: "Kontakt & Domain", done: Boolean(tenant.contact.email && tenant.hosts.length) },
+    { id: "tenants", label: "Kontakt & Link", done: Boolean(tenant.contact.email && tenant.slug) },
     { id: "branding", label: "Logo & Farben", done: Boolean(tenant.name && tenant.theme.primary && tenant.theme.surface) },
     { id: "tenants", label: "Karte oder Platzplan", done: tenant.map.configured !== false },
     { id: "stations", label: "Stationen aktivieren", done: activeStations.length > 0 },
@@ -231,15 +231,14 @@ function TenantSettings({ tenant, saving, onSave }: { tenant: Tenant; saving: bo
     setDraft({ ...draft, map: { ...draft.map, sitePlan: { ...draft.map.sitePlan, coordinates } } });
   }
   return <div className="space-y-6">
-    <SettingsCard title="Campingplatz & Domain" description="Die Zuordnung erfolgt zentral über Domain oder Subdomain.">
+    <SettingsCard title="Campingplatz & Link" description="Standardmäßig läuft jeder Campingplatz unter platzguide.de/c/link-kuerzel. Eigene Domains können später optional ergänzt werden.">
       <Field label="Name" value={draft.name} onChange={(name) => setDraft({ ...draft, name })} />
-      <Field label="Subdomain" value={draft.slug} suffix=".app-domain.de" onChange={(slug) => setDraft({ ...draft, slug })} />
-      <Field label="Domains" value={hostText} onChange={(hosts) => setDraft({ ...draft, hosts: hosts.split(",").map((host) => host.trim()).filter(Boolean) })} />
+      <Field label="Link-Kürzel" value={draft.slug} onChange={(slug) => setDraft({ ...draft, slug })} />
+      <Field label="Optionale eigene Domains" value={hostText} onChange={(hosts) => setDraft({ ...draft, hosts: hosts.split(",").map((host) => host.trim()).filter(Boolean) })} />
       <div className="rounded-xl bg-[#f7f7f4] p-4 text-sm leading-6 text-black/65">
-        <p className="font-bold text-[#1b302a]">DNS-Anleitung</p>
-        <p>Für eine Subdomain: <code>{draft.slug}.deine-domain.de</code> als CNAME auf die Hauptdomain setzen oder als A-Record auf die Server-IP zeigen lassen.</p>
-        <p>Für viele Mandanten: Wildcard <code>*.deine-domain.de</code> auf die Plattform zeigen lassen. Danach die Domain hier bei „Domains“ eintragen.</p>
-        <p>Reverse Proxy: Ziel ist der öffentliche Nginx der App, üblicherweise <code>http://SERVER-IP:80</code>.</p>
+        <p className="font-bold text-[#1b302a]">Öffentlicher Link</p>
+        <p>Standard-Link: <code>/c/{draft.slug}</code>. Dafür ist kein Wildcard-DNS und kein Wildcard-Zertifikat nötig.</p>
+        <p>Eigene Domains sind später optional möglich: Domain per A-/CNAME-Record auf die Plattform zeigen lassen und hier eintragen.</p>
       </div>
       <Field label="Kontakt-Telefon" value={draft.contact.phone} onChange={(phone) => setDraft({ ...draft, contact: { ...draft.contact, phone } })} />
       <Field label="Kontakt-E-Mail" value={draft.contact.email} onChange={(email) => setDraft({ ...draft, contact: { ...draft.contact, email } })} />
@@ -331,7 +330,7 @@ function Billing({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; 
           <ul className="mt-4 space-y-2 text-sm text-black/65">
             <li>{plan.storageLimitMb >= 1024 ? "1 GB" : `${plan.storageLimitMb} MB`} Speicher</li>
             <li>Support innerhalb {plan.supportResponseHours}h</li>
-            <li>{plan.customDomainEnabled ? "Eigene Domain möglich" : "Subdomain inklusive"}</li>
+            <li>{plan.customDomainEnabled ? "Eigene Domain möglich" : "Platzguide-Link inklusive"}</li>
             <li>Öffentlich erst nach manueller Freigabe</li>
           </ul>
         </button>)}
@@ -341,7 +340,7 @@ function Billing({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; 
         <p><strong>Einrichtungsservice:</strong> optional durch Michael für {formatEuro(draft.billing.setupServicePriceCents)} einmalig.</p>
       </div>
     </SettingsCard>
-    <SettingsCard title="Veröffentlichung" description="Du steuerst manuell, ob Besucher die Subdomain sehen dürfen.">
+    <SettingsCard title="Veröffentlichung" description="Du steuerst manuell, ob Besucher den Platzguide-Link sehen dürfen.">
       <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-4 text-sm font-bold">Besucher-App öffentlich freischalten<input type="checkbox" checked={draft.billing.publicEnabled} onChange={(event) => setDraft({ ...draft, billing: { ...draft.billing, publicEnabled: event.target.checked, status: event.target.checked ? "active" : draft.billing.status } })} className="h-5 w-5 accent-[#286551]" /></label>
       <Select label="Status" value={draft.billing.status} options={["trial", "active", "past_due", "blocked"]} onChange={(status) => setDraft({ ...draft, billing: { ...draft.billing, status: status as Tenant["billing"]["status"], publicEnabled: status === "active" ? draft.billing.publicEnabled : false } })} />
       <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-4 text-sm font-bold">Einrichtungsservice gebucht<input type="checkbox" checked={draft.billing.setupServiceBooked ?? false} onChange={(event) => setDraft({ ...draft, billing: { ...draft.billing, setupServiceBooked: event.target.checked } })} className="h-5 w-5 accent-[#286551]" /></label>
@@ -446,7 +445,7 @@ function Profile({ tenant, adminEmail }: { tenant: Tenant; adminEmail: string })
     </SettingsCard>
   </div>;
 }
-function Security() { return <div className="grid min-w-0 gap-6 xl:grid-cols-2"><SettingsCard title="Sicherheitsstatus" description="Zentrale Schutzmaßnahmen für die Plattform.">{["Rollenmodell für Plattform und Mandanten", "HTTP-only Session-Cookie", "Tenant-Kontext pro Anfrage", "Datenbank-RLS vorbereitet", "Self-Service standardmäßig geschlossen", "Datenschutz-Export und Löschanfrage"].map((item) => <p key={item} className="flex min-w-0 items-center gap-3 border-b border-black/5 py-3 text-sm"><ShieldCheck size={18} className="shrink-0 text-emerald-600" /><span className="min-w-0 break-words">{item}</span></p>)}</SettingsCard><SettingsCard title="Produktions-Checkliste" description="Diese Punkte müssen beim Deployment gesetzt werden.">{["Sicheres ADMIN_PASSWORD_HASH", "Zufälliges AUTH_SECRET", "PostgreSQL-Verbindung", "DNS/Wildcard-Domain", "E-Mail-Verifikation und Rate-Limits", "Rechtstexte juristisch prüfen"].map((item) => <label key={item} className="flex min-w-0 items-center gap-3 border-b border-black/5 py-3 text-sm"><input type="checkbox" className="h-4 w-4 shrink-0" /><span className="min-w-0 break-words">{item}</span></label>)}</SettingsCard></div>; }
+function Security() { return <div className="grid min-w-0 gap-6 xl:grid-cols-2"><SettingsCard title="Sicherheitsstatus" description="Zentrale Schutzmaßnahmen für die Plattform.">{["Rollenmodell für Plattform und Mandanten", "HTTP-only Session-Cookie", "Tenant-Kontext pro Anfrage", "Datenbank-RLS vorbereitet", "Self-Service standardmäßig geschlossen", "Datenschutz-Export und Löschanfrage"].map((item) => <p key={item} className="flex min-w-0 items-center gap-3 border-b border-black/5 py-3 text-sm"><ShieldCheck size={18} className="shrink-0 text-emerald-600" /><span className="min-w-0 break-words">{item}</span></p>)}</SettingsCard><SettingsCard title="Produktions-Checkliste" description="Diese Punkte müssen beim Deployment gesetzt werden.">{["Sicheres ADMIN_PASSWORD_HASH", "Zufälliges AUTH_SECRET", "PostgreSQL-Verbindung", "DNS und TLS für Hauptdomain", "E-Mail-Verifikation und Rate-Limits", "Rechtstexte juristisch prüfen"].map((item) => <label key={item} className="flex min-w-0 items-center gap-3 border-b border-black/5 py-3 text-sm"><input type="checkbox" className="h-4 w-4 shrink-0" /><span className="min-w-0 break-words">{item}</span></label>)}</SettingsCard></div>; }
 function SettingsCard({ title, description, children }: { title: string; description: string; children: React.ReactNode }) { return <section className="min-w-0 w-full overflow-hidden animate-enter rounded-xl bg-white p-5 shadow-sm"><h2 className="break-words font-display text-2xl">{title}</h2><p className="mt-1 break-words text-sm text-black/45">{description}</p><div className="mt-4 min-w-0 space-y-4">{children}</div></section>; }
 function ModuleListHeader({ onAdd, saving, onSave }: { onAdd: () => void; saving: boolean; onSave: () => void }) { return <div className="flex flex-wrap gap-2"><button onClick={onAdd} className="rounded-xl border px-4 py-3 text-sm font-bold"><Plus size={16} className="mr-2 inline" />Hinzufügen</button><Save saving={saving} onClick={onSave} /></div>; }
 function AdminItem({ active, onToggle, onRemove, children }: { active: boolean; onToggle: (active: boolean) => void; onRemove: () => void; children: React.ReactNode }) { return <div className="space-y-3 rounded-xl border border-black/10 p-4"><div className="flex items-center justify-between gap-3"><label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={active} onChange={(event) => onToggle(event.target.checked)} className="h-4 w-4 accent-[#286551]" /> Aktiv</label><button onClick={onRemove} className="text-sm font-bold text-red-600">Entfernen</button></div>{children}</div>; }
