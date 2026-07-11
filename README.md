@@ -26,6 +26,8 @@ bleiben je Mandant getrennt.
 - Optionale Module: Veranstaltungen, Rundgänge, Platzguide-Pass, Feedback,
   Check-ins, Statusanzeigen und digitale Gästemappe
 - Healthcheck unter `/api/health` für Monitoring und Deployments
+- Plattform-Admin mit Systemlog-, Auditlog-, Monitoring- und Upload-Cleanup-Ansicht
+- Uptime-Check mit SMTP-Alarm an den Plattform-Admin
 - E-Mail-Verifikation per SMTP vorbereitet
 - Mailprovider: klassisches SMTP
 - Captcha: Cloudflare Turnstile oder hCaptcha

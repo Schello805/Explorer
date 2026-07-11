@@ -17,6 +17,8 @@ DB_PASSWORD="${DB_PASSWORD:-}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@schellenberger.biz}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"
 AUTH_SECRET="${AUTH_SECRET:-}"
+MONITORING_SECRET="${MONITORING_SECRET:-}"
+MAINTENANCE_SECRET="${MAINTENANCE_SECRET:-}"
 GITHUB_URL="${GITHUB_URL:-https://github.com/Schello805/Explorer}"
 ALLOW_PUBLIC_SIGNUP="${ALLOW_PUBLIC_SIGNUP:-false}"
 NEXT_PUBLIC_BASE_URL="${NEXT_PUBLIC_BASE_URL:-}"
@@ -200,6 +202,8 @@ write_env_file() {
   local env_file="${APP_DIR}/.env.local"
   local password_hash
   [[ -n "${AUTH_SECRET}" ]] || AUTH_SECRET="$(generate_secret)"
+  [[ -n "${MONITORING_SECRET}" ]] || MONITORING_SECRET="$(generate_secret)"
+  [[ -n "${MAINTENANCE_SECRET}" ]] || MAINTENANCE_SECRET="$(generate_secret)"
   password_hash="$(cd "${APP_DIR}" && node -e "require('bcryptjs').hash(process.argv[1], 12).then(console.log)" "${ADMIN_PASSWORD}")"
 
   if [[ "${INSTALL_POSTGRES}" == "true" ]]; then
@@ -220,6 +224,8 @@ write_env_file() {
 ADMIN_EMAIL=${ADMIN_EMAIL}
 ADMIN_PASSWORD_HASH=${password_hash}
 AUTH_SECRET=${AUTH_SECRET}
+MONITORING_SECRET=${MONITORING_SECRET}
+MAINTENANCE_SECRET=${MAINTENANCE_SECRET}
 NEXT_PUBLIC_APP_REVISION=$(git -C "${APP_DIR}" rev-parse --short HEAD)
 NEXT_PUBLIC_GITHUB_URL=${GITHUB_URL}
 DATABASE_URL=${DATABASE_URL}

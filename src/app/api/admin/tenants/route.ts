@@ -1,8 +1,7 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import { z } from "zod";
-import { ADMIN_EMAIL, verifyAdminSession } from "@/lib/auth";
+import { authorizePlatformAdmin } from "@/lib/platform-admin";
 import { createTenantInstance } from "@/lib/tenant-store";
 
 const tenantCreateSchema = z.object({
@@ -11,15 +10,6 @@ const tenantCreateSchema = z.object({
   ownerEmail: z.string().trim().email(),
   ownerPassword: z.string().min(12).max(200)
 });
-
-async function authorizePlatformAdmin() {
-  const cookieStore = await cookies();
-  const session = await verifyAdminSession(
-    cookieStore.get("platzguide_session")?.value ?? cookieStore.get("explorer_session")?.value
-  );
-  if (!session || session.role !== "platform-admin" || session.email.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) return null;
-  return session;
-}
 
 export async function POST(request: Request) {
   const session = await authorizePlatformAdmin();

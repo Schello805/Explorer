@@ -1,16 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Image from "next/image";
 import { Activity, Bell, BookOpen, CalendarDays, Caravan, CheckCircle2, ChevronRight, CreditCard, Database, Download, FileText, Gift, Globe2, HelpCircle, ImageIcon, LayoutDashboard, LifeBuoy, Mail, MapPinned, Menu, MessageSquareWarning, Palette, Plus, Search, Server, Settings, ShieldCheck, Trash2, Users, X } from "lucide-react";
 import { applyBillingPlan, billingPlans, formatEuro, storageUsedMb } from "@/lib/billing";
-import type { Category, EventItem, GuestGuideItem, MediaAsset, Reward, Station, Tenant, Tour } from "@/lib/types";
+import type { AuditEntry, Category, EventItem, GuestGuideItem, MediaAsset, Reward, Station, Tenant, Tour } from "@/lib/types";
 import { cn, statusLabel } from "@/lib/utils";
 import { StationLocationPicker } from "@/components/station-location-picker";
 import { StationImport } from "@/components/station-import";
 import { CreateTenantForm } from "@/components/platform-admin-console";
 
 const platformLogo = "/icons/platzguide-logo.png";
+type PlatformAuditEntry = AuditEntry & { tenantName: string; tenantSlug?: string };
 
 const navigation = [
   { id: "overview", label: "Übersicht", icon: LayoutDashboard },
@@ -183,9 +184,54 @@ function Overview({ tenant, stations, stationCount, templateCount, onNavigate }:
 }
 
 function PlatformSection({ tenants, adminEmail }: { tenants: Tenant[]; adminEmail: string }) {
-  const auditEntries = tenants.flatMap((tenant) => tenant.auditLog.map((entry) => ({ ...entry, tenantName: tenant.name }))).slice(0, 20);
+  const auditEntries: PlatformAuditEntry[] = tenants.flatMap((tenant) => tenant.auditLog.map((entry) => ({ ...entry, tenantName: tenant.name }))).slice(0, 20);
   const archivedCount = tenants.filter((tenant) => tenant.archivedAt).length;
   const publicCount = tenants.filter((tenant) => tenant.billing.publicEnabled && tenant.billing.status === "active").length;
+  const [systemLogs, setSystemLogs] = useState<string[]>([]);
+  const [auditLines, setAuditLines] = useState(auditEntries);
+  const [cleanup, setCleanup] = useState<{ candidates: { url: string; sizeBytes: number }[]; reclaimableBytes: number; dryRun: boolean; deleted: number } | null>(null);
+  const [systemMessage, setSystemMessage] = useState("");
+
+  const loadSystemLogs = useCallback(async () => {
+    const response = await fetch("/api/admin/system/logs?lines=80");
+    const payload = await response.json() as { lines?: string[]; warning?: string };
+    setSystemLogs(payload.lines ?? []);
+    if (payload.warning) setSystemMessage(payload.warning);
+  }, []);
+
+  const loadAudit = useCallback(async () => {
+    const response = await fetch("/api/admin/system/audit");
+    if (!response.ok) return;
+    const payload = await response.json() as { entries: PlatformAuditEntry[] };
+    setAuditLines(payload.entries);
+  }, []);
+
+  const previewCleanup = useCallback(async () => {
+    const response = await fetch("/api/admin/system/cleanup");
+    if (!response.ok) return;
+    setCleanup(await response.json());
+  }, []);
+
+  async function runCleanup() {
+    if (!cleanup?.candidates.length) return;
+    if (!confirm(`${cleanup.candidates.length} ungenutzte Upload-Dateien endgültig löschen?`)) return;
+    const response = await fetch("/api/admin/system/cleanup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dryRun: false })
+    });
+    if (!response.ok) return alert("Upload-Cleanup konnte nicht ausgeführt werden.");
+    const payload = await response.json();
+    setCleanup(payload);
+    setSystemMessage(`${payload.deleted} Upload-Dateien gelöscht.`);
+  }
+
+  async function checkMonitoring() {
+    const response = await fetch("/api/admin/system/monitoring");
+    const payload = await response.json().catch(() => null) as { ok?: boolean; error?: string; latencyMs?: number } | null;
+    setSystemMessage(payload?.ok ? `Monitoring OK · ${payload.latencyMs ?? "?"} ms` : `Monitoring meldet Fehler: ${payload?.error ?? response.status}`);
+  }
+
   return <div className="animate-enter space-y-6">
     <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
       <div><p className="text-sm text-[#1b302a]/55">Angemeldet als {adminEmail}</p><h2 className="mt-1 font-display text-4xl">Plattformverwaltung</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-black/55">Hier verwaltest du das Projekt selbst: Mandantenstatus, Betriebschecks, SMTP-Hinweise, Logs und Auditübersicht.</p></div>
@@ -209,6 +255,18 @@ function PlatformSection({ tenants, adminEmail }: { tenants: Tenant[]; adminEmai
         <Command label="Update starten" command="sudo RUN_VERIFY=false bash /opt/platzguide/scripts/update-ubuntu.sh" />
         <Command label="Healthcheck lokal" command="curl -fsS http://127.0.0.1:3000/api/health" />
       </SettingsCard>
+      <SettingsCard title="Systemlogs" description="Letzte Servermeldungen direkt aus journalctl, falls der Prozess darauf zugreifen darf.">
+        <div className="flex flex-wrap gap-2"><button onClick={loadSystemLogs} className="rounded-xl border px-4 py-3 text-sm font-bold">Logs aktualisieren</button><button onClick={checkMonitoring} className="rounded-xl border px-4 py-3 text-sm font-bold">Monitoring prüfen</button></div>
+        {systemMessage && <p className="rounded-xl bg-[#f7f7f4] p-3 text-sm font-bold text-[#286551]">{systemMessage}</p>}
+        <pre className="max-h-80 overflow-auto rounded-xl bg-[#101f1a] p-3 text-xs leading-5 text-white/80">{systemLogs.length ? systemLogs.join("\n") : "Noch keine Logs geladen."}</pre>
+      </SettingsCard>
+      <SettingsCard title="Upload-Cleanup" description="Findet Dateien in public/uploads, die in keinem Mandanten mehr referenziert sind.">
+        <div className="rounded-xl bg-[#f7f7f4] p-4 text-sm">
+          <p><strong>{cleanup?.candidates.length ?? 0}</strong> ungenutzte Dateien · {Math.round((cleanup?.reclaimableBytes ?? 0) / 1024 / 1024 * 10) / 10} MB freigebbar</p>
+          <div className="mt-3 flex flex-wrap gap-2"><button onClick={previewCleanup} className="rounded-xl border px-4 py-3 text-sm font-bold">Erneut prüfen</button><button onClick={runCleanup} disabled={!cleanup?.candidates.length} className="rounded-xl bg-red-700 px-4 py-3 text-sm font-bold text-white disabled:opacity-40">Ungenutzte löschen</button></div>
+        </div>
+        <div className="max-h-44 overflow-auto rounded-xl border border-black/10 p-3 text-xs text-black/55">{cleanup?.candidates.slice(0, 20).map((item) => <p key={item.url} className="break-all">{item.url}</p>) || "Keine Kandidaten."}</div>
+      </SettingsCard>
       <SettingsCard title="Mandanten" description="Schneller Überblick über Zahlung, Veröffentlichung und Archivstatus.">
         {tenants.length === 0 && <p className="rounded-xl bg-[#f7f7f4] p-4 text-sm text-black/55">Noch keine Mandanten vorhanden.</p>}
         <div className="space-y-2">{tenants.map((tenant) => <div key={tenant.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-black/10 p-3 text-sm">
@@ -220,8 +278,9 @@ function PlatformSection({ tenants, adminEmail }: { tenants: Tenant[]; adminEmai
         <CreateTenantForm compact />
       </SettingsCard>
       <SettingsCard title="Auditlog" description="Letzte protokollierte Änderungen mandantenübergreifend.">
-        {auditEntries.length === 0 && <p className="rounded-xl bg-[#f7f7f4] p-4 text-sm text-black/55">Noch keine Audit-Einträge vorhanden.</p>}
-        <div className="space-y-2">{auditEntries.map((entry) => <div key={`${entry.id}-${entry.createdAt}`} className="rounded-xl border border-black/10 p-3 text-sm">
+        <button onClick={loadAudit} className="rounded-xl border px-4 py-3 text-sm font-bold">Auditlog aktualisieren</button>
+        {auditLines.length === 0 && <p className="rounded-xl bg-[#f7f7f4] p-4 text-sm text-black/55">Noch keine Audit-Einträge vorhanden.</p>}
+        <div className="space-y-2">{auditLines.map((entry) => <div key={`${entry.id}-${entry.createdAt}`} className="rounded-xl border border-black/10 p-3 text-sm">
           <div className="flex flex-wrap justify-between gap-2"><p className="font-bold">{entry.action}</p><p className="text-xs text-black/45">{formatStableDate(entry.createdAt)}</p></div>
           <p className="mt-1 text-xs text-black/55">{entry.tenantName} · {entry.entityType} · {entry.actorEmail}</p>
         </div>)}</div>

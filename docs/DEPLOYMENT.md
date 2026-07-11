@@ -32,7 +32,9 @@ keine Provider-spezifischen APIs, sondern ausschließlich `SMTP_HOST`,
 
 Monitoring kann `/api/health` abfragen. Der Endpunkt liefert App-Name,
 Revision, Mandantenanzahl und Latenz oder Status `503`, wenn der Datenzugriff
-fehlschlägt.
+fehlschlägt. Für aktive Alarmierung per E-Mail gibt es zusätzlich
+`/api/monitoring/uptime`. In Produktion muss dafür `MONITORING_SECRET` gesetzt
+sein; Fehler werden gedrosselt an `ADMIN_EMAIL` gesendet.
 
 ## Datenbank
 
@@ -78,6 +80,15 @@ Lokale Uploads landen unter `public/uploads/<tenantId>/`. Erlaubte MIME-Typen
 und maximale Dateigröße sind pro Mandant im Adminpanel unter `Integrationen`
 verwaltbar. Platzpläne können im Bereich `Campingplätze` hochgeladen und über
 vier Eckpunkte georeferenziert werden.
+
+Nicht mehr referenzierte Upload-Dateien können im Plattform-Admin geprüft und
+gelöscht werden. Für automatische Wartung setzt du `MAINTENANCE_SECRET` und
+rufst z. B. per Cron auf:
+
+```bash
+MAINTENANCE_SECRET='...' DRY_RUN=false \
+  bash /opt/platzguide/scripts/cleanup-uploads.sh
+```
 
 ## Analytics
 
@@ -151,6 +162,8 @@ Wichtige Optionen:
 - `INSTALL_POSTGRES=false`: externe Datenbank über `DATABASE_URL` verwenden
 - `ADMIN_PASSWORD`: erzeugt automatisch den bcrypt-Hash
 - `ADMIN_EMAIL`: Admin-Adresse, Standard `admin@schellenberger.biz`
+- `MONITORING_SECRET`: geheimer Token für `/api/monitoring/uptime`
+- `MAINTENANCE_SECRET`: geheimer Token für automatische Wartung
 - `NEXT_PUBLIC_BASE_URL`: öffentliche Basis-URL; wird sonst aus `DOMAIN`
   abgeleitet oder bei `DOMAIN=_` automatisch auf die Server-IP gesetzt
 - `ALLOW_PUBLIC_SIGNUP=true`: Self-Service-Registrierung aktivieren
@@ -168,6 +181,7 @@ Nach der Installation:
 ```bash
 systemctl status platzguide
 journalctl -u platzguide -f
+MONITORING_SECRET='...' bash /opt/platzguide/scripts/monitor-uptime.sh
 ```
 
 Die App ist nach erfolgreichem Abschluss direkt startbereit. Das Skript prüft

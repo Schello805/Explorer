@@ -63,6 +63,7 @@ export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey }
     { label: "Freigabe", done: Boolean(result) }
   ];
   const completedSteps = signupSteps.filter((step) => step.done).length;
+  const revision = process.env.NEXT_PUBLIC_APP_REVISION ?? "dev";
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
@@ -159,7 +160,7 @@ export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey }
     </section>
 
     <footer className="mx-auto flex w-[min(90%,1180px)] flex-col gap-3 border-t border-[#18332b]/10 py-6 text-sm text-[#18332b]/55 sm:flex-row sm:items-center sm:justify-between">
-      <p>© Michael Schellenberger · Platzguide</p>
+      <p>© Michael Schellenberger · Platzguide · Revision {revision}</p>
       <nav className="flex flex-wrap gap-x-5 gap-y-2">
         <Link href="/rechtliches/impressum">Impressum</Link>
         <Link href="/rechtliches/datenschutz">Datenschutz</Link>

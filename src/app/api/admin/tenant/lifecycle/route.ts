@@ -1,22 +1,12 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { ADMIN_EMAIL, verifyAdminSession } from "@/lib/auth";
+import { authorizePlatformAdmin } from "@/lib/platform-admin";
 import { archiveTenant, deleteTenantPermanently, listTenants, reactivateTenant } from "@/lib/tenant-store";
 
 const lifecycleSchema = z.object({
   tenantId: z.string().uuid(),
   action: z.enum(["archive", "reactivate", "delete"])
 });
-
-async function authorizePlatformAdmin() {
-  const cookieStore = await cookies();
-  const session = await verifyAdminSession(
-    cookieStore.get("platzguide_session")?.value ?? cookieStore.get("explorer_session")?.value
-  );
-  if (!session || session.role !== "platform-admin" || session.email.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) return null;
-  return session;
-}
 
 export async function POST(request: Request) {
   const session = await authorizePlatformAdmin();

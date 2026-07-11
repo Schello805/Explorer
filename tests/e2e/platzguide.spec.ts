@@ -32,7 +32,7 @@ test("platform admin can preview and publish a tenant manually", async ({ page, 
   await expect(page.getByRole("heading", { name: "Pakete" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Starter.*100 MB/s })).toBeVisible();
   await expect(page.getByText("19,99")).toBeVisible();
-  const publicToggle = page.getByLabel("Besucher-App öffentlich freischalten");
+  const publicToggle = page.locator('label:has-text("Besucher-App öffentlich freischalten") input[type="checkbox"]');
   if (!await publicToggle.isChecked()) await publicToggle.check();
   await Promise.all([
     page.waitForResponse((response) => response.url().includes("/api/admin/tenant") && response.ok()),
@@ -49,6 +49,8 @@ test("mobile admin and visitor views stay within viewport", async ({ page, isMob
   test.skip(!isMobile, "mobile-only viewport assertion");
   await page.goto("/");
   await expectNoHorizontalOverflow(page);
+  await page.getByLabel("Hilfe anzeigen").first().tap();
+  await expect(page.getByText("Der sichtbare Name deines Campingplatz-Guides")).toBeVisible();
 
   await loginAsPlatformAdmin(page);
   await expect(page.getByLabel("Menü öffnen")).toBeVisible();
@@ -59,10 +61,23 @@ test("mobile admin and visitor views stay within viewport", async ({ page, isMob
   await expectNoHorizontalOverflow(page);
 });
 
+test("platform admin can open system logs, audit and cleanup tools", async ({ page, isMobile }) => {
+  test.skip(isMobile, "system tools are covered on desktop");
+  await loginAsPlatformAdmin(page);
+  await page.getByRole("button", { name: "Plattform" }).click();
+  await expect(page.getByRole("heading", { name: "Plattformverwaltung" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Systemlogs" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Upload-Cleanup" })).toBeVisible();
+  await page.getByRole("button", { name: "Logs aktualisieren" }).click();
+  await expect(page.locator("pre").filter({ hasText: /Noch keine Logs geladen|next start|Ready|journalctl/i })).toBeVisible();
+  await page.getByRole("button", { name: "Monitoring prüfen" }).click();
+  await expect(page.getByText(/Monitoring/i)).toBeVisible();
+});
+
 async function loginAsPlatformAdmin(page: import("@playwright/test").Page) {
   await page.goto("/admin/login");
-  await page.getByLabel("E-Mail").fill("admin@schellenberger.biz");
-  await page.getByLabel("Passwort").fill("playwright-admin");
+  await page.locator('input[name="email"]').fill("admin@schellenberger.biz");
+  await page.locator('input[name="password"]').fill("playwright-admin");
   await Promise.all([
     page.waitForURL(/\/admin$/),
     page.getByRole("button", { name: /Sicher anmelden/i }).click()

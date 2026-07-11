@@ -86,6 +86,8 @@ print_summary() {
   printf '  Status:    systemctl status %s\n' "${APP_NAME}"
   printf '  Logs:      journalctl -u %s -f\n' "${APP_NAME}"
   printf '  Health:    curl -fsS http://127.0.0.1:%s/api/health\n' "${port}"
+  printf '  Monitor:   MONITORING_SECRET=... bash %s/scripts/monitor-uptime.sh\n' "${APP_DIR}"
+  printf '  Cleanup:   MAINTENANCE_SECRET=... DRY_RUN=false bash %s/scripts/cleanup-uploads.sh\n' "${APP_DIR}"
   printf '  Update:    bash %s/scripts/update-ubuntu.sh\n' "${APP_DIR}"
 }
 
