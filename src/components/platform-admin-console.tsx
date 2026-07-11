@@ -56,10 +56,10 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_1fr]">
         <AdminCard title="Globale Einrichtung" icon={<Server />}>
-          <ChecklistItem done label="Admin-Login aktiv" text="Du bist als Plattform-Admin angemeldet." />
-          <ChecklistItem done label="PostgreSQL angebunden" text="Mandantendaten werden aus der Produktionsdatenbank geladen." />
-          <ChecklistItem done label="Mandantentrennung vorbereitet" text="Datenzugriffe laufen tenantgebunden und RLS-geschützt." />
-          <ChecklistItem done={smtpConfigured} label="SMTP konfigurieren" text="SMTP-Werte werden ausschließlich serverseitig in .env.local gesetzt. Mandanten speichern keine SMTP-Serverdaten." />
+          <ChecklistItem done label="Admin-Login aktiv" />
+          <ChecklistItem done label="PostgreSQL angebunden" />
+          <ChecklistItem done label="Mandantentrennung aktiv" />
+          <ChecklistItem done={smtpConfigured} label="SMTP konfiguriert" />
         </AdminCard>
 
         <AdminCard title="Admin-Werkzeuge" icon={<Terminal />}>
@@ -142,8 +142,8 @@ function AdminCard({ title, icon, children }: { title: string; icon: React.React
   return <section className="rounded-[1.5rem] bg-white p-5 shadow-sm"><div className="flex items-center justify-between gap-3"><h2 className="font-display text-2xl">{title}</h2><span className="text-[#286551]">{icon}</span></div><div className="mt-4 space-y-3">{children}</div></section>;
 }
 
-function ChecklistItem({ done, label, text }: { done: boolean; label: string; text: string }) {
-  return <div className="flex gap-3 rounded-xl border border-black/5 p-3"><CheckCircle2 className={done ? "text-emerald-600" : "text-black/25"} size={19} /><div><p className="font-bold">{label}</p><p className="mt-1 text-sm leading-5 text-black/50">{text}</p></div></div>;
+function ChecklistItem({ done, label }: { done: boolean; label: string }) {
+  return <div className="flex items-center gap-3 rounded-xl border border-black/5 p-3"><CheckCircle2 className={done ? "text-emerald-600" : "text-black/25"} size={19} /><p className="font-bold">{label}</p></div>;
 }
 
 function Command({ label, command }: { label: string; command: string }) {
