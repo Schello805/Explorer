@@ -12,6 +12,11 @@
 - [ ] Wildcard-Domain, unbekannte Hosts und Custom Domains produktiv konfigurieren
 - [ ] Rechtstexte pro Mandant juristisch prüfen und vervollständigen
 - [ ] E2E-Tests mit zwei echten Mandanten und PostgreSQL-RLS ergänzen
+- [ ] Uptime-Monitoring mit Fehleralarm per E-Mail einrichten
+- [ ] Rate-Limits für Login, Registrierung, Feedback und Uploads erweitern
+- [ ] Upload-Cleanup für nicht mehr verwendete Dateien ergänzen
+- [ ] Admin-Audit sichtbarer pro Mandant auswerten
+- [ ] GPS-Praxistest auf Android und iOS/Safari durchführen
 
 ## Optionale Module
 
