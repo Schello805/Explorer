@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Activity, AlertTriangle, CheckCircle2, Database, Eye, EyeOff, Mail, Plus, Server, ShieldCheck, Terminal, Users } from "lucide-react";
@@ -13,7 +13,7 @@ function slugify(value: string) {
 }
 
 export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: string; tenants: Tenant[] }) {
-  const smtpConfigured = false;
+  const [mailConfigured, setMailConfigured] = useState(false);
   return <main className="min-h-screen bg-[#f2f3ef] p-4 text-[#1b302a] sm:p-6">
     <section className="mx-auto w-full max-w-7xl">
       <header className="flex flex-col gap-4 rounded-[2rem] bg-[#173c32] p-5 text-white shadow-sm sm:flex-row sm:items-center sm:justify-between">
@@ -59,7 +59,7 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
           <ChecklistItem done label="Admin-Login aktiv" />
           <ChecklistItem done label="PostgreSQL angebunden" />
           <ChecklistItem done label="Mandantentrennung aktiv" />
-          <ChecklistItem done={smtpConfigured} label="SMTP konfiguriert" />
+          <ChecklistItem done={mailConfigured} label="SMTP konfiguriert" />
         </AdminCard>
 
         <AdminCard title="Admin-Werkzeuge" icon={<Terminal />}>
@@ -69,10 +69,7 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
           <Command label="Healthcheck" command="curl -fsS http://127.0.0.1:3000/api/health" />
         </AdminCard>
 
-        <AdminCard title="SMTP & E-Mail" icon={<Mail />}>
-          <p className="text-sm leading-6 text-black/55">Globale SMTP-Zugangsdaten gehören aus Sicherheitsgründen nicht als Klartext in die Weboberfläche. Trage sie auf dem Server in `.env.local` ein. E-Mails werden nur an Admins des jeweiligen Mandanten gesendet; Gäste erhalten maximal Push-Mitteilungen.</p>
-          <div className="rounded-xl bg-[#f7f7f4] p-3 text-xs leading-5 text-black/55">Benötigt: `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM`, `MAIL_FROM_NAME`.</div>
-        </AdminCard>
+        <MailSettingsCard onConfiguredChange={setMailConfigured} />
 
         <AdminCard title="Fehlerlogs & Auditlog" icon={<AlertTriangle />}>
           <p className="text-sm leading-6 text-black/55">Systemfehler liest du aktuell über `journalctl`. Mandanten-Auditlogs erscheinen, sobald mindestens ein Campingplatz existiert, in dessen Adminbereich. Der nächste sinnvolle Ausbauschritt wäre eine eigene Webansicht für Systemlogs und Auditlog-Filter.</p>
@@ -132,6 +129,105 @@ export function CreateTenantForm({ compact = false }: { compact?: boolean }) {
     {state.error && <p className="mt-3 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{state.error}</p>}
     {state.success && <p className="mt-3 rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{state.success}</p>}
   </form>;
+}
+
+type MailConfig = {
+  smtpHost: string;
+  smtpPort: number;
+  smtpSecure: boolean;
+  smtpUser: string;
+  smtpPassword: string;
+  hasSmtpPassword: boolean;
+  mailFrom: string;
+  mailFromName: string;
+  mailLogoUrl: string;
+  configured: boolean;
+};
+
+function MailSettingsCard({ onConfiguredChange }: { onConfiguredChange: (configured: boolean) => void }) {
+  const [config, setConfig] = useState<MailConfig>({
+    smtpHost: "",
+    smtpPort: 587,
+    smtpSecure: false,
+    smtpUser: "",
+    smtpPassword: "",
+    hasSmtpPassword: false,
+    mailFrom: "noreply@platzguide.de",
+    mailFromName: "Platzguide",
+    mailLogoUrl: "",
+    configured: false
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [state, setState] = useState({ loading: false, testing: false, message: "", error: "" });
+
+  useEffect(() => {
+    fetch("/api/admin/system/mail-config")
+      .then((response) => response.ok ? response.json() : null)
+      .then((payload: Omit<MailConfig, "smtpPassword"> | null) => {
+        if (!payload) return;
+        setConfig({ ...payload, smtpPassword: "" });
+        onConfiguredChange(payload.configured);
+      })
+      .catch(() => undefined);
+  }, [onConfiguredChange]);
+
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setState({ loading: true, testing: false, message: "", error: "" });
+    const response = await fetch("/api/admin/system/mail-config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(config)
+    });
+    setState({ loading: false, testing: false, message: response.ok ? "SMTP-Konfiguration gespeichert." : "", error: response.ok ? "" : "SMTP-Konfiguration konnte nicht gespeichert werden." });
+    if (response.ok) {
+      setConfig((current) => ({ ...current, smtpPassword: "", hasSmtpPassword: current.hasSmtpPassword || Boolean(current.smtpPassword), configured: Boolean(current.smtpHost && current.mailFrom) }));
+      onConfiguredChange(Boolean(config.smtpHost && config.mailFrom));
+    }
+  }
+
+  async function sendTestMail() {
+    setState({ loading: false, testing: true, message: "", error: "" });
+    const response = await fetch("/api/admin/system/mail-config", { method: "PUT" });
+    setState({ loading: false, testing: false, message: response.ok ? "Testmail wurde an deinen Superadmin-Zugang gesendet." : "", error: response.ok ? "" : "Testmail fehlgeschlagen. Bitte SMTP-Daten prüfen." });
+  }
+
+  return <AdminCard title="SMTP & E-Mail" icon={<Mail />}>
+    <p className="text-sm leading-6 text-black/55">Diese Einstellungen gelten zentral für die ganze Plattform. Absender, Name und SMTP-Zugang werden hier gespeichert; Mandanten können diese Werte nicht ändern.</p>
+    <p className="rounded-xl bg-[#f7f7f4] p-3 text-xs leading-5 text-black/55">Systemmails gehen an Mandantenadmins oder an dich als Superadmin. Gäste erhalten keine E-Mails.</p>
+    <form onSubmit={save} className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <MailInput label="SMTP Host" value={config.smtpHost} onChange={(smtpHost) => setConfig({ ...config, smtpHost })} placeholder="smtp.example.de" required />
+        <MailInput label="SMTP Port" type="number" value={String(config.smtpPort)} onChange={(smtpPort) => setConfig({ ...config, smtpPort: Number(smtpPort) })} required />
+        <MailInput label="SMTP Benutzer" value={config.smtpUser} onChange={(smtpUser) => setConfig({ ...config, smtpUser })} placeholder="user@example.de" />
+        <label className="text-sm font-bold">SMTP Passwort
+          <span className="mt-1 flex rounded-xl border border-black/10 bg-white">
+            <input type={showPassword ? "text" : "password"} value={config.smtpPassword} onChange={(event) => setConfig({ ...config, smtpPassword: event.target.value })} placeholder={config.hasSmtpPassword ? "Gespeichert · leer lassen zum Behalten" : "Passwort"} className="min-w-0 flex-1 rounded-xl px-3 py-3 outline-none" />
+            <button title="Passwort anzeigen oder verbergen." type="button" onClick={() => setShowPassword((value) => !value)} className="px-3 text-[#286551]">{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+          </span>
+        </label>
+        <MailInput label="Absender E-Mail" type="email" value={config.mailFrom} onChange={(mailFrom) => setConfig({ ...config, mailFrom })} required />
+        <MailInput label="Absender Name" value={config.mailFromName} onChange={(mailFromName) => setConfig({ ...config, mailFromName })} required />
+      </div>
+      <MailInput label="Logo-URL für Mails" value={config.mailLogoUrl} onChange={(mailLogoUrl) => setConfig({ ...config, mailLogoUrl })} placeholder="https://platzguide.de/icons/platzguide-logo.png" />
+      <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-3 text-sm font-bold">
+        <span>SSL/TLS direkt verwenden</span>
+        <input type="checkbox" checked={config.smtpSecure} onChange={(event) => setConfig({ ...config, smtpSecure: event.target.checked, smtpPort: event.target.checked ? 465 : config.smtpPort })} className="h-5 w-5 accent-[#286551]" />
+      </label>
+      <div className="flex flex-wrap gap-2">
+        <button disabled={state.loading} className="rounded-xl bg-[#173c32] px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{state.loading ? "Speichert …" : "SMTP speichern"}</button>
+        <button type="button" disabled={state.testing || !config.configured && !config.smtpHost} onClick={sendTestMail} className="rounded-xl border border-black/10 px-5 py-3 text-sm font-bold disabled:opacity-50">{state.testing ? "Sendet …" : "Testmail senden"}</button>
+      </div>
+      {state.message && <p className="rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{state.message}</p>}
+      {state.error && <p className="rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{state.error}</p>}
+    </form>
+  </AdminCard>;
+}
+
+function MailInput({ label, value, onChange, type = "text", placeholder, required }: { label: string; value: string; onChange: (value: string) => void; type?: string; placeholder?: string; required?: boolean }) {
+  return <label className="text-sm font-bold">{label}
+    <input type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} required={required} className="mt-1 w-full rounded-xl border border-black/10 bg-white px-3 py-3" />
+  </label>;
 }
 
 function Metric({ icon, label, value, note }: { icon: React.ReactNode; label: string; value: string; note: string }) {
