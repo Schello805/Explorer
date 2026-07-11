@@ -2,13 +2,14 @@ import { expect, test } from "@playwright/test";
 
 test("marketing page explains pricing and manual publishing", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: /Camping-App erstellen/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /digitaler Campingplatz-Guide/i })).toBeVisible();
   await expect(page.getByText("Kostenlos einrichten und testen")).toBeVisible();
-  await expect(page.getByText("Starter", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Einfach testen/i })).toBeVisible();
   await expect(page.getByText("4,99")).toBeVisible();
   await expect(page.getByText("Pro", { exact: true })).toBeVisible();
   await expect(page.getByText("19,99")).toBeVisible();
-  await expect(page.getByText("manuell freigeschaltet")).toBeVisible();
+  await expect(page.getByText("manueller Freigabe")).toBeVisible();
+  await expect(page.getByRole("link", { name: "AGB" })).toBeVisible();
 });
 
 test("anonymous visitors cannot open an unpublished tenant", async ({ page }) => {
@@ -28,7 +29,7 @@ test("platform admin can preview and publish a tenant manually", async ({ page, 
   await page.goto("/admin");
   await page.getByLabel("Mandant wählen").selectOption({ label: "Camping Publishplatz" });
   await page.getByRole("button", { name: /Abo & Veröffentlichung/i }).click();
-  await expect(page.getByText("Starter", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Pakete" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Starter.*100 MB/s })).toBeVisible();
   await expect(page.getByText("19,99")).toBeVisible();
   const publicToggle = page.getByLabel("Besucher-App öffentlich freischalten");

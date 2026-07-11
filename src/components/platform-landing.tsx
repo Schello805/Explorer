@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import Image from "next/image";
-import { ArrowRight, Code2, ShieldCheck, Smartphone } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, CheckCircle2, Code2, CreditCard, Gauge, LifeBuoy, ShieldCheck, Smartphone } from "lucide-react";
 import { billingPlans, formatEuro, setupServicePriceCents, yearlyDiscountPercent } from "@/lib/billing";
 
 type CaptchaProvider = "turnstile" | "hcaptcha" | "disabled";
@@ -56,31 +57,55 @@ export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey }
     };
   }, [allowSignup, captchaProvider, captchaSiteKey]);
 
+  const signupSteps = [
+    { label: "Profil", done: Boolean(name && slug) },
+    { label: "Admin", done: Boolean(ownerEmail && ownerPassword.length >= 12) },
+    { label: "Freigabe", done: Boolean(result) }
+  ];
+  const completedSteps = signupSteps.filter((step) => step.done).length;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "Platzguide",
+    applicationCategory: "TravelApplication",
+    operatingSystem: "Web, iOS, Android",
+    description: "Mobile-first PWA und Adminplattform für Campingplätze mit Subdomain, Stationen, Gästemappe und mandantengetrennter Verwaltung.",
+    offers: [
+      { "@type": "Offer", name: "Starter", price: "4.99", priceCurrency: "EUR" },
+      { "@type": "Offer", name: "Pro", price: "19.99", priceCurrency: "EUR" }
+    ]
+  };
+
   return <main className="min-h-screen bg-[#f5f2e9] text-[#18332b]">
-    <section className="mx-auto grid min-h-screen w-[90%] content-center gap-6 py-8 lg:grid-cols-[1fr_.9fr] lg:items-center">
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+    <section className="mx-auto grid min-h-screen w-[90%] content-center gap-8 py-8 lg:grid-cols-[1fr_.82fr] lg:items-center">
       <div>
         <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-bold text-[#195f4c] shadow-sm"><Image src={platformLogo} alt="" width={20} height={20} className="h-5 w-5 object-contain" /> Platzguide Plattform</div>
-        <h1 className="mt-5 max-w-2xl font-display text-4xl leading-[1.02] sm:text-6xl">Camping-App erstellen. Subdomain wählen. Inhalte pflegen.</h1>
-        <p className="mt-4 max-w-xl text-base leading-7 text-[#18332b]/65">Mobile-first PWA für Campingplätze: Karte, Stationen, Gästemappe, Events und Adminbereich — pro Campingplatz strikt getrennt.</p>
-        <p className="mt-3 max-w-xl rounded-xl bg-white/80 p-3 text-sm font-bold leading-6 text-[#195f4c]">Kostenlos einrichten und testen. Öffentlich sichtbar wird die Besucher-App erst nach manueller Freigabe.</p>
+        <h1 className="mt-5 max-w-3xl font-display text-4xl leading-[1.02] sm:text-6xl">Dein digitaler Campingplatz-Guide in wenigen Minuten.</h1>
+        <p className="mt-4 max-w-2xl text-base leading-7 text-[#18332b]/65">Platzguide ist die mobile-first PWA für Campingplätze: Stationen, Platzplan, Gästemappe, Events, Rechtstexte und Adminbereich — getrennt je Mandant und bereit für Subdomains.</p>
+        <p className="mt-3 max-w-2xl rounded-xl bg-white/85 p-3 text-sm font-bold leading-6 text-[#195f4c]">Kostenlos einrichten und testen. Öffentlich sichtbar wird die Besucher-App erst nach deiner manuellen Freigabe.</p>
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
           <MiniFeature icon={<Smartphone />} title="Mobil zuerst" text="Für Gäste am Platz." />
           <MiniFeature icon={<ShieldCheck />} title="Getrennte Daten" text="Tenant-ID je Anfrage." />
-          <MiniFeature icon={<Code2 />} title="Source Available" text="Nicht-kommerziell frei." />
+          <MiniFeature icon={<Gauge />} title="Schnell online" text="PWA statt App-Store." />
         </div>
         <div className="mt-6 flex flex-wrap gap-3">
           <a href="/admin" className="rounded-xl bg-[#195f4c] px-5 py-3 text-sm font-bold text-white">Admin öffnen</a>
+          <a href="#preise" className="rounded-xl border border-[#195f4c]/20 bg-white px-5 py-3 text-sm font-bold text-[#195f4c]">Preise ansehen</a>
         </div>
-        <div className="mt-6 grid gap-3 sm:grid-cols-2">
-          <PriceCard title="Starter" price={billingPlans.starter.monthlyPriceCents} lines={["100 MB Speicher", "Support innerhalb 24h", "Subdomain inklusive"]} />
-          <PriceCard title="Pro" price={billingPlans.pro.monthlyPriceCents} lines={["1 GB Speicher", "Support innerhalb 6h", "Mehrere Admins & künftige Module"]} />
+        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+          <WorkflowStep number="1" title="Instanz erstellen" text="Name, Subdomain und Adminzugang festlegen." />
+          <WorkflowStep number="2" title="Platz einrichten" text="Stationen, Karte, Medien und Rechtstexte pflegen." />
+          <WorkflowStep number="3" title="Freischalten" text="Erst nach Zahlung/Freigabe öffentlich sichtbar." />
         </div>
-        <p className="mt-3 text-sm text-[#18332b]/55">Monatlich kündbar · {yearlyDiscountPercent}% Jahresrabatt · optionale Einrichtung durch Michael für {formatEuro(setupServicePriceCents)}.</p>
       </div>
 
       <form onSubmit={createInstance} className="rounded-[2rem] bg-white p-5 shadow-soft sm:p-7">
-        <p className="text-xs font-bold uppercase tracking-[.18em] text-[#195f4c]/60">Neue Instanz</p>
-        <h2 className="mt-2 font-display text-3xl">Campingplatz anlegen</h2>
+        <div className="flex items-center justify-between gap-3">
+          <div><p className="text-xs font-bold uppercase tracking-[.18em] text-[#195f4c]/60">Neue Instanz</p><h2 className="mt-2 font-display text-3xl">Campingplatz anlegen</h2></div>
+          <span className="rounded-full bg-[#eef4ed] px-3 py-1 text-xs font-bold text-[#195f4c]">{completedSteps}/3</span>
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-2">{signupSteps.map((step) => <div key={step.label} className="rounded-xl bg-[#f7f4ed] p-2 text-xs font-bold"><CheckCircle2 size={15} className={step.done ? "text-emerald-600" : "text-black/20"} />{step.label}</div>)}</div>
         <p className="mt-3 rounded-xl bg-[#f7f4ed] p-3 text-sm leading-5 text-[#18332b]/65">Du kannst alles vorbereiten und testen. Für anonyme Besucher bleibt die Subdomain gesperrt, bis sie manuell freigeschaltet wird.</p>
         {!allowSignup && <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm leading-5 text-amber-900">Self-Service ist vorbereitet, aber standardmäßig geschlossen. Aktivierung erfolgt erst mit E-Mail-Verifikation, Rate-Limit und Nutzungsbedingungen.</p>}
         <div className="mt-5 space-y-4">
@@ -100,19 +125,48 @@ export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey }
         <button disabled={loading || !allowSignup} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#195f4c] px-5 py-3.5 font-bold text-white disabled:opacity-60">{loading ? "Wird erstellt …" : allowSignup ? "Instanz erstellen" : "Self-Service geschlossen"} <ArrowRight size={18} /></button>
       </form>
     </section>
+    <section id="preise" className="mx-auto w-[90%] pb-12">
+      <div className="rounded-[2rem] bg-[#18332b] p-5 text-white sm:p-8">
+        <p className="text-xs font-bold uppercase tracking-[.18em] text-[#e8b65f]">Preise</p>
+        <h2 className="mt-2 font-display text-4xl">Einfach testen, manuell freischalten.</h2>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-white/65">Monatlich kündbar, {yearlyDiscountPercent}% Jahresrabatt bei Jahreszahlung. Die optionale Einrichtung durch Michael kostet einmalig {formatEuro(setupServicePriceCents)}.</p>
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          <PriceCard title="Starter" price={billingPlans.starter.monthlyPriceCents} badge="Für die meisten Plätze" lines={["100 MB Speicher für Bilder/kurze Medien", "Support innerhalb von 24 Stunden", "Subdomain inklusive", "Öffentliche App nach manueller Freigabe"]} />
+          <PriceCard title="Pro" price={billingPlans.pro.monthlyPriceCents} badge="Für wachsende Teams" lines={["1 GB Speicher", "Support innerhalb von 6 Stunden", "Mehrere Admins und künftige Pro-Module", "Eigene Domain möglich"]} />
+        </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <MiniFeature icon={<CreditCard />} title="Zahlung später" text="Freischaltung aktuell manuell." />
+          <MiniFeature icon={<LifeBuoy />} title="Support klar" text="24h Starter, 6h Pro." />
+          <MiniFeature icon={<Code2 />} title="Source Available" text="Privat/Vereine nicht-kommerziell." />
+        </div>
+      </div>
+    </section>
+    <footer className="mx-auto flex w-[90%] flex-col gap-3 border-t border-[#18332b]/10 py-6 text-sm text-[#18332b]/55 sm:flex-row sm:items-center sm:justify-between">
+      <p>© Michael Schellenberger · Platzguide</p>
+      <nav className="flex flex-wrap gap-x-5 gap-y-2">
+        <Link href="/rechtliches/impressum">Impressum</Link>
+        <Link href="/rechtliches/datenschutz">Datenschutz</Link>
+        <Link href="/rechtliches/cookies">Cookies</Link>
+        <Link href="/rechtliches/agb">AGB</Link>
+      </nav>
+    </footer>
   </main>;
 }
 
 function MiniFeature({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
-  return <div className="rounded-2xl bg-white p-4 shadow-sm"><div className="text-[#195f4c]">{icon}</div><p className="mt-3 font-bold">{title}</p><p className="mt-1 text-sm text-[#18332b]/55">{text}</p></div>;
+  return <div className="rounded-2xl bg-white p-4 text-[#18332b] shadow-sm"><div className="text-[#195f4c]">{icon}</div><p className="mt-3 font-bold">{title}</p><p className="mt-1 text-sm text-[#18332b]/55">{text}</p></div>;
 }
 
-function PriceCard({ title, price, lines }: { title: string; price: number; lines: string[] }) {
-  return <article className="rounded-2xl bg-white p-4 shadow-sm">
-    <p className="text-xs font-bold uppercase tracking-widest text-[#195f4c]/60">{title}</p>
-    <p className="mt-2 font-display text-3xl">{formatEuro(price)}</p>
-    <p className="text-xs text-[#18332b]/45">pro Monat</p>
-    <ul className="mt-3 space-y-1 text-sm text-[#18332b]/65">{lines.map((line) => <li key={line}>✓ {line}</li>)}</ul>
+function WorkflowStep({ number, title, text }: { number: string; title: string; text: string }) {
+  return <div className="rounded-2xl bg-white p-4 shadow-sm"><span className="grid h-8 w-8 place-items-center rounded-full bg-[#195f4c] text-sm font-bold text-white">{number}</span><p className="mt-3 font-bold">{title}</p><p className="mt-1 text-sm leading-5 text-[#18332b]/55">{text}</p></div>;
+}
+
+function PriceCard({ title, price, badge, lines }: { title: string; price: number; badge: string; lines: string[] }) {
+  return <article className="rounded-2xl bg-white p-5 text-[#18332b] shadow-sm">
+    <div className="flex items-center justify-between gap-3"><p className="text-xs font-bold uppercase tracking-widest text-[#195f4c]/60">{title}</p><span className="rounded-full bg-[#f4ead6] px-3 py-1 text-xs font-bold text-[#9a6420]">{badge}</span></div>
+    <p className="mt-3 font-display text-5xl">{formatEuro(price)}</p>
+    <p className="text-sm text-[#18332b]/45">pro Monat · monatlich kündbar</p>
+    <ul className="mt-4 space-y-2 text-sm text-[#18332b]/70">{lines.map((line) => <li key={line} className="flex gap-2"><CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-600" />{line}</li>)}</ul>
   </article>;
 }
 

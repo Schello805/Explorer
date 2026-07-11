@@ -142,7 +142,7 @@ export type Tenant = {
     };
   };
   contact: { phone: string; email: string; emergency: string };
-  legal: { imprint: string; privacy: string; cookies: string };
+  legal: { imprint: string; privacy: string; cookies: string; terms: string };
   tracking: { enabled: boolean; provider: string; measurementId: string };
   email: { senderName: string; senderEmail: string; replyTo: string };
   billing: {

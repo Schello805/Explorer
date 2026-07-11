@@ -54,7 +54,46 @@ Betroffene Personen haben Rechte auf Auskunft, Berichtigung, Löschung, Einschr�
 
 Platzguide nutzt notwendige Cookies und lokale Speicherfunktionen für Login, Sicherheit, Sprache, Favoriten, Offline-Funktion und Einwilligungsstatus.
 
-Optionale Speicherung für Statistik, Tracking, Push-Mitteilungen oder externe Dienste erfolgt nur nach Aktivierung und, soweit erforderlich, nach Einwilligung.`
+Optionale Speicherung für Statistik, Tracking, Push-Mitteilungen oder externe Dienste erfolgt nur nach Aktivierung und, soweit erforderlich, nach Einwilligung.`,
+    terms: `Allgemeine Nutzungsbedingungen für Platzguide
+
+Stand: 2026
+
+1. Anbieter
+Platzguide wird angeboten von Michael Schellenberger, Ziegeleistrasse 32, 91572 Bechhofen, E-Mail: info@schellenberger.biz.
+
+2. Leistungsbeschreibung
+Platzguide ist eine mandantenfähige Web-App/PWA für Campingplätze. Betreiber können eine eigene Instanz mit Subdomain, Branding, Stationen, Gästemappe, Rechtstexten, Medien und weiteren Modulen einrichten. Die öffentliche Besucher-App wird erst nach manueller Freigabe sichtbar.
+
+3. Registrierung und Zugang
+Betreiber sind verpflichtet, richtige Kontaktdaten anzugeben und Zugangsdaten vertraulich zu behandeln. Michael Schellenberger darf Zugänge sperren, wenn ein Missbrauch, Sicherheitsrisiko, Zahlungsverzug oder ein Verstoß gegen diese Bedingungen vorliegt.
+
+4. Pakete, Preise und Laufzeit
+Starter kostet 4,99 € pro Monat und enthält 100 MB Speicher sowie Support innerhalb von 24 Stunden. Pro kostet 19,99 € pro Monat und enthält 1 GB Speicher, mehrere Admins bzw. künftige Pro-Module sowie Support innerhalb von 6 Stunden. Jahreszahlung kann mit Rabatt angeboten werden. Die Einrichtung als Service kostet optional einmalig 199,00 €. Verträge sind monatlich kündbar, sofern nichts anderes vereinbart wurde.
+
+5. Testphase und Veröffentlichung
+Betreiber können ihre Instanz vorbereiten und testen. Für anonyme Besucher wird die Subdomain erst öffentlich sichtbar, wenn die Freigabe durch den Plattform-Admin erfolgt und der Mandant nicht gesperrt ist.
+
+6. Inhalte der Betreiber
+Betreiber sind für alle von ihnen eingestellten Inhalte, Bilder, Rechtstexte, Öffnungszeiten, Kontaktdaten und Informationen selbst verantwortlich. Sie dürfen nur Inhalte hochladen, an denen sie die erforderlichen Rechte besitzen.
+
+7. Speicher und technische Grenzen
+Der Speicherplatz ist je Paket begrenzt. Nicht erlaubte Dateitypen, zu große Dateien oder Inhalte mit Sicherheitsrisiko können abgelehnt oder entfernt werden.
+
+8. Verfügbarkeit und Wartung
+Platzguide wird mit angemessener Sorgfalt betrieben. Kurzzeitige Unterbrechungen durch Wartung, Updates, Sicherheitsmaßnahmen, Hosting- oder Netzwerkstörungen können auftreten. Ein Anspruch auf permanente Verfügbarkeit besteht nur, wenn dies gesondert vereinbart wurde.
+
+9. Datenschutz und Mandantentrennung
+Daten werden mandantengetrennt verarbeitet. Betreiber dürfen nur Daten ihres eigenen Campingplatzes verwalten. Details ergeben sich aus den Datenschutzhinweisen.
+
+10. Haftung
+Die Haftung richtet sich nach den gesetzlichen Vorschriften. Für vom Betreiber eingestellte Inhalte, fehlerhafte Platzinformationen, nicht geprüfte Rechtstexte oder externe Dienste übernimmt Michael Schellenberger keine Verantwortung.
+
+11. Änderungen
+Diese Bedingungen können angepasst werden, wenn technische, rechtliche oder wirtschaftliche Gründe dies erfordern. Betreiber werden über wesentliche Änderungen angemessen informiert.
+
+12. Schlussbestimmungen
+Es gilt deutsches Recht. Sollten einzelne Regelungen unwirksam sein, bleibt die Wirksamkeit der übrigen Regelungen unberührt.`
   },
   tracking: { enabled: false, provider: "none", measurementId: "" },
   email: { senderName: "Platzguide", senderEmail: "info@schellenberger.biz", replyTo: "info@schellenberger.biz" },

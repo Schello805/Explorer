@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Activity, Bell, BookOpen, CalendarDays, Caravan, CheckCircle2, ChevronRight, Download, FileText, Gift, Globe2, ImageIcon, LayoutDashboard, MapPinned, Menu, MessageSquareWarning, Palette, Plus, Search, Settings, ShieldCheck, Trash2, Users, X } from "lucide-react";
+import { Activity, Bell, BookOpen, CalendarDays, Caravan, CheckCircle2, ChevronRight, CreditCard, Download, FileText, Gift, Globe2, ImageIcon, LayoutDashboard, LifeBuoy, MapPinned, Menu, MessageSquareWarning, Palette, Plus, Search, Settings, ShieldCheck, Trash2, Users, X } from "lucide-react";
 import { applyBillingPlan, billingPlans, formatEuro, storageUsedMb } from "@/lib/billing";
 import type { Category, EventItem, GuestGuideItem, MediaAsset, Reward, Station, Tenant, Tour } from "@/lib/types";
 import { cn, statusLabel } from "@/lib/utils";
@@ -126,7 +126,7 @@ function Overview({ tenant, stations, stationCount, templateCount, onNavigate }:
       <p className="flex items-center gap-2 text-sm font-bold text-emerald-700"><span className="h-2 w-2 rounded-full bg-emerald-500" /> System betriebsbereit</p>
     </div>
     <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <Metric label="Campingplätze" value="1" note="Aktiver Mandant" icon={<Caravan />} />
+      <Metric label="Status" value={billingStatusLabel[tenant.billing.status]} note={tenant.billing.publicEnabled ? "Öffentlich sichtbar" : "Noch nicht öffentlich"} icon={<Caravan />} />
       <Metric label="Stationen" value={String(stationCount)} note={`${templateCount} Vorlagen`} icon={<MapPinned />} />
       <Metric label="Besuche heute" value="—" note="Tracking deaktiviert" icon={<Activity />} />
       <Metric label="Admins" value="1" note="Plattformweit" icon={<Users />} />
@@ -135,7 +135,7 @@ function Overview({ tenant, stations, stationCount, templateCount, onNavigate }:
       <SetupAssistant tenant={tenant} stations={stations} onNavigate={onNavigate} />
       <section className="rounded-2xl bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between"><h3 className="font-display text-2xl">Dein Campingplatz</h3><button onClick={() => onNavigate("tenants")} className="text-sm font-bold text-[#286551]">Verwalten <ChevronRight size={16} className="inline" /></button></div>
-        <div className="mt-5 flex items-center gap-4 rounded-2xl bg-[#eff3ec] p-4"><span className="grid h-14 w-14 place-items-center rounded-2xl bg-white p-1.5 shadow-sm"><Image src={platformLogo} alt="Platzguide" width={44} height={44} className="h-full w-full object-contain" /></span><div className="min-w-0"><p className="truncate font-bold">{tenant.name}</p><p className="truncate text-sm text-[#1b302a]/50">{tenant.slug}.app-domain.de</p></div><span className="ml-auto rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">Aktiv</span></div>
+        <div className="mt-5 flex items-center gap-4 rounded-2xl bg-[#eff3ec] p-4"><span className="grid h-14 w-14 place-items-center rounded-2xl bg-white p-1.5 shadow-sm"><Image src={platformLogo} alt="Platzguide" width={44} height={44} className="h-full w-full object-contain" /></span><div className="min-w-0"><p className="truncate font-bold">{tenant.name}</p><p className="truncate text-sm text-[#1b302a]/50">{tenant.slug}.app-domain.de</p></div><BillingBadge tenant={tenant} /></div>
       </section>
     </div>
   </div>;
@@ -190,6 +190,24 @@ function Stations({ tenant, stations, onEdit, onRemove, onCreate, onImport }: { 
 function StationBadge({ station }: { station: Station }) {
   if (station.isTemplate) return <span className="shrink-0 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800">Vorlage</span>;
   return <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">{statusLabel[station.status]}</span>;
+}
+
+const billingStatusLabel: Record<Tenant["billing"]["status"], string> = {
+  trial: "Testphase",
+  active: "Aktiv",
+  past_due: "Zahlung offen",
+  blocked: "Gesperrt"
+};
+
+const billingStatusClass: Record<Tenant["billing"]["status"], string> = {
+  trial: "bg-amber-100 text-amber-800",
+  active: "bg-emerald-100 text-emerald-700",
+  past_due: "bg-orange-100 text-orange-800",
+  blocked: "bg-red-100 text-red-700"
+};
+
+function BillingBadge({ tenant }: { tenant: Tenant }) {
+  return <span className={cn("ml-auto shrink-0 rounded-full px-3 py-1 text-xs font-bold", billingStatusClass[tenant.billing.status])}>{billingStatusLabel[tenant.billing.status]}</span>;
 }
 
 function TenantSettings({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) {
@@ -254,7 +272,7 @@ function TenantSettings({ tenant, saving, onSave }: { tenant: Tenant; saving: bo
   </div>;
 }
 function Branding({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) { const [draft, setDraft] = useState(tenant); return <SettingsCard title="Erscheinungsbild" description="Farben und Texte werden nur für diesen Mandanten ausgespielt."><Field label="Claim" value={draft.tagline} onChange={(tagline) => setDraft({ ...draft, tagline })} /><Field label="Logo-Kürzel" value={draft.logoMark} onChange={(logoMark) => setDraft({ ...draft, logoMark })} /><div className="grid gap-4 sm:grid-cols-3"><Color label="Primärfarbe" value={draft.theme.primary} onChange={(primary) => setDraft({ ...draft, theme: { ...draft.theme, primary } })} /><Color label="Akzentfarbe" value={draft.theme.secondary} onChange={(secondary) => setDraft({ ...draft, theme: { ...draft.theme, secondary } })} /><Color label="Hintergrund" value={draft.theme.surface} onChange={(surface) => setDraft({ ...draft, theme: { ...draft.theme, surface } })} /></div><Save saving={saving} onClick={() => onSave(draft)} /></SettingsCard>; }
-function Legal({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) { const [draft, setDraft] = useState(tenant); return <SettingsCard title="Rechtstexte" description="Jeder Campingplatz benötigt eigene, rechtlich geprüfte Angaben."><Area label="Impressum" value={draft.legal.imprint} onChange={(imprint) => setDraft({ ...draft, legal: { ...draft.legal, imprint } })} /><Area label="Datenschutz" value={draft.legal.privacy} onChange={(privacy) => setDraft({ ...draft, legal: { ...draft.legal, privacy } })} /><Area label="Cookie-Hinweise" value={draft.legal.cookies} onChange={(cookies) => setDraft({ ...draft, legal: { ...draft.legal, cookies } })} /><Save saving={saving} onClick={() => onSave(draft)} /></SettingsCard>; }
+function Legal({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) { const [draft, setDraft] = useState(tenant); return <SettingsCard title="Rechtstexte" description="Jeder Campingplatz benötigt eigene, rechtlich geprüfte Angaben."><Area label="Impressum" value={draft.legal.imprint} onChange={(imprint) => setDraft({ ...draft, legal: { ...draft.legal, imprint } })} /><Area label="Datenschutz" value={draft.legal.privacy} onChange={(privacy) => setDraft({ ...draft, legal: { ...draft.legal, privacy } })} /><Area label="Cookie-Hinweise" value={draft.legal.cookies} onChange={(cookies) => setDraft({ ...draft, legal: { ...draft.legal, cookies } })} /><Area label="AGB / Nutzungsbedingungen" value={draft.legal.terms} onChange={(terms) => setDraft({ ...draft, legal: { ...draft.legal, terms } })} /><Save saving={saving} onClick={() => onSave(draft)} /></SettingsCard>; }
 function Modules({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) { const [draft, setDraft] = useState(tenant); const modules = [["Rundgänge", "tours", "Für Besucher-App und Verwaltung freischalten"], ["Check-ins & QR-Code", "checkins", "Für Besucher-App und Verwaltung freischalten"], ["Veranstaltungen", "events", "Für Besucher-App und Verwaltung freischalten"], ["Feedback", "feedback", "Für Besucher-App und Verwaltung freischalten"], ["Platzguide-Pass", "rewards", "Für Besucher-App und Verwaltung freischalten"], ["Push-Mitteilungen", "push", "Vorbereitet, aber erst mit VAPID/Push-Service wirklich aktiv"], ["Belegungs-/Statusanzeigen", "occupancy", "Für Besucher-App und Verwaltung freischalten"], ["Digitale Gästemappe", "guestGuide", "Mandantengebundene Inhalte für Gäste"]]; return <SettingsCard title="Funktionsmodule" description="Funktionen lassen sich je Campingplatz aktivieren.">{modules.map(([label, id, note]) => <label key={id} className="flex min-w-0 items-center justify-between gap-4 border-b border-black/5 py-4"><div className="min-w-0"><p className="break-words font-bold">{label}</p><p className="text-xs text-black/45">{note}</p></div><input type="checkbox" checked={draft.features[id] ?? false} onChange={(event) => setDraft({ ...draft, features: { ...draft.features, [id]: event.target.checked } })} className="h-5 w-5 shrink-0 accent-[#286551]" /></label>)}<Save saving={saving} onClick={() => onSave(draft)} /></SettingsCard>; }
 function Integrations({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) {
   const [draft, setDraft] = useState(tenant);
@@ -293,10 +311,17 @@ function Billing({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; 
   const [draft, setDraft] = useState(tenant);
   const usedMb = storageUsedMb(draft);
   const yearlyPrice = Math.round(draft.billing.monthlyPriceCents * 12 * (1 - draft.billing.yearlyDiscountPercent / 100));
+  const frontendState = draft.billing.publicEnabled && draft.billing.status === "active" ? "öffentlich sichtbar" : "nur für Admins/Betreiber testbar";
   function choosePlan(plan: Tenant["billing"]["plan"]) {
     setDraft((current) => applyBillingPlan(current, plan));
   }
   return <div className="space-y-6">
+    <div className="grid gap-4 md:grid-cols-4">
+      <Metric label="Abo" value={billingPlans[draft.billing.plan].label} note="Monatlich kündbar" icon={<CreditCard />} />
+      <Metric label="Status" value={billingStatusLabel[draft.billing.status]} note={frontendState} icon={<ShieldCheck />} />
+      <Metric label="Speicher" value={`${usedMb} MB`} note={`von ${draft.billing.storageLimitMb} MB genutzt`} icon={<ImageIcon />} />
+      <Metric label="Support" value={`${draft.billing.supportResponseHours}h`} note="max. Reaktionszeit" icon={<LifeBuoy />} />
+    </div>
     <SettingsCard title="Pakete" description="Der Betreiber kann einrichten und testen. Öffentlich wird die App erst nach manueller Freigabe.">
       <div className="grid gap-4 lg:grid-cols-2">
         {Object.entries(billingPlans).map(([id, plan]) => <button key={id} onClick={() => choosePlan(id as Tenant["billing"]["plan"])} className={cn("rounded-2xl border p-4 text-left transition", draft.billing.plan === id ? "border-[#173c32] bg-[#eff3ec]" : "border-black/10 bg-white hover:border-[#173c32]/40")}>
@@ -307,6 +332,7 @@ function Billing({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; 
             <li>{plan.storageLimitMb >= 1024 ? "1 GB" : `${plan.storageLimitMb} MB`} Speicher</li>
             <li>Support innerhalb {plan.supportResponseHours}h</li>
             <li>{plan.customDomainEnabled ? "Eigene Domain möglich" : "Subdomain inklusive"}</li>
+            <li>Öffentlich erst nach manueller Freigabe</li>
           </ul>
         </button>)}
       </div>
@@ -321,7 +347,8 @@ function Billing({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; 
       <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-4 text-sm font-bold">Einrichtungsservice gebucht<input type="checkbox" checked={draft.billing.setupServiceBooked ?? false} onChange={(event) => setDraft({ ...draft, billing: { ...draft.billing, setupServiceBooked: event.target.checked } })} className="h-5 w-5 accent-[#286551]" /></label>
       <div className="rounded-xl bg-[#f7f7f4] p-4 text-sm leading-6 text-black/65">
         <p><strong>Speicher:</strong> {usedMb} MB von {draft.billing.storageLimitMb} MB genutzt.</p>
-        <p><strong>Frontend:</strong> {draft.billing.publicEnabled ? "öffentlich sichtbar" : "nur für eingeloggte Admins/Betreiber als Test sichtbar"}.</p>
+        <p><strong>Frontend:</strong> {frontendState}.</p>
+        <p><strong>Statuslogik:</strong> Nur <code>active</code> plus Freischaltung macht die Besucher-App öffentlich. <code>trial</code>, <code>past_due</code> und <code>blocked</code> bleiben gesperrt.</p>
       </div>
       <Save saving={saving} onClick={() => onSave(draft)} />
     </SettingsCard>

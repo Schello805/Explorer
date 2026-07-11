@@ -38,7 +38,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   if (!tenant) {
     return <SystemError title="Campingplatz nicht gefunden" message="Für diese Domain ist noch kein Mandant eingerichtet." />;
   }
-  if (!tenant.billing.publicEnabled) {
+  if (!tenant.billing.publicEnabled || tenant.billing.status !== "active") {
     const cookieStore = await cookies();
     const session = await verifyAdminSession(
       cookieStore.get("platzguide_session")?.value ?? cookieStore.get("explorer_session")?.value

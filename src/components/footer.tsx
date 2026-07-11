@@ -16,6 +16,7 @@ export function Footer({ tenant }: { tenant: Tenant }) {
           <Link href="/rechtliches/impressum">Impressum</Link>
           <Link href="/rechtliches/datenschutz">Datenschutz</Link>
           <Link href="/rechtliches/cookies">Cookie-Hinweise</Link>
+          <Link href="/rechtliches/agb">AGB</Link>
           <button className="text-left" data-open-consent>Einwilligung ändern</button>
         </nav>
       </div>

@@ -5,9 +5,30 @@ import { tenantDefaults } from "@/lib/tenant-defaults";
 
 export async function generateMetadata(): Promise<Metadata> {
   const tenant = await getTenant().catch(() => null);
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://platzguide.de";
+  const platformTitle = "Platzguide · Mobile Campingplatz-App mit Subdomain und Adminbereich";
+  const platformDescription = "Platzguide ist die mobile-first PWA für Campingplätze: Karte, Stationen, Gästemappe, Events, Rechtstexte und mandantenfähiger Adminbereich.";
   return {
-    title: tenant ? `${tenant.name} · Platzguide` : "Platzguide",
-    description: tenant?.tagline ?? "Mandantenfähige Campingplatz-App und PWA.",
+    metadataBase: new URL(baseUrl),
+    title: tenant ? `${tenant.name} · Platzguide` : platformTitle,
+    description: tenant?.tagline ?? platformDescription,
+    alternates: { canonical: tenant ? "/" : baseUrl },
+    keywords: ["Campingplatz App", "Camping PWA", "digitale Gästemappe", "Campingplatz Karte", "Platzguide", "Subdomain Campingplatz"],
+    openGraph: {
+      title: tenant ? `${tenant.name} · Platzguide` : platformTitle,
+      description: tenant?.tagline ?? platformDescription,
+      url: tenant ? "/" : baseUrl,
+      siteName: "Platzguide",
+      locale: "de_DE",
+      type: "website",
+      images: [{ url: "/icons/platzguide-logo.png", width: 512, height: 512, alt: "Platzguide Logo" }]
+    },
+    twitter: {
+      card: "summary",
+      title: tenant ? `${tenant.name} · Platzguide` : platformTitle,
+      description: tenant?.tagline ?? platformDescription,
+      images: ["/icons/platzguide-logo.png"]
+    },
     manifest: "/manifest.webmanifest",
     icons: {
       icon: "/icons/platzguide-logo.png",

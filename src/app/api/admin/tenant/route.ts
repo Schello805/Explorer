@@ -34,7 +34,7 @@ const tenantSchema = z.object({
     }).optional()
   }),
   contact: z.object({ phone: z.string().max(80), email: z.string().email(), emergency: z.string().max(160) }),
-  legal: z.object({ imprint: z.string().max(10000), privacy: z.string().max(20000), cookies: z.string().max(10000) }),
+  legal: z.object({ imprint: z.string().max(10000), privacy: z.string().max(20000), cookies: z.string().max(10000), terms: z.string().max(20000) }),
   tracking: z.object({ enabled: z.boolean(), provider: z.string().max(80), measurementId: z.string().max(120) }),
   email: z.object({ senderName: z.string().max(120), senderEmail: z.string().email(), replyTo: z.string().email() }),
   billing: z.object({
