@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { ArrowRight, KeyRound } from "lucide-react";
+import { ArrowRight, HelpCircle, KeyRound } from "lucide-react";
 
 const platformLogo = "/icons/platzguide-logo.png";
 
@@ -38,12 +38,15 @@ export default function LoginPage() {
         <p className="mt-8 text-xs font-bold uppercase tracking-[.2em] text-[#e8b65f]">Nur für Michael</p>
         <h2 className="mt-2 font-display text-5xl">Willkommen zurück.</h2>
         <p className="mt-3 text-sm leading-6 text-white/55">Melde dich an, um Plattform und Campingplätze zentral zu verwalten.</p>
-        <label className="mt-8 block text-sm font-bold">E-Mail<input name="email" type="email" defaultValue="admin@schellenberger.biz" required className="mt-2 w-full rounded-xl border border-white/15 bg-white/10 px-4 py-3.5 outline-none" /></label>
-        <label className="mt-4 block text-sm font-bold">Passwort<input name="password" type="password" required minLength={8} className="mt-2 w-full rounded-xl border border-white/15 bg-white/10 px-4 py-3.5 outline-none" /></label>
+        <label className="mt-8 block text-sm font-bold"><LabelText label="E-Mail" tooltip="Die E-Mail-Adresse deines Plattform- oder Betreiberzugangs." /><input name="email" title="Die E-Mail-Adresse deines Plattform- oder Betreiberzugangs." type="email" defaultValue="admin@schellenberger.biz" required className="mt-2 w-full rounded-xl border border-white/15 bg-white/10 px-4 py-3.5 outline-none" /></label>
+        <label className="mt-4 block text-sm font-bold"><LabelText label="Passwort" tooltip="Das Passwort, das bei Installation oder Einladung für diesen Zugang gesetzt wurde." /><input name="password" title="Das Passwort, das bei Installation oder Einladung für diesen Zugang gesetzt wurde." type="password" required minLength={8} className="mt-2 w-full rounded-xl border border-white/15 bg-white/10 px-4 py-3.5 outline-none" /></label>
         {error && <p role="alert" className="mt-4 rounded-xl bg-red-400/15 p-3 text-sm text-red-200">{error}</p>}
         <button disabled={loading} className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#e8b65f] px-5 py-3.5 font-bold text-[#173c32] disabled:opacity-60">{loading ? "Anmeldung läuft …" : "Sicher anmelden"} <ArrowRight size={18} /></button>
-        {process.env.NODE_ENV !== "production" && <p className="mt-4 text-xs text-white/35">Lokaler Entwicklungszugang: platzguide-admin</p>}
       </form>
     </section>
   </main>;
+}
+
+function LabelText({ label, tooltip }: { label: string; tooltip: string }) {
+  return <span className="flex items-center gap-1.5">{label}<span className="group relative inline-flex text-[#e8b65f]" title={tooltip}><HelpCircle size={15} aria-hidden="true" /><span className="pointer-events-none absolute left-1/2 top-6 z-20 hidden w-64 -translate-x-1/2 rounded-xl bg-white p-3 text-xs font-normal leading-5 text-[#173c32] shadow-xl group-hover:block">{tooltip}</span></span></span>;
 }

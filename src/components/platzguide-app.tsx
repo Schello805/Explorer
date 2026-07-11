@@ -71,7 +71,7 @@ export function PlatzguideApp({ tenant, basePath = "" }: { tenant: Tenant; baseP
           <label className="mt-5 flex w-full items-center gap-3 rounded-xl bg-white px-4 py-3 text-[#18332b] shadow-xl">
             <Search size={20} className="text-[#18332b]/50" />
             <span className="sr-only">Stationen suchen</span>
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Spielplatz, Dusche, Restaurant …" className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-[#18332b]/40" />
+            <input title="Suche nach Stationen, Kategorien oder Begriffen wie Dusche, Restaurant oder Spielplatz." aria-label="Stationen suchen" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Spielplatz, Dusche, Restaurant …" className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-[#18332b]/40" />
             <SlidersHorizontal size={19} />
           </label>
         </div>
@@ -130,7 +130,7 @@ export function PlatzguideApp({ tenant, basePath = "" }: { tenant: Tenant; baseP
         {tenant.features.feedback && <ModuleCard icon={<MessageSquareWarning />} title="Feedback">
           {feedbackSent && <p className="rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">Danke, die Meldung ist angekommen.</p>}
           <form onSubmit={sendFeedback} className="space-y-3">
-            <textarea value={feedback} onChange={(event) => setFeedback(event.target.value)} rows={3} placeholder="Was sollen wir prüfen?" className="w-full rounded-xl border border-black/10 bg-[#fafaf8] p-3 text-sm outline-none" />
+            <textarea title="Beschreibe kurz, was am Platzguide geprüft oder korrigiert werden soll." aria-label="Feedback oder Fehlermeldung" value={feedback} onChange={(event) => setFeedback(event.target.value)} rows={3} placeholder="Was sollen wir prüfen?" className="w-full rounded-xl border border-black/10 bg-[#fafaf8] p-3 text-sm outline-none" />
             <button className="rounded-xl bg-[var(--primary)] px-4 py-3 text-sm font-bold text-white">Meldung senden</button>
           </form>
         </ModuleCard>}

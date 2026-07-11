@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Code2, CreditCard, Gauge, LifeBuoy, ShieldCheck, Smartphone } from "lucide-react";
+import { ArrowRight, CheckCircle2, Code2, CreditCard, Gauge, HelpCircle, LifeBuoy, ShieldCheck, Smartphone } from "lucide-react";
 import { billingPlans, formatEuro, setupServicePriceCents, yearlyDiscountPercent } from "@/lib/billing";
 
 type CaptchaProvider = "turnstile" | "hcaptcha" | "disabled";
@@ -24,7 +24,7 @@ export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey }
   async function createInstance(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!allowSignup) {
-      setError("Self-Service ist aus Sicherheitsgründen noch deaktiviert.");
+      setError("Registrierung ist aktuell noch nicht geöffnet.");
       return;
     }
     setError("");
@@ -107,13 +107,12 @@ export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey }
         </div>
         <div className="mt-4 grid grid-cols-3 gap-2">{signupSteps.map((step) => <div key={step.label} className="rounded-xl bg-[#f7f4ed] p-2 text-xs font-bold"><CheckCircle2 size={15} className={step.done ? "text-emerald-600" : "text-black/20"} />{step.label}</div>)}</div>
         <p className="mt-3 rounded-xl bg-[#f7f4ed] p-3 text-sm leading-5 text-[#18332b]/65">Du kannst alles vorbereiten und testen. Für anonyme Besucher bleibt der Platzguide-Link gesperrt, bis er manuell freigeschaltet wird.</p>
-        {!allowSignup && <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm leading-5 text-amber-900">Self-Service ist vorbereitet, aber standardmäßig geschlossen. Aktivierung erfolgt erst mit E-Mail-Verifikation, Rate-Limit und Nutzungsbedingungen.</p>}
         <div className="mt-5 space-y-4">
-          <Field label="Name der App" value={name} onChange={setName} />
-          <Field label="Link-Kürzel" value={slug} onChange={(value) => setSlug(value.toLowerCase().replace(/[^a-z0-9-]/g, ""))} prefix="/c/" />
-          <Field label="Admin-E-Mail" value={ownerEmail} onChange={setOwnerEmail} />
-          <Field label="Admin-Passwort" type="password" value={ownerPassword} onChange={setOwnerPassword} />
-          <label className="hidden">Website<input value={website} onChange={(event) => setWebsite(event.target.value)} tabIndex={-1} autoComplete="off" /></label>
+          <Field label="Name der App" tooltip="Der sichtbare Name deines Campingplatz-Guides, z. B. Camping Sonnental." value={name} onChange={setName} />
+          <Field label="Link-Kürzel" tooltip="Kurzer, eindeutiger Link ohne Leerzeichen. Daraus wird platzguide.de/c/dein-kuerzel." value={slug} onChange={(value) => setSlug(value.toLowerCase().replace(/[^a-z0-9-]/g, ""))} prefix="/c/" />
+          <Field label="Admin-E-Mail" tooltip="E-Mail-Adresse für den späteren Verwaltungszugang dieses Campingplatzes." value={ownerEmail} onChange={setOwnerEmail} />
+          <Field label="Admin-Passwort" tooltip="Mindestens 12 Zeichen. Verwende ein eigenes, starkes Passwort." type="password" value={ownerPassword} onChange={setOwnerPassword} />
+          <label className="hidden">Website<input title="Spam-Schutzfeld. Bitte leer lassen." value={website} onChange={(event) => setWebsite(event.target.value)} tabIndex={-1} autoComplete="off" /></label>
           {allowSignup && captchaProvider !== "disabled" && captchaSiteKey && <div className="overflow-hidden rounded-xl">
             {captchaProvider === "turnstile"
               ? <div className="cf-turnstile" data-sitekey={captchaSiteKey} data-callback="platzguideCaptchaSolved" />
@@ -122,7 +121,7 @@ export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey }
         </div>
         {error && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p>}
         {result && <div className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900"><strong>Erstellt:</strong><br /><a className="font-bold underline" href={result.localUrl}>Platzguide öffnen</a><br />Öffentlicher Link nach Freigabe: {result.publicUrl}</div>}
-        <button disabled={loading || !allowSignup} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#195f4c] px-5 py-3.5 font-bold text-white disabled:opacity-60">{loading ? "Wird erstellt …" : allowSignup ? "Instanz erstellen" : "Self-Service geschlossen"} <ArrowRight size={18} /></button>
+        <button disabled={loading || !allowSignup} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#195f4c] px-5 py-3.5 font-bold text-white disabled:opacity-60">{loading ? "Wird erstellt …" : allowSignup ? "Instanz erstellen" : "Registrierung bald verfügbar"} <ArrowRight size={18} /></button>
       </form>
     </section>
     <section id="preise" className="mx-auto w-[90%] pb-12">
@@ -170,6 +169,10 @@ function PriceCard({ title, price, badge, lines }: { title: string; price: numbe
   </article>;
 }
 
-function Field({ label, value, prefix, suffix, type = "text", onChange }: { label: string; value: string; prefix?: string; suffix?: string; type?: string; onChange: (value: string) => void }) {
-  return <label className="block text-sm font-bold">{label}<div className="mt-2 flex rounded-xl border border-black/10 bg-[#fafaf8]">{prefix && <span className="shrink-0 border-r border-black/10 px-3 py-3 text-black/40">{prefix}</span>}<input required type={type} minLength={type === "password" ? 12 : undefined} value={value} onChange={(event) => onChange(event.target.value)} className="min-w-0 flex-1 bg-transparent px-4 py-3 outline-none" />{suffix && <span className="shrink-0 border-l border-black/10 px-3 py-3 text-black/40">{suffix}</span>}</div></label>;
+function Field({ label, tooltip, value, prefix, suffix, type = "text", onChange }: { label: string; tooltip: string; value: string; prefix?: string; suffix?: string; type?: string; onChange: (value: string) => void }) {
+  return <label className="block text-sm font-bold"><span className="flex items-center gap-1.5">{label}<HelpBubble text={tooltip} /></span><div className="mt-2 flex rounded-xl border border-black/10 bg-[#fafaf8]">{prefix && <span className="shrink-0 border-r border-black/10 px-3 py-3 text-black/40">{prefix}</span>}<input required title={tooltip} aria-label={label} type={type} minLength={type === "password" ? 12 : undefined} value={value} onChange={(event) => onChange(event.target.value)} className="min-w-0 flex-1 bg-transparent px-4 py-3 outline-none" />{suffix && <span className="shrink-0 border-l border-black/10 px-3 py-3 text-black/40">{suffix}</span>}</div></label>;
+}
+
+function HelpBubble({ text }: { text: string }) {
+  return <span className="group relative inline-flex text-[#195f4c]" title={text}><HelpCircle size={15} aria-hidden="true" /><span className="pointer-events-none absolute left-1/2 top-6 z-20 hidden w-64 -translate-x-1/2 rounded-xl bg-[#18332b] p-3 text-xs font-normal leading-5 text-white shadow-xl group-hover:block group-focus-within:block">{text}</span></span>;
 }
