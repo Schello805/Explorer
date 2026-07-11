@@ -14,6 +14,7 @@ BACKUP_DATABASE_BEFORE_MIGRATION="${BACKUP_DATABASE_BEFORE_MIGRATION:-true}"
 AUTO_REPAIR_DATABASE_ENV="${AUTO_REPAIR_DATABASE_ENV:-true}"
 FORCE_NPM_CI="${FORCE_NPM_CI:-false}"
 NPM_CI_TIMEOUT_SECONDS="${NPM_CI_TIMEOUT_SECONDS:-900}"
+SERVICE_READY_TIMEOUT_SECONDS="${SERVICE_READY_TIMEOUT_SECONDS:-60}"
 
 log() { printf '\033[1;34m[INFO]\033[0m %s\n' "$*"; }
 ok() { printf '\033[1;32m[OK]\033[0m %s\n' "$*"; }
@@ -198,12 +199,50 @@ needs_rebuild() {
   [[ "${env_revision}" != "${current_revision}" ]]
 }
 
+hash_files() {
+  local files=("$@")
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "${files[@]}" | sha256sum | awk '{print $1}'
+    return
+  fi
+  shasum -a 256 "${files[@]}" | shasum -a 256 | awk '{print $1}'
+}
+
+dependency_stamp_file() {
+  printf '%s/.deploy-state/dependencies.sha256' "${APP_DIR}"
+}
+
+dependency_manifest_hash() {
+  hash_files "${APP_DIR}/package.json" "${APP_DIR}/package-lock.json"
+}
+
+mark_dependencies_installed() {
+  local state_dir stamp_file
+  state_dir="${APP_DIR}/.deploy-state"
+  stamp_file="$(dependency_stamp_file)"
+  mkdir -p "${state_dir}"
+  dependency_manifest_hash > "${stamp_file}"
+  chown -R "${APP_USER}:${APP_USER}" "${state_dir}" 2>/dev/null || true
+}
+
 dependencies_changed() {
+  local current_hash installed_hash stamp_file
   [[ "${FORCE_NPM_CI}" == "true" ]] && return 0
   [[ ! -d "${APP_DIR}/node_modules" ]] && return 0
-  [[ -z "${OLD_REV}" ]] && return 1
-  git -C "${APP_DIR}" diff --name-only "${OLD_REV}" HEAD -- package.json package-lock.json \
-    | grep -q .
+  stamp_file="$(dependency_stamp_file)"
+  current_hash="$(dependency_manifest_hash)"
+  installed_hash="$(cat "${stamp_file}" 2>/dev/null || true)"
+  [[ "${installed_hash}" == "${current_hash}" ]] && return 1
+
+  log "Prüfe installierte Node-Abhängigkeiten gegen package-lock.json ..."
+  if sudo -u "${APP_USER}" bash -lc "cd '${APP_DIR}' && npm ls --depth=0 --silent >/dev/null 2>&1"; then
+    mark_dependencies_installed
+    ok "Vorhandene Node-Abhängigkeiten passen; npm ci wird übersprungen."
+    return 1
+  fi
+
+  warn "Node-Abhängigkeiten fehlen oder passen nicht zum Lockfile."
+  return 0
 }
 
 run_migrations() {
@@ -270,10 +309,16 @@ rollback() {
     ok ".env.local aus Backup wiederhergestellt."
   fi
   git -C "${APP_DIR}" checkout "${OLD_REV}"
-  sudo -u "${APP_USER}" bash -lc "cd '${APP_DIR}' && npm ci --no-audit --no-fund"
+  if dependencies_changed; then
+    log "Installiere Rollback-Abhängigkeiten ..."
+    sudo -u "${APP_USER}" bash -lc "cd '${APP_DIR}' && timeout '${NPM_CI_TIMEOUT_SECONDS}' npm ci --include=dev --no-audit --no-fund"
+    mark_dependencies_installed
+  else
+    ok "Rollback-Abhängigkeiten passen; npm ci wird übersprungen."
+  fi
   sudo -u "${APP_USER}" bash -lc "cd '${APP_DIR}' && npm run build"
   systemctl restart "${APP_NAME}.service"
-  sleep 2
+  wait_for_service_ready
   if [[ -f "${APP_DIR}/scripts/smoke-test.sh" ]]; then
     APP_DIR="${APP_DIR}" bash "${APP_DIR}/scripts/smoke-test.sh"
   else
@@ -290,7 +335,8 @@ install_and_build() {
   if dependencies_changed; then
     log "Installiere Abhängigkeiten mit npm ci. Das kann je nach Server einige Minuten dauern."
     log "Timeout: ${NPM_CI_TIMEOUT_SECONDS}s. Wenn package-lock unverändert ist, wird dieser Schritt künftig übersprungen."
-    sudo -u "${APP_USER}" bash -lc "cd '${APP_DIR}' && timeout '${NPM_CI_TIMEOUT_SECONDS}' npm ci --no-audit --no-fund"
+    sudo -u "${APP_USER}" bash -lc "cd '${APP_DIR}' && timeout '${NPM_CI_TIMEOUT_SECONDS}' npm ci --include=dev --no-audit --no-fund"
+    mark_dependencies_installed
   else
     ok "package.json/package-lock.json unverändert; npm ci wird übersprungen."
   fi
@@ -322,9 +368,25 @@ write_revision() {
 restart_service() {
   log "Starte Service neu ..."
   systemctl restart "${APP_NAME}.service"
-  sleep 2
+  wait_for_service_ready
   systemctl is-active --quiet "${APP_NAME}.service" || fail "Service läuft nach Update nicht. Prüfe: journalctl -u ${APP_NAME} -n 100"
   ok "Service läuft."
+}
+
+wait_for_service_ready() {
+  local port waited
+  port="$(grep -E '^PORT=' "${APP_DIR}/.env.local" 2>/dev/null | cut -d= -f2 || true)"
+  port="${port:-3000}"
+  waited=0
+  while (( waited < SERVICE_READY_TIMEOUT_SECONDS )); do
+    if curl -fsS "http://127.0.0.1:${port}/api/health" >/dev/null 2>&1; then
+      ok "Service antwortet auf /api/health nach ${waited}s."
+      return 0
+    fi
+    sleep 2
+    waited=$((waited + 2))
+  done
+  fail "Service wurde nicht rechtzeitig bereit. Prüfe: journalctl -u ${APP_NAME} -n 120 --no-pager"
 }
 
 health_check() {

@@ -4,6 +4,7 @@ set -Eeuo pipefail
 APP_DIR="${APP_DIR:-/opt/platzguide}"
 BASE_URL="${BASE_URL:-}"
 PORT="${PORT:-}"
+SMOKE_TEST_TIMEOUT_SECONDS="${SMOKE_TEST_TIMEOUT_SECONDS:-60}"
 
 log() { printf '\033[1;34m[INFO]\033[0m %s\n' "$*"; }
 ok() { printf '\033[1;32m[OK]\033[0m %s\n' "$*"; }
@@ -23,8 +24,15 @@ fi
 check_get() {
   local path="$1"
   local expected="$2"
-  local status
-  status="$(curl -sS -o /dev/null -w "%{http_code}" "${BASE_URL}${path}" || true)"
+  local status waited
+  waited=0
+  status="000"
+  while (( waited < SMOKE_TEST_TIMEOUT_SECONDS )); do
+    status="$(curl -s -o /dev/null -w "%{http_code}" "${BASE_URL}${path}" || true)"
+    [[ "${status}" == "${expected}" ]] && break
+    sleep 2
+    waited=$((waited + 2))
+  done
   [[ "${status}" == "${expected}" ]] || fail "${path} liefert HTTP ${status}, erwartet ${expected}."
   ok "${path} liefert HTTP ${expected}."
 }

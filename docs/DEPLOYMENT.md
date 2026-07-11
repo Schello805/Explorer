@@ -181,10 +181,21 @@ Git-Revision zurück.
 sudo bash /opt/platzguide/scripts/update-ubuntu.sh
 ```
 
+Das Script lädt Git-Updates selbst. Bitte vorher kein manuelles `git pull`
+ausführen; dadurch bleiben Abhängigkeitsprüfung, Revision und Fortschritt
+eindeutig nachvollziehbar.
+
 Während des Updates zeigt das Script nummerierte Schritte, laufende Dauer pro
 Abschnitt und klare Hinweise für längere Phasen wie `npm ci` oder Build. Am
 Ende werden Base URL, lokale Healthcheck-URL, Revision, Backup-Pfad und die
 wichtigsten Service-Befehle ausgegeben.
+
+Node-Abhängigkeiten werden über einen Lockfile-Hash unter `.deploy-state`
+geprüft. `npm ci` läuft dadurch nur, wenn `package.json` oder
+`package-lock.json` wirklich nicht zu den installierten Abhängigkeiten passen.
+Der Installationsschritt nutzt bewusst `--include=dev`, weil Next.js beim
+Produktionsbuild TypeScript-, ESLint- und Test-Typen aus `devDependencies`
+benötigen kann.
 
 Optionen:
 
@@ -202,6 +213,8 @@ Optionen:
 - `AUTO_REPAIR_DATABASE_ENV=true`: fehlende lokale PostgreSQL-URL automatisch reparieren
 - `FORCE_NPM_CI=true`: erzwingt Neuinstallation der Node-Abhängigkeiten
 - `NPM_CI_TIMEOUT_SECONDS=900`: maximale Dauer für `npm ci`
+- `SERVICE_READY_TIMEOUT_SECONDS=60`: maximale Wartezeit bis `/api/health`
+  nach Neustart antwortet
 
 Bei einer frischen, leeren Installation ohne Mandanten überspringt das
 Updatescript den PostgreSQL-Dump vor Migrationen automatisch. Sobald mindestens
