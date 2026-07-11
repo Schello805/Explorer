@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Activity, Bell, BookOpen, CalendarDays, Caravan, CheckCircle2, ChevronRight, CreditCard, Database, Download, FileText, Gift, Globe2, HelpCircle, ImageIcon, LayoutDashboard, LifeBuoy, Mail, MapPinned, Menu, MessageSquareWarning, Palette, Plus, Search, Server, Settings, ShieldCheck, Trash2, Users, X } from "lucide-react";
 import { applyBillingPlan, billingPlans, formatEuro, storageUsedMb } from "@/lib/billing";
@@ -649,8 +649,24 @@ function Color({ label, value, onChange }: { label: string; value: string; onCha
 function LabelText({ label, tooltip }: { label: string; tooltip: string }) { return <span className="flex min-w-0 items-center gap-1.5">{label}<HelpBubble text={tooltip} /></span>; }
 function HelpBubble({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
-  return <span className="relative inline-flex shrink-0 text-[#286551]">
-    <button type="button" aria-label="Hilfe anzeigen" onClick={() => setOpen((value) => !value)} onBlur={() => window.setTimeout(() => setOpen(false), 160)} className="rounded-full p-0.5 text-[#286551]"><HelpCircle size={15} aria-hidden="true" /></button>
+  const wrapperRef = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    function closeOnOutsideClick(event: PointerEvent) {
+      if (!wrapperRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+  return <span ref={wrapperRef} className="relative inline-flex shrink-0 text-[#286551]">
+    <button type="button" aria-label="Hilfe anzeigen" onClick={(event) => { event.stopPropagation(); setOpen((value) => !value); }} className="rounded-full p-0.5 text-[#286551]"><HelpCircle size={15} aria-hidden="true" /></button>
     {open && <span className="absolute left-1/2 top-7 z-40 w-64 max-w-[80vw] -translate-x-1/2 rounded-xl bg-[#173c32] p-3 text-xs font-normal leading-5 text-white shadow-xl">{text}</span>}
   </span>;
 }

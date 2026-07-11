@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { ArrowRight, HelpCircle, KeyRound } from "lucide-react";
 
@@ -49,8 +49,24 @@ export default function LoginPage() {
 
 function LabelText({ label, tooltip }: { label: string; tooltip: string }) {
   const [open, setOpen] = useState(false);
-  return <span className="flex items-center gap-1.5">{label}<span className="relative inline-flex text-[#e8b65f]">
-    <button type="button" aria-label="Hilfe anzeigen" onClick={() => setOpen((value) => !value)} onBlur={() => window.setTimeout(() => setOpen(false), 160)} className="rounded-full p-0.5 text-[#e8b65f]"><HelpCircle size={15} aria-hidden="true" /></button>
+  const wrapperRef = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    function closeOnOutsideClick(event: PointerEvent) {
+      if (!wrapperRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+  return <span className="flex items-center gap-1.5">{label}<span ref={wrapperRef} className="relative inline-flex text-[#e8b65f]">
+    <button type="button" aria-label="Hilfe anzeigen" onClick={(event) => { event.stopPropagation(); setOpen((value) => !value); }} className="rounded-full p-0.5 text-[#e8b65f]"><HelpCircle size={15} aria-hidden="true" /></button>
     {open && <span className="absolute left-1/2 top-7 z-30 w-64 max-w-[80vw] -translate-x-1/2 rounded-xl bg-white p-3 text-xs font-normal leading-5 text-[#173c32] shadow-xl">{tooltip}</span>}
   </span></span>;
 }
