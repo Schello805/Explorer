@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Activity, Bell, BookOpen, CalendarDays, Caravan, CheckCircle2, ChevronRight, CreditCard, Download, Eye, EyeOff, FileText, Gift, Globe2, HelpCircle, ImageIcon, LayoutDashboard, LifeBuoy, MapPinned, Menu, MessageSquareWarning, Palette, Plus, Search, Server, Settings, ShieldCheck, Trash2, Users, X } from "lucide-react";
+import { Activity, Bell, BookOpen, CalendarDays, Caravan, CheckCircle2, ChevronRight, CreditCard, Download, Droplets, Eye, EyeOff, Footprints, Gift, Globe2, HelpCircle, ImageIcon, LayoutDashboard, LifeBuoy, MapPinned, Menu, MessageSquareWarning, Palette, Plus, Recycle, Search, Server, Settings, ShieldCheck, Sparkles, Trash2, Users, Utensils, X } from "lucide-react";
 import { applyBillingPlan, billingPlans, formatEuro, storageUsedMb } from "@/lib/billing";
 import type { Category, EventItem, GuestGuideItem, MediaAsset, OccupancyStatus, PushMessage, Reward, Station, Tenant, Tour } from "@/lib/types";
 import { cn, statusLabel } from "@/lib/utils";
@@ -27,7 +27,6 @@ const navigation = [
   { id: "occupancy", label: "Statusanzeigen", icon: Activity },
   { id: "guide", label: "Gästemappe", icon: BookOpen },
   { id: "feedback", label: "Feedback", icon: MessageSquareWarning },
-  { id: "legal", label: "Recht & Datenschutz", icon: FileText },
   { id: "modules", label: "Module", icon: Settings },
   { id: "integrations", label: "Integrationen", icon: Settings },
   { id: "billing", label: "Abo & Veröffentlichung", icon: ShieldCheck },
@@ -43,6 +42,7 @@ export function AdminConsole({ tenant, tenants, adminEmail, isPlatformAdmin = fa
   const [stations, setStations] = useState(tenant.stations);
   const [editing, setEditing] = useState<Station | null>(null);
   const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState("");
   const tenantAdminHiddenSections = new Set(["modules", "billing", "security"]);
   const platformNavigation = isPlatformAdmin
     ? navigation.filter((item) => tenantAdminHiddenSections.has(item.id))
@@ -55,6 +55,7 @@ export function AdminConsole({ tenant, tenants, adminEmail, isPlatformAdmin = fa
     const response = await fetch(`/api/admin/stations?id=${encodeURIComponent(id)}&tenantId=${encodeURIComponent(currentTenant.id)}`, { method: "DELETE" });
     if (!response.ok) return alert("Die Station konnte nicht gelöscht werden.");
     setStations((items) => items.filter((item) => item.id !== id));
+    flashNotice("Station gelöscht.");
   }
 
   async function persistStation(station: Station) {
@@ -69,6 +70,7 @@ export function AdminConsole({ tenant, tenants, adminEmail, isPlatformAdmin = fa
       ? items.map((item) => item.id === saved.id ? saved : item)
       : [saved, ...items]);
     setEditing(null);
+    flashNotice(saved.isTemplate ? "Vorlage gespeichert." : "Station gespeichert.");
   }
 
   async function placeTemplateStation(station: Station, position: { x: number; y: number }) {
@@ -94,6 +96,12 @@ export function AdminConsole({ tenant, tenants, adminEmail, isPlatformAdmin = fa
     setCurrentTenant(saved);
     setStations(saved.stations);
     setAvailableTenants((items) => items.map((item) => item.id === saved.id ? saved : item));
+    flashNotice("Änderungen gespeichert.");
+  }
+
+  function flashNotice(message: string) {
+    setNotice(message);
+    window.setTimeout(() => setNotice(""), 3200);
   }
 
   async function updateTenantLifecycle(action: "archive" | "reactivate" | "delete") {
@@ -131,6 +139,7 @@ export function AdminConsole({ tenant, tenants, adminEmail, isPlatformAdmin = fa
     setCurrentTenant(payload.tenant);
     setStations(payload.tenant.stations);
     setAvailableTenants((items) => items.map((item) => item.id === payload.tenant.id ? payload.tenant : item));
+    flashNotice(action === "archive" ? "Mandant archiviert." : "Mandant reaktiviert.");
   }
 
   async function importStations(importedStations: Station[]) {
@@ -155,6 +164,7 @@ export function AdminConsole({ tenant, tenants, adminEmail, isPlatformAdmin = fa
       </header>
       <div className="mx-auto min-w-0 w-[90%] py-5">
         {section === "overview" && <Overview key={currentTenant.id} tenant={currentTenant} stations={stations} stationCount={stations.filter((station) => !station.isTemplate).length} templateCount={stations.filter((station) => station.isTemplate).length} onNavigate={setSection} />}
+        {notice && <div role="status" className="fixed bottom-4 left-1/2 z-50 w-[90%] max-w-md -translate-x-1/2 rounded-2xl bg-[#173c32] px-4 py-3 text-sm font-bold text-white shadow-2xl lg:left-[calc(50%+7.5rem)]">{notice}</div>}
         {section === "stations" && <Stations key={currentTenant.id} tenant={currentTenant} stations={stations} onEdit={setEditing} onRemove={removeStation} onCreate={() => setEditing(blankStation(currentTenant.id))} onImport={importStations} onPlaceTemplate={placeTemplateStation} />}
         {section === "categories" && <Categories key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "tenants" && <TenantSettings key={currentTenant.id} tenant={currentTenant} saving={saving} platformAdmin={isPlatformAdmin} onLifecycle={updateTenantLifecycle} onSave={saveTenant} />}
@@ -244,7 +254,7 @@ function Stations({ tenant, stations, onEdit, onRemove, onCreate, onImport, onPl
       <div><h2 className="font-display text-2xl">Stationen</h2><p className="text-sm text-black/45">Orte, Services und Erlebnisse</p></div>
       <div className="flex flex-wrap gap-2"><StationImport tenantId={tenant.id} categories={tenant.categories} onImport={onImport} /><button onClick={onCreate} className="rounded-xl bg-[#173c32] px-4 py-3 text-sm font-bold text-white"><Plus size={17} className="mr-2 inline" /> Neue Station</button></div>
     </div>
-    <StationTemplateDropZone stations={stations} mapConfig={tenant.map} onEdit={onEdit} onPlaceTemplate={onPlaceTemplate} />
+    <StationTemplateDropZone stations={stations} categories={tenant.categories} mapConfig={tenant.map} onEdit={onEdit} onPlaceTemplate={onPlaceTemplate} />
     <div className="p-3"><label className="flex w-full items-center gap-2 rounded-lg bg-[#f2f3ef] px-3 py-2.5"><Search size={17} /><input title="Filtere die Stationsliste nach Name, Kategorie oder Beschreibung." aria-label="Station suchen" placeholder="Station suchen …" className="min-w-0 w-full bg-transparent outline-none" /></label></div>
     <div className="divide-y divide-black/5 lg:hidden">
       {activeStations.map((station) => <article key={station.id} className="p-4">
@@ -256,7 +266,7 @@ function Stations({ tenant, stations, onEdit, onRemove, onCreate, onImport, onPl
   </section>;
 }
 
-function StationTemplateDropZone({ stations, mapConfig, onEdit, onPlaceTemplate }: { stations: Station[]; mapConfig: Tenant["map"]; onEdit: (station: Station) => void; onPlaceTemplate: (station: Station, position: { x: number; y: number }) => Promise<void> }) {
+function StationTemplateDropZone({ stations, categories, mapConfig, onEdit, onPlaceTemplate }: { stations: Station[]; categories: Category[]; mapConfig: Tenant["map"]; onEdit: (station: Station) => void; onPlaceTemplate: (station: Station, position: { x: number; y: number }) => Promise<void> }) {
   const dropRef = useRef<HTMLDivElement>(null);
   const [placingId, setPlacingId] = useState<string | null>(null);
   const templates = stations.filter((station) => station.isTemplate);
@@ -264,8 +274,11 @@ function StationTemplateDropZone({ stations, mapConfig, onEdit, onPlaceTemplate 
 
   async function place(station: Station, position: { x: number; y: number }) {
     setPlacingId(station.id);
-    await onPlaceTemplate(station, position);
-    setPlacingId(null);
+    try {
+      await onPlaceTemplate(station, position);
+    } finally {
+      setPlacingId(null);
+    }
   }
 
   function dropStation(event: React.DragEvent<HTMLDivElement>) {
@@ -282,7 +295,7 @@ function StationTemplateDropZone({ stations, mapConfig, onEdit, onPlaceTemplate 
     <div className="rounded-2xl bg-[#f7f7f4] p-4">
       <p className="text-xs font-bold uppercase tracking-widest text-[#286551]">Schnellstart</p>
       <h3 className="mt-2 font-display text-2xl">Standardstationen platzieren</h3>
-      <p className="mt-2 text-sm leading-6 text-black/55">Ziehe eine Vorlage auf die Karte. Auf dem Smartphone tippe einfach auf „Platzieren“ und verschiebe sie danach im Editor exakt.</p>
+      <p className="mt-2 text-sm leading-6 text-black/55">Ziehe eine Vorlage auf die Karte. Auf dem Smartphone tippe auf „Platzieren“ und setze die exakte GPS-Position danach im Editor.</p>
       <div className="mt-4 space-y-2">
         {templates.length === 0 && <p className="rounded-xl bg-white p-3 text-sm text-black/55">Alle Vorlagen sind aktiviert. Neue Orte kannst du jederzeit über „Neue Station“ anlegen.</p>}
         {templates.map((station, index) => <div key={station.id} draggable onDragStart={(event) => event.dataTransfer.setData("text/plain", station.id)} className="cursor-grab rounded-xl border border-black/10 bg-white p-3 active:cursor-grabbing">
@@ -297,13 +310,16 @@ function StationTemplateDropZone({ stations, mapConfig, onEdit, onPlaceTemplate 
         </div>)}
       </div>
     </div>
-    <div ref={dropRef} onDrop={dropStation} onDragOver={(event) => event.preventDefault()} className="relative min-h-[340px] overflow-hidden rounded-2xl border-4 border-white bg-[#dce9cf] shadow-inner map-texture">
+    <div ref={dropRef} onDrop={dropStation} onDragOver={(event) => event.preventDefault()} className="relative min-h-[360px] overflow-hidden rounded-2xl border-4 border-white bg-[#dce9cf] shadow-inner map-texture">
       {mapConfig.sitePlan?.imageUrl && <Image src={mapConfig.sitePlan.imageUrl} alt="Platzplan" fill className="object-cover opacity-80" />}
       <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1.5 text-xs font-bold text-[#173c32] shadow-sm">Karte / Platzplan</div>
-      <div className="absolute bottom-4 left-4 right-4 rounded-xl bg-white/90 p-3 text-xs leading-5 text-black/60 shadow-sm">Die Position wird direkt gespeichert. Für GPS-Feinjustierung öffne danach die Station und setze den Marker exakt auf der Kartengrundlage.</div>
-      {placedStations.map((station) => <button key={station.id} onClick={() => onEdit(station)} style={{ left: `${station.position.x}%`, top: `${station.position.y}%` }} className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#173c32] px-3 py-2 text-xs font-bold text-white shadow-lg ring-4 ring-white/90">
-        {station.name}
-      </button>)}
+      <div className="pointer-events-none absolute inset-x-4 bottom-4 rounded-xl bg-white/90 p-3 text-xs leading-5 text-black/60 shadow-sm">Tipp: Station anklicken zum Bearbeiten. Im Editor kannst du den Marker per Karte, GPS oder Koordinaten exakt setzen.</div>
+      {placedStations.map((station) => {
+        const category = categories.find((item) => item.id === station.categoryId);
+        return <button key={station.id} onClick={() => onEdit(station)} style={{ left: `${station.position.x}%`, top: `${station.position.y}%`, backgroundColor: category?.color ?? "#173c32" }} className="absolute max-w-[42%] -translate-x-1/2 -translate-y-1/2 rounded-full px-3 py-2 text-xs font-bold text-white shadow-lg ring-4 ring-white/90">
+          <span className="block truncate">{station.name}</span>
+        </button>;
+      })}
     </div>
   </div>;
 }
@@ -786,6 +802,22 @@ function tooltipForLabel(label: string) {
 function Save({ saving, onClick }: { saving: boolean; onClick: () => void }) { return <button onClick={onClick} disabled={saving} className="rounded-xl bg-[#173c32] px-5 py-3 text-sm font-bold text-white disabled:opacity-60">{saving ? "Speichert …" : "Änderungen speichern"}</button>; }
 
 function blankStation(tenantId: string): Station { return { id: crypto.randomUUID(), tenantId, categoryId: "service", name: "", shortDescription: "", description: "", openingHours: "Durchgehend geöffnet", status: "open", latitude: 0, longitude: 0, position: { x: 50, y: 50 }, image: "linear-gradient(135deg, #c9d8c2, #527761)" }; }
+const categoryIconMap = { Sparkles, Droplets, Recycle, Utensils, Caravan, Footprints, MapPinned, Settings };
+function CategoryIcon({ icon, color }: { icon: string; color: string }) {
+  const Icon = categoryIconMap[icon as keyof typeof categoryIconMap] ?? MapPinned;
+  return <span style={{ backgroundColor: `${color}18`, color }} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"><Icon size={19} /></span>;
+}
+function CategoryPicker({ categories, value, onChange }: { categories: Tenant["categories"]; value: string; onChange: (value: string) => void }) {
+  return <div>
+    <LabelText label="Kategorie" tooltip="Kategorie bestimmt Farbe, Filter und Icon der Station in der Besucher-App." />
+    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+      {categories.map((category) => <button type="button" key={category.id} onClick={() => onChange(category.id)} className={cn("flex min-w-0 items-center gap-3 rounded-xl border p-3 text-left transition", value === category.id ? "border-[#173c32] bg-[#eff3ec] ring-2 ring-[#173c32]/10" : "border-black/10 bg-[#fafaf8] hover:border-[#173c32]/40")}>
+        <CategoryIcon icon={category.icon} color={category.color} />
+        <span className="min-w-0"><span className="block truncate font-bold">{category.name}</span><span className="block truncate text-xs font-normal text-black/45">{category.id}</span></span>
+      </button>)}
+    </div>
+  </div>;
+}
 function StationEditor({ station, categories, mapConfig, onClose, onSave }: {
   station: Station;
   categories: Tenant["categories"];
@@ -797,13 +829,18 @@ function StationEditor({ station, categories, mapConfig, onClose, onSave }: {
   return <div className="fixed inset-0 z-50 flex justify-end overflow-hidden bg-black/35">
     <form onSubmit={(event) => { event.preventDefault(); onSave(draft); }} className="h-full w-full max-w-xl overflow-x-hidden overflow-y-auto bg-white p-4 shadow-2xl sm:p-6">
       <div className="flex items-center justify-between"><div><p className="text-xs font-bold uppercase tracking-widest text-[#286551]">Stationseditor</p><h2 className="font-display text-3xl">{station.name || "Neue Station"}</h2></div><button type="button" onClick={onClose} className="rounded-full bg-black/5 p-2"><X /></button></div>
+      <div className="mt-5 grid gap-2 rounded-2xl bg-[#f7f7f4] p-3 text-xs font-bold text-black/55 sm:grid-cols-3">
+        <p className="rounded-xl bg-white p-3">1. Kategorie wählen</p>
+        <p className="rounded-xl bg-white p-3">2. Texte ergänzen</p>
+        <p className="rounded-xl bg-white p-3">3. Marker exakt setzen</p>
+      </div>
       <div className="mt-8 space-y-5">
         <label className="block text-sm font-bold"><LabelText label="Name" tooltip={tooltipForLabel("Name")} /><input required title={tooltipForLabel("Name")} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} className="mt-2 w-full rounded-xl border p-3" /></label>
-        <label className="block text-sm font-bold"><LabelText label="Kategorie" tooltip="Kategorie für Filter, Icon und Gruppierung in der Besucher-App." /><select title="Kategorie für Filter, Icon und Gruppierung in der Besucher-App." value={draft.categoryId} onChange={(event) => setDraft({ ...draft, categoryId: event.target.value })} className="mt-2 w-full rounded-xl border p-3">{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
+        <CategoryPicker categories={categories} value={draft.categoryId} onChange={(categoryId) => setDraft({ ...draft, categoryId })} />
         <label className="block text-sm font-bold"><LabelText label="Kurzbeschreibung" tooltip="Ein kurzer Satz für Stationskarten und Listen." /><input title="Ein kurzer Satz für Stationskarten und Listen." value={draft.shortDescription} onChange={(event) => setDraft({ ...draft, shortDescription: event.target.value })} className="mt-2 w-full rounded-xl border p-3" /></label>
         <label className="block text-sm font-bold"><LabelText label="Beschreibung" tooltip={tooltipForLabel("Beschreibung")} /><textarea title={tooltipForLabel("Beschreibung")} rows={5} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} className="mt-2 w-full rounded-xl border p-3" /></label>
         <label className="block text-sm font-bold"><LabelText label="Öffnungszeiten" tooltip="Öffnungszeiten oder kurzer Hinweis, z. B. Heute 08:00–20:00 oder Durchgehend geöffnet." /><input title="Öffnungszeiten oder kurzer Hinweis, z. B. Heute 08:00–20:00 oder Durchgehend geöffnet." value={draft.openingHours} onChange={(event) => setDraft({ ...draft, openingHours: event.target.value })} className="mt-2 w-full rounded-xl border p-3" /></label>
-        <label className="block text-sm font-bold"><LabelText label="Status" tooltip={tooltipForLabel("Status")} /><select title={tooltipForLabel("Status")} value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value as Station["status"] })} className="mt-2 w-full rounded-xl border p-3"><option value="open">Geöffnet</option><option value="closed">Geschlossen</option><option value="limited">Eingeschränkt</option><option value="maintenance">Nicht verfügbar</option></select></label>
+        <div className="block text-sm font-bold"><LabelText label="Status" tooltip={tooltipForLabel("Status")} /><div className="mt-2 grid gap-2 sm:grid-cols-2">{(["open", "limited", "closed", "maintenance"] as Station["status"][]).map((status) => <button type="button" key={status} onClick={() => setDraft({ ...draft, status })} className={cn("rounded-xl border px-4 py-3 text-left text-sm font-bold", draft.status === status ? "border-[#173c32] bg-[#eff3ec] text-[#173c32]" : "border-black/10 bg-[#fafaf8] text-black/60")}>{statusLabel[status]}</button>)}</div></div>
         <label className="flex items-start gap-3 rounded-xl bg-[#f7f7f4] p-4 text-sm font-bold"><input title="Aktiviert diese Station für Besucher. Deaktiviert bleibt sie als Vorlage in der Verwaltung." type="checkbox" checked={!draft.isTemplate} onChange={(event) => setDraft({ ...draft, isTemplate: !event.target.checked })} className="mt-0.5 h-5 w-5 accent-[#286551]" /><span><span className="inline-flex items-center gap-1.5">In Besucher-App anzeigen<HelpBubble text="Aktiviert diese Station für Besucher. Deaktiviert bleibt sie als Vorlage in der Verwaltung." /></span><span className="mt-1 block font-normal leading-5 text-black/50">Standardstationen starten als Vorlage und werden erst nach Aktivierung öffentlich sichtbar.</span></span></label>
         <StationLocationPicker mapConfig={mapConfig} longitude={draft.longitude} latitude={draft.latitude} onChange={(position) => setDraft((current) => ({ ...current, ...position }))} />
       </div>

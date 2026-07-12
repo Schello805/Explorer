@@ -34,8 +34,14 @@ export function StationLocationPicker({ mapConfig, longitude, latitude, onChange
   );
   const [locating, setLocating] = useState(false);
   const [locationMessage, setLocationMessage] = useState("");
+  const [positionMessage, setPositionMessage] = useState("");
 
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
+  useEffect(() => {
+    if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) return;
+    if (!longitude && !latitude) return;
+    markerRef.current?.setLngLat([longitude, latitude]);
+  }, [longitude, latitude]);
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     let cancelled = false;
@@ -74,10 +80,12 @@ export function StationLocationPicker({ mapConfig, longitude, latitude, onChange
       marker.on("dragend", () => {
         const point = marker.getLngLat();
         onChangeRef.current({ longitude: point.lng, latitude: point.lat });
+        setPositionMessage("Marker verschoben und Position übernommen.");
       });
       map.on("click", (event) => {
         marker.setLngLat(event.lngLat);
         onChangeRef.current({ longitude: event.lngLat.lng, latitude: event.lngLat.lat });
+        setPositionMessage("Klickposition übernommen.");
       });
       markerRef.current = marker;
       mapRef.current = map;
@@ -107,6 +115,7 @@ export function StationLocationPicker({ mapConfig, longitude, latitude, onChange
       mapRef.current?.flyTo({ center: [next.longitude, next.latitude], zoom: 19 });
       onChangeRef.current(next);
       setLocationMessage(coords.accuracy > 50 ? `Standort gefunden, Genauigkeit ca. ${Math.round(coords.accuracy)} m.` : "Standort gefunden.");
+      setPositionMessage("GPS-Position übernommen.");
       setLocating(false);
     }, (error) => {
       if (error.code === error.PERMISSION_DENIED) setLocationMessage("Standort wurde nicht freigegeben. Bitte Browser-Berechtigung prüfen.");
@@ -118,18 +127,18 @@ export function StationLocationPicker({ mapConfig, longitude, latitude, onChange
 
   return <section>
     <div className="flex flex-wrap items-end justify-between gap-3">
-      <div><p className="text-sm font-bold">Position auf dem Platz</p><p className="mt-1 text-xs font-normal text-black/45">Karte anklicken oder Marker verschieben.</p></div>
+      <div><p className="text-sm font-bold">Position auf dem Platz</p><p className="mt-1 text-xs font-normal text-black/45">Karte anklicken, Marker ziehen oder GPS direkt vor Ort nutzen.</p></div>
       <button type="button" onClick={useCurrentLocation} disabled={locating} className="rounded-xl border border-black/10 px-3 py-2 text-xs font-bold disabled:opacity-50"><LocateFixed size={15} className="mr-1.5 inline" />{locating ? "GPS wird ermittelt …" : "Aktuellen Standort nutzen"}</button>
     </div>
     <div className="relative mt-3 h-72 overflow-hidden rounded-2xl border border-black/10 bg-[#dce8d0]">
       <div ref={containerRef} className="absolute inset-0" />
-      <div className="pointer-events-none absolute left-3 top-3 rounded-lg bg-white/90 px-3 py-2 text-xs font-bold shadow"><Crosshair size={14} className="mr-1 inline" /> Bis auf den Stellplatz zoomen</div>
+      <div className="pointer-events-none absolute left-3 top-3 max-w-[calc(100%-1.5rem)] rounded-lg bg-white/90 px-3 py-2 text-xs font-bold leading-5 shadow"><Crosshair size={14} className="mr-1 inline" /> Marker anklicken/ziehen · Karte zoomen · speichern</div>
     </div>
     <div className="mt-3 grid gap-3 sm:grid-cols-2">
       <label className="text-xs font-bold text-black/55">Breitengrad<input title="Nord-Süd-Koordinate als Dezimalzahl. Kann per Karte, Marker oder GPS gesetzt werden." type="number" step="any" value={latitude} onChange={(event) => onChange({ latitude: Number(event.target.value), longitude })} className="mt-1 w-full rounded-xl border p-3 text-sm text-black" /></label>
       <label className="text-xs font-bold text-black/55">Längengrad<input title="Ost-West-Koordinate als Dezimalzahl. Kann per Karte, Marker oder GPS gesetzt werden." type="number" step="any" value={longitude} onChange={(event) => onChange({ longitude: Number(event.target.value), latitude })} className="mt-1 w-full rounded-xl border p-3 text-sm text-black" /></label>
     </div>
-    {locationMessage && <p className="mt-2 rounded-xl bg-[#f7f7f4] p-3 text-xs font-bold leading-5 text-black/60">{locationMessage}</p>}
+    {(locationMessage || positionMessage) && <p className="mt-2 rounded-xl bg-[#f7f7f4] p-3 text-xs font-bold leading-5 text-black/60">{locationMessage || positionMessage}</p>}
     <p className="mt-2 flex items-start gap-2 text-xs font-normal leading-5 text-black/45"><MapPin size={14} className="mt-0.5 shrink-0" /> GPS funktioniert am besten direkt an der Station und auf einem Smartphone.</p>
   </section>;
 }
