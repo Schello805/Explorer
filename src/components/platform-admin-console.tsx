@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Activity, AlertTriangle, CheckCircle2, Database, Eye, EyeOff, Mail, Plus, Server, ShieldCheck, Terminal, Users } from "lucide-react";
+import { Activity, AlertTriangle, Database, Eye, EyeOff, Mail, Plus, ShieldCheck, Terminal, Users } from "lucide-react";
 import type { AuditEntry, Tenant } from "@/lib/types";
 
 const platformLogo = "/icons/platzguide-logo.png";
@@ -15,7 +15,7 @@ function slugify(value: string) {
 }
 
 export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: string; tenants: Tenant[] }) {
-  const [mailConfigured, setMailConfigured] = useState(false);
+  const [, setMailConfigured] = useState(false);
   const auditEntries: PlatformAuditEntry[] = tenants.flatMap((tenant) => tenant.auditLog.map((entry) => ({ ...entry, tenantName: tenant.name, tenantSlug: tenant.slug }))).slice(0, 20);
   const [systemLogs, setSystemLogs] = useState<string[]>([]);
   const [auditLines, setAuditLines] = useState(auditEntries);
@@ -71,7 +71,6 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
       <nav className="mt-6 space-y-2">
         <PlatformNavLink href="#plattform" label="Übersicht" icon={<Activity size={18} />} />
         <PlatformNavLink href="#mandanten" label="Mandanten" icon={<Users size={18} />} />
-        <PlatformNavLink href="#einrichtung" label="Globale Einrichtung" icon={<Server size={18} />} />
         <PlatformNavLink href="#profil" label="Profil" icon={<ShieldCheck size={18} />} />
         <PlatformNavLink href="#smtp" label="SMTP & E-Mail" icon={<Mail size={18} />} />
         <PlatformNavLink href="#captcha" label="Captcha" icon={<ShieldCheck size={18} />} />
@@ -128,14 +127,7 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
         </div>
       </section>}
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_1fr]">
-        <AdminCard id="einrichtung" title="Globale Einrichtung" icon={<Server />}>
-          <ChecklistItem done label="Admin-Login aktiv" />
-          <ChecklistItem done label="PostgreSQL angebunden" />
-          <ChecklistItem done label="Mandantentrennung aktiv" />
-          <ChecklistItem done={mailConfigured} label="SMTP konfiguriert" />
-        </AdminCard>
-
+      <div className="mt-6 grid gap-6">
         <AdminCard id="werkzeuge" title="Admin-Werkzeuge" icon={<Terminal />}>
           <Command label="Live-Logs" command="journalctl -u platzguide -f" />
           <Command label="Status" command="systemctl status platzguide" />
@@ -307,7 +299,7 @@ function CaptchaSettingsCard() {
       <label className="text-sm font-bold">Captcha-Anbieter
         <select value={config.provider} onChange={(event) => setConfig({ ...config, provider: event.target.value as CaptchaProvider })} className="mt-1 w-full rounded-xl border border-black/10 bg-white px-3 py-3">
           <option value="disabled">Deaktiviert</option>
-          <option value="recaptcha">Google reCAPTCHA</option>
+          <option value="recaptcha">Google reCAPTCHA v2 Checkbox</option>
           <option value="turnstile">Cloudflare Turnstile</option>
           <option value="hcaptcha">hCaptcha</option>
         </select>
@@ -494,10 +486,6 @@ function Metric({ icon, label, value, note }: { icon: React.ReactNode; label: st
 
 function AdminCard({ id, title, icon, children }: { id?: string; title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return <section id={id} className="scroll-mt-6 rounded-[1.5rem] bg-white p-5 shadow-sm"><div className="flex items-center justify-between gap-3"><h2 className="font-display text-2xl">{title}</h2><span className="text-[#286551]">{icon}</span></div><div className="mt-4 space-y-3">{children}</div></section>;
-}
-
-function ChecklistItem({ done, label }: { done: boolean; label: string }) {
-  return <div className="flex items-center gap-3 rounded-xl border border-black/5 p-3"><CheckCircle2 className={done ? "text-emerald-600" : "text-black/25"} size={19} /><p className="font-bold">{label}</p></div>;
 }
 
 function Command({ label, command }: { label: string; command: string }) {
