@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Activity, AlertTriangle, Database, Eye, EyeOff, Mail, Plus, ShieldCheck, Terminal, Users } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle2, Database, Eye, EyeOff, FileText, HardDrive, Mail, Plus, ShieldCheck, Terminal, Users } from "lucide-react";
 import type { AuditEntry, Tenant } from "@/lib/types";
 
 const platformLogo = "/icons/platzguide-logo.png";
@@ -16,7 +16,7 @@ function slugify(value: string) {
 }
 
 export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: string; tenants: Tenant[] }) {
-  const [, setMailConfigured] = useState(false);
+  const [mailConfigured, setMailConfigured] = useState(false);
   const auditEntries: PlatformAuditEntry[] = tenants.flatMap((tenant) => tenant.auditLog.map((entry) => ({ ...entry, tenantName: tenant.name, tenantSlug: tenant.slug }))).slice(0, 20);
   const [systemLogs, setSystemLogs] = useState<string[]>([]);
   const [auditLines, setAuditLines] = useState(auditEntries);
@@ -75,6 +75,7 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
         <PlatformNavLink href="#profil" label="Profil" icon={<ShieldCheck size={18} />} />
         <PlatformNavLink href="#smtp" label="SMTP & E-Mail" icon={<Mail size={18} />} />
         <PlatformNavLink href="#captcha" label="Captcha" icon={<ShieldCheck size={18} />} />
+        <PlatformNavLink href="#recht" label="Rechtstexte" icon={<FileText size={18} />} />
         <PlatformNavLink href="#werkzeuge" label="Werkzeuge" icon={<Terminal size={18} />} />
         <PlatformNavLink href="#logs" label="Systemlogs" icon={<AlertTriangle size={18} />} />
         {tenants.length > 0
@@ -105,7 +106,13 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
         <Metric icon={<Users />} label="Mandanten" value={String(tenants.length)} note="Aktuell angelegt" />
         <Metric icon={<Database />} label="Datenbank" value="PostgreSQL" note="Produktionsbetrieb" />
         <Metric icon={<ShieldCheck />} label="RLS" value="Aktiv" note="Tenant-Isolierung" />
-        <Metric icon={<Activity />} label="System" value="Online" note="App erreichbar" />
+        <Metric icon={<Activity />} label="System" value={mailConfigured ? "Bereit" : "Prüfen"} note={mailConfigured ? "SMTP konfiguriert" : "SMTP fehlt oder lädt"} />
+      </div>
+
+      <div className="mt-6 grid gap-4 lg:grid-cols-3">
+        <StatusTile ok label="PostgreSQL" note="Pflichtdatenbank aktiv" />
+        <StatusTile ok={mailConfigured} label="SMTP" note={mailConfigured ? "Systemmails aktiv" : "SMTP speichern und Testmail senden"} />
+        <StatusTile ok={tenants.length > 0} label="Mandanten" note={tenants.length > 0 ? "Mandantenverwaltung bereit" : "Ersten Campingplatz anlegen"} />
       </div>
 
       {tenants.length === 0 && <section id="mandanten" className="mt-6 grid scroll-mt-6 gap-6 rounded-[2rem] bg-white p-6 shadow-sm xl:grid-cols-[.9fr_1.1fr]">
@@ -126,6 +133,7 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
           </div>
           <Link href="/admin/tenant" className="rounded-xl bg-[#173c32] px-5 py-3 text-sm font-bold text-white">Mandantenverwaltung öffnen</Link>
         </div>
+        <TenantOverview tenants={tenants} />
       </section>}
 
       <div className="mt-6 grid gap-6">
@@ -142,6 +150,8 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
 
         <CaptchaSettingsCard />
 
+        <LegalSettingsCard />
+
         <AdminCard id="logs" title="Systemlogs" icon={<AlertTriangle />}>
           <p className="text-sm leading-6 text-black/55">Live-Auszug aus dem Systemdienst. Falls der Server keinen Zugriff auf `journalctl` erlaubt, zeigt die Ansicht eine verständliche Meldung statt eines Absturzes.</p>
           <div className="flex flex-wrap gap-2"><button onClick={loadSystemLogs} className="rounded-xl border border-black/10 px-4 py-3 text-sm font-bold">Logs aktualisieren</button><button onClick={checkMonitoring} className="rounded-xl border border-black/10 px-4 py-3 text-sm font-bold">Monitoring prüfen</button><Link href="/api/health" target="_blank" className="rounded-xl border border-black/10 px-4 py-3 text-sm font-bold">Healthcheck öffnen</Link></div>
@@ -149,7 +159,7 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
           <pre className="max-h-80 overflow-auto rounded-xl bg-[#101f1a] p-3 text-xs leading-5 text-white/80">{systemLogs.length ? systemLogs.join("\n") : "Noch keine Logs geladen."}</pre>
         </AdminCard>
 
-        <AdminCard title="Upload-Cleanup" icon={<Database />}>
+        <AdminCard title="Upload-Cleanup" icon={<HardDrive />}>
           <p className="text-sm leading-6 text-black/55">Findet Upload-Dateien, die in keinem Mandanten mehr referenziert sind. Gelöscht wird erst nach Rückfrage.</p>
           <div className="rounded-xl bg-[#f7f7f4] p-4 text-sm">
             <p><strong>{cleanup?.candidates.length ?? 0}</strong> ungenutzte Dateien · {Math.round((cleanup?.reclaimableBytes ?? 0) / 1024 / 1024 * 10) / 10} MB freigebbar</p>
@@ -215,6 +225,92 @@ function PlatformAccountCard({ adminEmail }: { adminEmail: string }) {
       {state.error && <p className="rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{state.error}</p>}
     </form>
   </AdminCard>;
+}
+
+function StatusTile({ ok, label, note }: { ok: boolean; label: string; note: string }) {
+  return <article className="flex items-start gap-3 rounded-2xl bg-white p-4 shadow-sm">
+    <span className={ok ? "text-emerald-600" : "text-amber-600"}>{ok ? <CheckCircle2 /> : <AlertTriangle />}</span>
+    <div className="min-w-0"><p className="font-bold">{label}</p><p className="mt-1 text-sm leading-5 text-black/50">{note}</p></div>
+  </article>;
+}
+
+function TenantOverview({ tenants }: { tenants: Tenant[] }) {
+  const activeCount = tenants.filter((tenant) => tenant.billing.status === "active" && tenant.billing.publicEnabled && !tenant.archivedAt).length;
+  const blockedCount = tenants.filter((tenant) => tenant.archivedAt || tenant.billing.status === "blocked").length;
+  const usedMb = tenants.reduce((sum, tenant) => sum + tenant.media.reduce((mediaSum, asset) => mediaSum + (asset.sizeBytes ?? 0), 0), 0) / 1024 / 1024;
+  return <div className="mt-5 grid gap-3 lg:grid-cols-[1fr_1fr_1fr]">
+    <div className="rounded-2xl bg-[#f7f7f4] p-4"><p className="text-xs font-bold uppercase tracking-widest text-black/35">Öffentlich</p><p className="mt-2 font-display text-3xl">{activeCount}</p><p className="text-sm text-black/50">freigeschaltete Plätze</p></div>
+    <div className="rounded-2xl bg-[#f7f7f4] p-4"><p className="text-xs font-bold uppercase tracking-widest text-black/35">Gesperrt</p><p className="mt-2 font-display text-3xl">{blockedCount}</p><p className="text-sm text-black/50">archiviert oder blockiert</p></div>
+    <div className="rounded-2xl bg-[#f7f7f4] p-4"><p className="text-xs font-bold uppercase tracking-widest text-black/35">Uploads</p><p className="mt-2 font-display text-3xl">{Math.round(usedMb * 10) / 10} MB</p><p className="text-sm text-black/50">tenantübergreifend referenziert</p></div>
+    <div className="lg:col-span-3 overflow-x-auto rounded-2xl border border-black/10">
+      <table className="w-full min-w-[720px] text-left text-sm">
+        <thead className="bg-[#fafaf8] text-xs uppercase tracking-wider text-black/40"><tr><th className="px-4 py-3">Campingplatz</th><th>Link</th><th>Paket</th><th>Status</th><th>Speicher</th><th className="px-4 text-right">Aktion</th></tr></thead>
+        <tbody>{tenants.map((tenant) => <tr key={tenant.id} className="border-t border-black/5">
+          <td className="px-4 py-3 font-bold">{tenant.name}</td>
+          <td className="text-black/55">/c/{tenant.slug}</td>
+          <td>{tenant.billing.plan === "pro" ? "Pro" : "Starter"}</td>
+          <td><span className={tenant.archivedAt || tenant.billing.status === "blocked" ? "rounded-full bg-red-50 px-2.5 py-1 text-xs font-bold text-red-700" : tenant.billing.status === "active" ? "rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700" : "rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700"}>{tenant.archivedAt ? "Archiviert" : tenant.billing.status}</span></td>
+          <td>{Math.round(tenant.media.reduce((sum, asset) => sum + (asset.sizeBytes ?? 0), 0) / 1024 / 1024 * 10) / 10} / {tenant.billing.storageLimitMb} MB</td>
+          <td className="px-4 text-right"><Link href={`/admin/tenant?tenant=${tenant.slug}`} className="font-bold text-[#286551]">Öffnen</Link></td>
+        </tr>)}</tbody>
+      </table>
+    </div>
+  </div>;
+}
+
+type PlatformLegal = {
+  imprint: string;
+  privacy: string;
+  cookies: string;
+  terms: string;
+};
+
+function LegalSettingsCard() {
+  const [legal, setLegal] = useState<PlatformLegal>({ imprint: "", privacy: "", cookies: "", terms: "" });
+  const [state, setState] = useState({ loading: true, message: "", error: "" });
+
+  useEffect(() => {
+    fetch("/api/admin/system/legal")
+      .then((response) => response.ok ? response.json() : null)
+      .then((payload: PlatformLegal | null) => {
+        if (payload) setLegal(payload);
+        setState({ loading: false, message: "", error: "" });
+      })
+      .catch(() => setState({ loading: false, message: "", error: "Rechtstexte konnten nicht geladen werden." }));
+  }, []);
+
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setState({ loading: true, message: "", error: "" });
+    const response = await fetch("/api/admin/system/legal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(legal)
+    });
+    setState({ loading: false, message: response.ok ? "Zentrale Rechtstexte gespeichert." : "", error: response.ok ? "" : "Rechtstexte konnten nicht gespeichert werden." });
+  }
+
+  return <AdminCard id="recht" title="Zentrale Rechtstexte" icon={<FileText />}>
+    <p className="text-sm leading-6 text-black/55">Diese Texte gelten für die Hauptdomain und alle Campingplatz-Links. Mandantenadmins pflegen keine eigenen Rechtstexte.</p>
+    <form onSubmit={save} className="space-y-3">
+      <LegalTextarea label="Impressum" value={legal.imprint} onChange={(imprint) => setLegal({ ...legal, imprint })} />
+      <LegalTextarea label="Datenschutz" value={legal.privacy} onChange={(privacy) => setLegal({ ...legal, privacy })} />
+      <LegalTextarea label="Cookie-Hinweise" value={legal.cookies} onChange={(cookies) => setLegal({ ...legal, cookies })} />
+      <LegalTextarea label="AGB / Nutzungsbedingungen" value={legal.terms} onChange={(terms) => setLegal({ ...legal, terms })} />
+      <div className="flex flex-wrap gap-2">
+        <button disabled={state.loading} className="rounded-xl bg-[#173c32] px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{state.loading ? "Speichert …" : "Rechtstexte speichern"}</button>
+        <Link href="/rechtliches/impressum" target="_blank" className="rounded-xl border border-black/10 px-5 py-3 text-sm font-bold">Vorschau öffnen</Link>
+      </div>
+      {state.message && <p className="rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{state.message}</p>}
+      {state.error && <p className="rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{state.error}</p>}
+    </form>
+  </AdminCard>;
+}
+
+function LegalTextarea({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return <label className="block text-sm font-bold">{label}
+    <textarea value={value} onChange={(event) => onChange(event.target.value)} rows={8} className="mt-1 w-full rounded-xl border border-black/10 bg-white px-3 py-3 font-normal leading-6" />
+  </label>;
 }
 
 type CaptchaConfig = {

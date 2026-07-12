@@ -7,7 +7,8 @@ import { listTenants } from "@/lib/tenant-store";
 
 export const dynamic = "force-dynamic";
 
-export default async function TenantAdminPage() {
+export default async function TenantAdminPage({ searchParams }: { searchParams: Promise<{ tenant?: string }> }) {
+  const { tenant: requestedTenant } = await searchParams;
   const cookieStore = await cookies();
   const session = await verifyAdminSession(
     cookieStore.get("platzguide_session")?.value ?? cookieStore.get("explorer_session")?.value
@@ -24,7 +25,7 @@ export default async function TenantAdminPage() {
   const visibleTenants = isPlatformAdmin
     ? tenants
     : tenants.filter((candidate) => canViewTenant(session, candidate.id));
-  const tenant = visibleTenants[0];
+  const tenant = visibleTenants.find((candidate) => candidate.slug === requestedTenant || candidate.id === requestedTenant) ?? visibleTenants[0];
   if (!tenant) {
     if (isPlatformAdmin) redirect("/admin/platform");
     return <SystemError title="Noch kein Campingplatz zugeordnet" message="Deinem Zugang ist noch kein Campingplatz zugeordnet." />;
