@@ -191,7 +191,7 @@ export type Tenant = {
   };
   integrations: {
     mail: { provider: "global-smtp" };
-    captcha: { provider: "turnstile" | "hcaptcha" | "disabled"; siteKey: string; requiredForSignup: boolean };
+    captcha: { provider: "turnstile" | "hcaptcha" | "recaptcha" | "disabled"; siteKey: string; requiredForSignup: boolean };
     storage: { provider: "local" | "s3" | "external-url"; maxUploadMb: number; allowedTypes: string[] };
     database: { provider: "postgresql"; rlsRequired: boolean };
     backup: { enabled: boolean; schedule: string; retentionDays: number };

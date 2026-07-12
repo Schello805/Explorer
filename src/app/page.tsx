@@ -23,7 +23,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   if (isPlatformHost(host)) {
     return <PlatformLanding
       allowSignup={process.env.ALLOW_PUBLIC_SIGNUP === "true"}
-      captchaProvider={process.env.CAPTCHA_PROVIDER === "turnstile" || process.env.CAPTCHA_PROVIDER === "hcaptcha" ? process.env.CAPTCHA_PROVIDER : "disabled"}
+      captchaProvider={process.env.CAPTCHA_PROVIDER === "turnstile" || process.env.CAPTCHA_PROVIDER === "hcaptcha" || process.env.CAPTCHA_PROVIDER === "recaptcha" ? process.env.CAPTCHA_PROVIDER : "disabled"}
       captchaSiteKey={process.env.NEXT_PUBLIC_CAPTCHA_SITE_KEY ?? ""}
     />;
   }

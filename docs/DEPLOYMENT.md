@@ -35,8 +35,9 @@ Alte Variablen wie `MAIL_PROVIDER`, `MAIL_WEBHOOK_URL`, `RESEND_API_KEY`,
 
 - `CAPTCHA_PROVIDER=turnstile`
 - `CAPTCHA_PROVIDER=hcaptcha`
+- `CAPTCHA_PROVIDER=recaptcha`
 - `NEXT_PUBLIC_CAPTCHA_SITE_KEY`
-- `TURNSTILE_SECRET_KEY` oder `HCAPTCHA_SECRET_KEY`
+- `TURNSTILE_SECRET_KEY`, `HCAPTCHA_SECRET_KEY` oder `RECAPTCHA_SECRET_KEY`
 
 Monitoring kann `/api/health` abfragen. Der Endpunkt liefert App-Name,
 Revision, Mandantenanzahl und Latenz oder Status `503`, wenn der Datenzugriff
@@ -177,8 +178,8 @@ Wichtige Optionen:
 - `ALLOW_PUBLIC_SIGNUP=true`: Self-Service-Registrierung aktivieren
 - `MAIL_FROM`, `MAIL_FROM_NAME`, `MAIL_LOGO_URL`
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`
-- `CAPTCHA_PROVIDER`: `disabled`, `turnstile` oder `hcaptcha`
-- `NEXT_PUBLIC_CAPTCHA_SITE_KEY`, `TURNSTILE_SECRET_KEY`, `HCAPTCHA_SECRET_KEY`
+- `CAPTCHA_PROVIDER`: `disabled`, `turnstile`, `hcaptcha` oder `recaptcha`
+- `NEXT_PUBLIC_CAPTCHA_SITE_KEY`, `TURNSTILE_SECRET_KEY`, `HCAPTCHA_SECRET_KEY`, `RECAPTCHA_SECRET_KEY`
 - `UPLOAD_MAX_MB`: Upload-Größenlimit, Standard `10`
 
 Der Mailversand läuft ausschließlich über klassisches SMTP. Bei fehlender

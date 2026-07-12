@@ -66,7 +66,7 @@ const tenantSchema = z.object({
     mail: z.object({
       provider: z.literal("global-smtp")
     }),
-    captcha: z.object({ provider: z.enum(["turnstile", "hcaptcha", "disabled"]), siteKey: z.string().max(500), requiredForSignup: z.boolean() }),
+    captcha: z.object({ provider: z.enum(["turnstile", "hcaptcha", "recaptcha", "disabled"]), siteKey: z.string().max(500), requiredForSignup: z.boolean() }),
     storage: z.object({ provider: z.enum(["local", "s3", "external-url"]), maxUploadMb: z.number().min(1).max(100), allowedTypes: z.array(z.string().max(120)).min(1) }),
     database: z.object({ provider: z.literal("postgresql"), rlsRequired: z.boolean() }),
     backup: z.object({ enabled: z.boolean(), schedule: z.string().max(80), retentionDays: z.number().min(1).max(365) })

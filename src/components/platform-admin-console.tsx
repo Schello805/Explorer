@@ -8,6 +8,7 @@ import type { AuditEntry, Tenant } from "@/lib/types";
 
 const platformLogo = "/icons/platzguide-logo.png";
 type PlatformAuditEntry = AuditEntry & { tenantName: string; tenantSlug?: string };
+type CaptchaProvider = "disabled" | "turnstile" | "hcaptcha" | "recaptcha";
 
 function slugify(value: string) {
   return value.toLowerCase().trim().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
@@ -73,6 +74,7 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
         <PlatformNavLink href="#einrichtung" label="Globale Einrichtung" icon={<Server size={18} />} />
         <PlatformNavLink href="#profil" label="Profil" icon={<ShieldCheck size={18} />} />
         <PlatformNavLink href="#smtp" label="SMTP & E-Mail" icon={<Mail size={18} />} />
+        <PlatformNavLink href="#captcha" label="Captcha" icon={<ShieldCheck size={18} />} />
         <PlatformNavLink href="#werkzeuge" label="Werkzeuge" icon={<Terminal size={18} />} />
         <PlatformNavLink href="#logs" label="Systemlogs" icon={<AlertTriangle size={18} />} />
         {tenants.length > 0
@@ -145,6 +147,8 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
 
         <MailSettingsCard onConfiguredChange={setMailConfigured} />
 
+        <CaptchaSettingsCard />
+
         <AdminCard id="logs" title="Systemlogs" icon={<AlertTriangle />}>
           <p className="text-sm leading-6 text-black/55">Live-Auszug aus dem Systemdienst. Falls der Server keinen Zugriff auf `journalctl` erlaubt, zeigt die Ansicht eine verständliche Meldung statt eines Absturzes.</p>
           <div className="flex flex-wrap gap-2"><button onClick={loadSystemLogs} className="rounded-xl border border-black/10 px-4 py-3 text-sm font-bold">Logs aktualisieren</button><button onClick={checkMonitoring} className="rounded-xl border border-black/10 px-4 py-3 text-sm font-bold">Monitoring prüfen</button><Link href="/api/health" target="_blank" className="rounded-xl border border-black/10 px-4 py-3 text-sm font-bold">Healthcheck öffnen</Link></div>
@@ -214,6 +218,112 @@ function PlatformAccountCard({ adminEmail }: { adminEmail: string }) {
       </label>
       <MailInput label="Neues Passwort" type={showPasswords ? "text" : "password"} value={newPassword} onChange={setNewPassword} placeholder="Leer lassen = Passwort behalten" />
       <button disabled={state.loading} className="rounded-xl bg-[#173c32] px-5 py-3 text-sm font-bold text-white disabled:opacity-60">{state.loading ? "Speichert …" : "Profil speichern"}</button>
+      {state.message && <p className="rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{state.message}</p>}
+      {state.error && <p className="rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{state.error}</p>}
+    </form>
+  </AdminCard>;
+}
+
+type CaptchaConfig = {
+  provider: CaptchaProvider;
+  siteKey: string;
+  turnstileSecretKey: string;
+  hcaptchaSecretKey: string;
+  recaptchaSecretKey: string;
+  hasTurnstileSecretKey: boolean;
+  hasHcaptchaSecretKey: boolean;
+  hasRecaptchaSecretKey: boolean;
+  allowPublicSignup: boolean;
+};
+
+function CaptchaSettingsCard() {
+  const [config, setConfig] = useState<CaptchaConfig>({
+    provider: "disabled",
+    siteKey: "",
+    turnstileSecretKey: "",
+    hcaptchaSecretKey: "",
+    recaptchaSecretKey: "",
+    hasTurnstileSecretKey: false,
+    hasHcaptchaSecretKey: false,
+    hasRecaptchaSecretKey: false,
+    allowPublicSignup: false
+  });
+  const [showSecrets, setShowSecrets] = useState(false);
+  const [state, setState] = useState({ loading: false, message: "", error: "" });
+
+  useEffect(() => {
+    fetch("/api/admin/system/captcha-config")
+      .then((response) => response.ok ? response.json() : null)
+      .then((payload: Omit<CaptchaConfig, "turnstileSecretKey" | "hcaptchaSecretKey" | "recaptchaSecretKey"> | null) => {
+        if (!payload) return;
+        setConfig({ ...payload, turnstileSecretKey: "", hcaptchaSecretKey: "", recaptchaSecretKey: "" });
+      })
+      .catch(() => undefined);
+  }, []);
+
+  async function saveCaptcha(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setState({ loading: true, message: "", error: "" });
+    const response = await fetch("/api/admin/system/captcha-config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(config)
+    });
+    if (!response.ok) {
+      setState({ loading: false, message: "", error: "Captcha-Konfiguration konnte nicht gespeichert werden." });
+      return;
+    }
+    setConfig((current) => ({
+      ...current,
+      hasTurnstileSecretKey: current.hasTurnstileSecretKey || Boolean(current.turnstileSecretKey),
+      hasHcaptchaSecretKey: current.hasHcaptchaSecretKey || Boolean(current.hcaptchaSecretKey),
+      hasRecaptchaSecretKey: current.hasRecaptchaSecretKey || Boolean(current.recaptchaSecretKey),
+      turnstileSecretKey: "",
+      hcaptchaSecretKey: "",
+      recaptchaSecretKey: ""
+    }));
+    setState({ loading: false, message: "Captcha-Konfiguration gespeichert.", error: "" });
+  }
+
+  const secretLabel = config.provider === "recaptcha"
+    ? "Google reCAPTCHA Secret-Key"
+    : config.provider === "turnstile"
+      ? "Turnstile Secret-Key"
+      : config.provider === "hcaptcha"
+        ? "hCaptcha Secret-Key"
+        : "Secret-Key";
+  const secretValue = config.provider === "recaptcha" ? config.recaptchaSecretKey : config.provider === "turnstile" ? config.turnstileSecretKey : config.hcaptchaSecretKey;
+  const hasSecret = config.provider === "recaptcha" ? config.hasRecaptchaSecretKey : config.provider === "turnstile" ? config.hasTurnstileSecretKey : config.hasHcaptchaSecretKey;
+
+  function updateSecret(value: string) {
+    if (config.provider === "recaptcha") setConfig({ ...config, recaptchaSecretKey: value });
+    else if (config.provider === "turnstile") setConfig({ ...config, turnstileSecretKey: value });
+    else setConfig({ ...config, hcaptchaSecretKey: value });
+  }
+
+  return <AdminCard id="captcha" title="Captcha & Registrierung" icon={<ShieldCheck />}>
+    <p className="text-sm leading-6 text-black/55">Diese Werte gelten global für die Konto- und Campingplatz-Erstellung auf der Startseite. Für Google nutzt du reCAPTCHA v2 Checkbox mit Domain `platzguide.de`.</p>
+    <form onSubmit={saveCaptcha} className="space-y-3">
+      <label className="text-sm font-bold">Captcha-Anbieter
+        <select value={config.provider} onChange={(event) => setConfig({ ...config, provider: event.target.value as CaptchaProvider })} className="mt-1 w-full rounded-xl border border-black/10 bg-white px-3 py-3">
+          <option value="disabled">Deaktiviert</option>
+          <option value="recaptcha">Google reCAPTCHA</option>
+          <option value="turnstile">Cloudflare Turnstile</option>
+          <option value="hcaptcha">hCaptcha</option>
+        </select>
+      </label>
+      <MailInput label="Öffentlicher Site-Key" value={config.siteKey} onChange={(siteKey) => setConfig({ ...config, siteKey })} placeholder="Site-Key aus der Anbieter-Konsole" />
+      {config.provider !== "disabled" && <label className="text-sm font-bold">{secretLabel}
+        <span className="mt-1 flex rounded-xl border border-black/10 bg-white">
+          <input type={showSecrets ? "text" : "password"} value={secretValue} onChange={(event) => updateSecret(event.target.value)} placeholder={hasSecret ? "Gespeichert · leer lassen zum Behalten" : "Secret-Key"} className="min-w-0 flex-1 rounded-xl px-3 py-3 outline-none" />
+          <button title="Secret anzeigen oder verbergen." type="button" onClick={() => setShowSecrets((value) => !value)} className="px-3 text-[#286551]">{showSecrets ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+        </span>
+      </label>}
+      <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-3 text-sm font-bold">
+        <span>Öffentliche Registrierung aktivieren</span>
+        <input type="checkbox" checked={config.allowPublicSignup} onChange={(event) => setConfig({ ...config, allowPublicSignup: event.target.checked })} className="h-5 w-5 accent-[#286551]" />
+      </label>
+      <button disabled={state.loading} className="rounded-xl bg-[#173c32] px-5 py-3 text-sm font-bold text-white disabled:opacity-60">{state.loading ? "Speichert …" : "Captcha speichern"}</button>
       {state.message && <p className="rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{state.message}</p>}
       {state.error && <p className="rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{state.error}</p>}
     </form>

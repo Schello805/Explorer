@@ -7,7 +7,7 @@ import Link from "next/link";
 import { ArrowRight, Camera, CheckCircle2, CreditCard, Heart, HelpCircle, LifeBuoy, List, Map, MapPinned, Search, ShieldAlert } from "lucide-react";
 import { billingPlans, formatEuro, setupServicePriceCents, yearlyDiscountPercent } from "@/lib/billing";
 
-type CaptchaProvider = "turnstile" | "hcaptcha" | "disabled";
+type CaptchaProvider = "turnstile" | "hcaptcha" | "recaptcha" | "disabled";
 const platformLogo = "/icons/platzguide-logo.png";
 
 export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey }: { allowSignup: boolean; captchaProvider: CaptchaProvider; captchaSiteKey: string }) {
@@ -49,7 +49,9 @@ export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey }
     script.defer = true;
     script.src = captchaProvider === "turnstile"
       ? "https://challenges.cloudflare.com/turnstile/v0/api.js"
-      : "https://js.hcaptcha.com/1/api.js";
+      : captchaProvider === "hcaptcha"
+        ? "https://js.hcaptcha.com/1/api.js"
+        : "https://www.google.com/recaptcha/api.js";
     document.head.appendChild(script);
     return () => {
       delete callbackHost.platzguideCaptchaSolved;
@@ -109,10 +111,12 @@ export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey }
           <Field label="Admin-E-Mail" tooltip="E-Mail-Adresse für den späteren Verwaltungszugang dieses Campingplatzes." value={ownerEmail} onChange={setOwnerEmail} />
           <Field label="Admin-Passwort" tooltip="Mindestens 12 Zeichen. Verwende ein eigenes, starkes Passwort." type="password" value={ownerPassword} onChange={setOwnerPassword} />
           <label className="hidden">Website<input title="Spam-Schutzfeld. Bitte leer lassen." value={website} onChange={(event) => setWebsite(event.target.value)} tabIndex={-1} autoComplete="off" /></label>
-          {allowSignup && captchaProvider !== "disabled" && captchaSiteKey && <div className="overflow-hidden rounded-xl">
+          {allowSignup && captchaProvider !== "disabled" && captchaSiteKey && <div className="captcha-frame overflow-hidden rounded-xl">
             {captchaProvider === "turnstile"
               ? <div className="cf-turnstile" data-sitekey={captchaSiteKey} data-callback="platzguideCaptchaSolved" />
-              : <div className="h-captcha" data-sitekey={captchaSiteKey} data-callback="platzguideCaptchaSolved" />}
+              : captchaProvider === "hcaptcha"
+                ? <div className="h-captcha" data-sitekey={captchaSiteKey} data-callback="platzguideCaptchaSolved" />
+                : <div className="g-recaptcha" data-sitekey={captchaSiteKey} data-callback="platzguideCaptchaSolved" />}
           </div>}
         </div>
         {error && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p>}

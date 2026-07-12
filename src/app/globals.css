@@ -29,6 +29,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 img, svg, video, canvas { max-width: 100%; }
+iframe { max-width: 100%; }
+main, section, header, footer, form, nav, aside, article, div {
+  min-width: 0;
+}
+input, select, textarea {
+  max-width: 100%;
+}
 button, input, select, textarea { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 :focus-visible { outline: 3px solid var(--secondary); outline-offset: 3px; }
@@ -58,4 +65,22 @@ button, a { -webkit-tap-highlight-color: transparent; }
   border-radius: 14px;
   box-shadow: 0 14px 40px rgba(20, 50, 40, .2);
   padding: 10px 14px;
+}
+.captcha-frame {
+  max-width: 100%;
+  overflow: hidden;
+}
+.captcha-frame > div {
+  max-width: 100%;
+}
+@media (max-width: 360px) {
+  .captcha-frame .g-recaptcha,
+  .captcha-frame .h-captcha,
+  .captcha-frame .cf-turnstile {
+    transform: scale(.88);
+    transform-origin: left top;
+  }
+  .captcha-frame {
+    min-height: 70px;
+  }
 }

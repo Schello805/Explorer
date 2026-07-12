@@ -25,5 +25,14 @@ export async function verifyCaptcha(token: string | undefined, remoteIp?: string
     return Boolean(result.success);
   }
 
+  if (provider === "recaptcha") {
+    if (!process.env.RECAPTCHA_SECRET_KEY) return false;
+    const body = new URLSearchParams({ secret: process.env.RECAPTCHA_SECRET_KEY, response: token });
+    if (remoteIp) body.set("remoteip", remoteIp);
+    const response = await fetch("https://www.google.com/recaptcha/api/siteverify", { method: "POST", body });
+    const result = await response.json() as { success?: boolean };
+    return Boolean(result.success);
+  }
+
   return false;
 }
