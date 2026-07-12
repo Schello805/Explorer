@@ -6,6 +6,7 @@ import path from "node:path";
 import postgres from "postgres";
 import { applyBillingPlan } from "@/lib/billing";
 import { appUrl, sendMail, tenantAdminUrl, tenantPublicUrl } from "@/lib/mail";
+import { applyPlatformSettingsToTenant } from "@/lib/platform-settings";
 import { createDefaultStationTemplates, tenantDefaults } from "@/lib/tenant-defaults";
 import type { AuditEntry, FeedbackMessage, PrivacyRequest, Station, Tenant } from "@/lib/types";
 
@@ -258,7 +259,7 @@ export async function createTenantInstance(input: {
   const shouldSendVerificationEmail = input.sendVerificationEmail !== false;
   const verificationToken = crypto.randomUUID();
   const tenantId = crypto.randomUUID();
-  const tenant: Tenant = normalizeTenant({
+  let tenant: Tenant = normalizeTenant({
     ...structuredClone(tenantDefaults),
     id: tenantId,
     slug,
@@ -305,6 +306,7 @@ export async function createTenantInstance(input: {
       createdAt: new Date().toISOString()
     }]
   });
+  tenant = await applyPlatformSettingsToTenant(tenant);
   tenant.auditLog[0] = { ...tenant.auditLog[0], tenantId: tenant.id, entityId: tenant.id };
   tenant.users = tenant.users.map((user) => ({ ...user, tenantId: tenant.id }));
 

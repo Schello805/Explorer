@@ -34,7 +34,7 @@ const navigation = [
   { id: "profile", label: "Profil", icon: Users }
 ];
 
-export function AdminConsole({ tenant, tenants, adminEmail, isPlatformAdmin = false }: { tenant: Tenant; tenants: Tenant[]; adminEmail: string; isPlatformAdmin?: boolean }) {
+export function AdminConsole({ tenant, tenants, adminEmail, isPlatformAdmin = false, tenantAdminPermissions }: { tenant: Tenant; tenants: Tenant[]; adminEmail: string; isPlatformAdmin?: boolean; tenantAdminPermissions?: { integrations: boolean; analytics: boolean; storage: boolean; backup: boolean } }) {
   const [section, setSection] = useState("overview");
   const [menuOpen, setMenuOpen] = useState(false);
   const [availableTenants, setAvailableTenants] = useState(tenants);
@@ -43,7 +43,7 @@ export function AdminConsole({ tenant, tenants, adminEmail, isPlatformAdmin = fa
   const [editing, setEditing] = useState<Station | null>(null);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
-  const tenantAdminHiddenSections = new Set(["modules", "billing", "security"]);
+  const tenantAdminHiddenSections = new Set(["modules", "billing", "security", ...(tenantAdminPermissions?.integrations ? [] : ["integrations"])]);
   const platformNavigation = isPlatformAdmin
     ? navigation.filter((item) => tenantAdminHiddenSections.has(item.id))
     : [];
@@ -171,7 +171,7 @@ export function AdminConsole({ tenant, tenants, adminEmail, isPlatformAdmin = fa
         {section === "branding" && <Branding key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "legal" && <Legal key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "modules" && <Modules key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
-        {section === "integrations" && <Integrations key={currentTenant.id} tenant={currentTenant} saving={saving} platformAdmin={isPlatformAdmin} onSave={saveTenant} />}
+        {section === "integrations" && <Integrations key={currentTenant.id} tenant={currentTenant} saving={saving} platformAdmin={isPlatformAdmin} tenantAdminPermissions={tenantAdminPermissions} onSave={saveTenant} />}
         {section === "billing" && <Billing key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "events" && <Events key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "tours" && <Tours key={currentTenant.id} tenant={currentTenant} stations={stations} saving={saving} onSave={saveTenant} />}
@@ -453,9 +453,12 @@ function Modules({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; 
     <Save saving={saving} onClick={() => onSave(draft)} />
   </SettingsCard>;
 }
-function Integrations({ tenant, saving, platformAdmin, onSave }: { tenant: Tenant; saving: boolean; platformAdmin: boolean; onSave: (tenant: Tenant) => void }) {
+function Integrations({ tenant, saving, platformAdmin, tenantAdminPermissions, onSave }: { tenant: Tenant; saving: boolean; platformAdmin: boolean; tenantAdminPermissions?: { integrations: boolean; analytics: boolean; storage: boolean; backup: boolean }; onSave: (tenant: Tenant) => void }) {
   const [draft, setDraft] = useState(tenant);
   const [mailTest, setMailTest] = useState("");
+  const canManageAnalytics = platformAdmin || Boolean(tenantAdminPermissions?.analytics);
+  const canManageStorage = platformAdmin || Boolean(tenantAdminPermissions?.storage);
+  const canManageBackup = platformAdmin || Boolean(tenantAdminPermissions?.backup);
   async function sendTestMail() {
     setMailTest("Sende Testmail …");
     const response = await fetch("/api/admin/mail/test", {
@@ -477,12 +480,12 @@ function Integrations({ tenant, saving, platformAdmin, onSave }: { tenant: Tenan
       <div className="flex flex-wrap gap-2"><button type="button" onClick={sendTestMail} className="rounded-xl border px-4 py-3 text-sm font-bold">Testmail an Mandanten-Admins senden</button></div>
       {mailTest && <p className="rounded-xl bg-[#eff3ec] p-3 text-sm font-bold text-[#286551]">{mailTest}</p>}
     </SettingsCard>
-    <SettingsCard title="Captcha & Self-Service" description="Turnstile oder hCaptcha schützt öffentliche Registrierung.">
+    {platformAdmin && <SettingsCard title="Captcha & Self-Service" description="Turnstile, hCaptcha oder reCAPTCHA schützt öffentliche Registrierung.">
       <Select label="Captcha-Provider" value={draft.integrations.captcha.provider} options={["disabled", "turnstile", "hcaptcha", "recaptcha"]} onChange={(provider) => setDraft({ ...draft, integrations: { ...draft.integrations, captcha: { ...draft.integrations.captcha, provider: provider as Tenant["integrations"]["captcha"]["provider"] } } })} />
       <Field label="Öffentlicher Site-Key" value={draft.integrations.captcha.siteKey} onChange={(siteKey) => setDraft({ ...draft, integrations: { ...draft.integrations, captcha: { ...draft.integrations.captcha, siteKey } } })} />
       <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-3 text-sm font-bold"><span className="inline-flex items-center gap-1.5">Für Registrierung erforderlich<HelpBubble text="Wenn aktiv, muss jede neue Registrierung zuerst die Captcha-Prüfung bestehen." /></span><input title="Wenn aktiv, muss jede neue Registrierung zuerst die Captcha-Prüfung bestehen." type="checkbox" checked={draft.integrations.captcha.requiredForSignup} onChange={(event) => setDraft({ ...draft, integrations: { ...draft.integrations, captcha: { ...draft.integrations.captcha, requiredForSignup: event.target.checked } } })} className="h-5 w-5 accent-[#286551]" /></label>
-    </SettingsCard>
-    <SettingsCard title="Analytics mit Matomo" description="Besucherstatistik je Campingplatz. Tracking startet erst nach Cookie-Einwilligung.">
+    </SettingsCard>}
+    {canManageAnalytics && <SettingsCard title="Analytics mit Matomo" description="Besucherstatistik je Campingplatz. Tracking startet erst nach Cookie-Einwilligung.">
       <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-3 text-sm font-bold"><span className="inline-flex items-center gap-1.5">Analytics aktivieren<HelpBubble text="Aktiviert Matomo für diesen Campingplatz. Besucher werden erst nach Zustimmung gezählt." /></span><input title="Aktiviert Matomo für diesen Campingplatz. Besucher werden erst nach Zustimmung gezählt." type="checkbox" checked={draft.tracking.enabled} onChange={(event) => setDraft({ ...draft, tracking: { ...draft.tracking, enabled: event.target.checked, provider: event.target.checked ? "matomo" : "none" } })} className="h-5 w-5 accent-[#286551]" /></label>
       <Select label="Analytics-Provider" value={draft.tracking.provider} options={["none", "matomo"]} onChange={(provider) => setDraft({ ...draft, tracking: { ...draft.tracking, provider: provider as Tenant["tracking"]["provider"], enabled: provider === "matomo" ? draft.tracking.enabled : false } })} />
       <Field label="Matomo-URL" value={draft.tracking.matomoUrl} onChange={(matomoUrl) => setDraft({ ...draft, tracking: { ...draft.tracking, matomoUrl } })} />
@@ -491,23 +494,23 @@ function Integrations({ tenant, saving, platformAdmin, onSave }: { tenant: Tenan
       <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-3 text-sm font-bold"><span className="inline-flex items-center gap-1.5">Do-Not-Track respektieren<HelpBubble text="Wenn aktiv, wird bei gesetztem Browser-Datenschutzsignal nicht getrackt." /></span><input title="Wenn aktiv, wird bei gesetztem Browser-Datenschutzsignal nicht getrackt." type="checkbox" checked={draft.tracking.respectDoNotTrack} onChange={(event) => setDraft({ ...draft, tracking: { ...draft.tracking, respectDoNotTrack: event.target.checked } })} className="h-5 w-5 accent-[#286551]" /></label>
       {draft.tracking.matomoUrl && <a href={draft.tracking.matomoUrl} target="_blank" rel="noreferrer" className="inline-flex w-fit rounded-xl border border-black/10 px-4 py-3 text-sm font-bold">Matomo öffnen</a>}
       <p className="rounded-xl bg-[#f7f7f4] p-3 text-xs leading-5 text-black/55">Wichtig: Matomo muss separat betrieben oder gebucht werden. Hier wird nur die Verbindung je Mandant verwaltet.</p>
-    </SettingsCard>
-    <SettingsCard title="Dateiablage, Datenbank & Backup" description="Betriebsparameter für Uploads, PostgreSQL und Sicherungen.">
+    </SettingsCard>}
+    {(platformAdmin || canManageStorage || canManageBackup) && <SettingsCard title="Dateiablage, Datenbank & Backup" description="Betriebsparameter für Uploads, PostgreSQL und Sicherungen.">
       <div className="rounded-xl bg-[#f7f7f4] p-4 text-sm leading-6 text-black/65"><strong className="text-[#1b302a]">Wichtig:</strong> Mandanten, Stationen, Einstellungen, Audit-Log und Metadaten liegen in PostgreSQL. Die Dateiablage betrifft nur hochgeladene Bilder, PDFs und Videos; bei „Server-Dateisystem“ werden diese Dateien lokal auf dem Server gespeichert und tenantgetrennt referenziert.</div>
-      <label className="block min-w-0 text-sm font-bold"><LabelText label="Dateiablage für Uploads" tooltip="Speicherort für hochgeladene Medien. Die eigentlichen App-Daten liegen weiterhin in PostgreSQL." /><select title="Speicherort für hochgeladene Medien. Die eigentlichen App-Daten liegen weiterhin in PostgreSQL." aria-label="Dateiablage für Uploads" value={draft.integrations.storage.provider} onChange={(event) => setDraft({ ...draft, integrations: { ...draft.integrations, storage: { ...draft.integrations.storage, provider: event.target.value as Tenant["integrations"]["storage"]["provider"] } } })} className="mt-2 w-full rounded-xl border border-black/10 bg-[#fafaf8] px-4 py-3 outline-none">
+      {canManageStorage && <label className="block min-w-0 text-sm font-bold"><LabelText label="Dateiablage für Uploads" tooltip="Speicherort für hochgeladene Medien. Die eigentlichen App-Daten liegen weiterhin in PostgreSQL." /><select title="Speicherort für hochgeladene Medien. Die eigentlichen App-Daten liegen weiterhin in PostgreSQL." aria-label="Dateiablage für Uploads" value={draft.integrations.storage.provider} onChange={(event) => setDraft({ ...draft, integrations: { ...draft.integrations, storage: { ...draft.integrations.storage, provider: event.target.value as Tenant["integrations"]["storage"]["provider"] } } })} className="mt-2 w-full rounded-xl border border-black/10 bg-[#fafaf8] px-4 py-3 outline-none">
         <option value="local">Server-Dateisystem, tenantgetrennt</option>
         <option value="s3">S3-kompatibler Objektspeicher</option>
         <option value="external-url">Externe Medien-URLs</option>
-      </select></label>
-      <Field label="Max. Upload MB" value={String(draft.integrations.storage.maxUploadMb)} onChange={(maxUploadMb) => setDraft({ ...draft, integrations: { ...draft.integrations, storage: { ...draft.integrations.storage, maxUploadMb: Number(maxUploadMb) } } })} />
-      <Area label="Erlaubte MIME-Typen" value={draft.integrations.storage.allowedTypes.join("\n")} onChange={(value) => setDraft({ ...draft, integrations: { ...draft.integrations, storage: { ...draft.integrations.storage, allowedTypes: value.split("\n").map((item) => item.trim()).filter(Boolean) } } })} />
-      <Select label="Datenbank" value={draft.integrations.database.provider} options={["postgresql"]} onChange={() => setDraft({ ...draft, integrations: { ...draft.integrations, database: { ...draft.integrations.database, provider: "postgresql" } } })} />
-      <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-3 text-sm font-bold"><span className="inline-flex items-center gap-1.5">RLS erzwingen<HelpBubble text="Sicherheitsregel, damit Datenbankdaten nur zum passenden Campingplatz gelesen werden." /></span><input title="Sicherheitsregel, damit Datenbankdaten nur zum passenden Campingplatz gelesen werden." type="checkbox" checked={draft.integrations.database.rlsRequired} onChange={(event) => setDraft({ ...draft, integrations: { ...draft.integrations, database: { ...draft.integrations.database, rlsRequired: event.target.checked } } })} className="h-5 w-5 accent-[#286551]" /></label>
-      <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-3 text-sm font-bold"><span className="inline-flex items-center gap-1.5">Backups aktiv<HelpBubble text="Wenn aktiv, sollen regelmäßig Sicherungen der Datenbank erstellt werden." /></span><input title="Wenn aktiv, sollen regelmäßig Sicherungen der Datenbank erstellt werden." type="checkbox" checked={draft.integrations.backup.enabled} onChange={(event) => setDraft({ ...draft, integrations: { ...draft.integrations, backup: { ...draft.integrations.backup, enabled: event.target.checked } } })} className="h-5 w-5 accent-[#286551]" /></label>
-      <Field label="Backup-Zeitplan" value={draft.integrations.backup.schedule} onChange={(schedule) => setDraft({ ...draft, integrations: { ...draft.integrations, backup: { ...draft.integrations.backup, schedule } } })} />
-      <Field label="Aufbewahrung Tage" value={String(draft.integrations.backup.retentionDays)} onChange={(retentionDays) => setDraft({ ...draft, integrations: { ...draft.integrations, backup: { ...draft.integrations.backup, retentionDays: Number(retentionDays) } } })} />
+      </select></label>}
+      {canManageStorage && <Field label="Max. Upload MB" value={String(draft.integrations.storage.maxUploadMb)} onChange={(maxUploadMb) => setDraft({ ...draft, integrations: { ...draft.integrations, storage: { ...draft.integrations.storage, maxUploadMb: Number(maxUploadMb) } } })} />}
+      {canManageStorage && <Area label="Erlaubte MIME-Typen" value={draft.integrations.storage.allowedTypes.join("\n")} onChange={(value) => setDraft({ ...draft, integrations: { ...draft.integrations, storage: { ...draft.integrations.storage, allowedTypes: value.split("\n").map((item) => item.trim()).filter(Boolean) } } })} />}
+      {platformAdmin && <Select label="Datenbank" value={draft.integrations.database.provider} options={["postgresql"]} onChange={() => setDraft({ ...draft, integrations: { ...draft.integrations, database: { ...draft.integrations.database, provider: "postgresql" } } })} />}
+      {platformAdmin && <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-3 text-sm font-bold"><span className="inline-flex items-center gap-1.5">RLS erzwingen<HelpBubble text="Sicherheitsregel, damit Datenbankdaten nur zum passenden Campingplatz gelesen werden." /></span><input title="Sicherheitsregel, damit Datenbankdaten nur zum passenden Campingplatz gelesen werden." type="checkbox" checked={draft.integrations.database.rlsRequired} onChange={(event) => setDraft({ ...draft, integrations: { ...draft.integrations, database: { ...draft.integrations.database, rlsRequired: event.target.checked } } })} className="h-5 w-5 accent-[#286551]" /></label>}
+      {canManageBackup && <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-3 text-sm font-bold"><span className="inline-flex items-center gap-1.5">Backups aktiv<HelpBubble text="Wenn aktiv, sollen regelmäßig Sicherungen der Datenbank erstellt werden." /></span><input title="Wenn aktiv, sollen regelmäßig Sicherungen der Datenbank erstellt werden." type="checkbox" checked={draft.integrations.backup.enabled} onChange={(event) => setDraft({ ...draft, integrations: { ...draft.integrations, backup: { ...draft.integrations.backup, enabled: event.target.checked } } })} className="h-5 w-5 accent-[#286551]" /></label>}
+      {canManageBackup && <Field label="Backup-Zeitplan" value={draft.integrations.backup.schedule} onChange={(schedule) => setDraft({ ...draft, integrations: { ...draft.integrations, backup: { ...draft.integrations.backup, schedule } } })} />}
+      {canManageBackup && <Field label="Aufbewahrung Tage" value={String(draft.integrations.backup.retentionDays)} onChange={(retentionDays) => setDraft({ ...draft, integrations: { ...draft.integrations, backup: { ...draft.integrations.backup, retentionDays: Number(retentionDays) } } })} />}
       <Save saving={saving} onClick={() => onSave(draft)} />
-    </SettingsCard>
+    </SettingsCard>}
   </div>;
 }
 

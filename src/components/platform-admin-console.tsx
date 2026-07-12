@@ -10,6 +10,15 @@ const platformLogo = "/icons/platzguide-logo.png";
 type PlatformAuditEntry = AuditEntry & { tenantName: string; tenantSlug?: string };
 type CaptchaProvider = "disabled" | "turnstile" | "hcaptcha" | "recaptcha";
 const maskedSecretPlaceholder = "••••••••••••";
+type ModuleId = "events" | "tours" | "checkins" | "rewards" | "guestGuide" | "feedback" | "push" | "occupancy";
+type PlatformModule = { id: ModuleId; label: string; description: string };
+type PlatformSettings = {
+  availableFeatures: Record<ModuleId, boolean>;
+  defaultFeatures: Record<ModuleId, boolean>;
+  tenantAdminPermissions: { integrations: boolean; analytics: boolean; storage: boolean; backup: boolean };
+  defaultIntegrations: Tenant["integrations"];
+  defaultTracking: Tenant["tracking"];
+};
 
 function slugify(value: string) {
   return value.toLowerCase().trim().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
@@ -75,6 +84,7 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
         <PlatformNavLink href="#profil" label="Profil" icon={<ShieldCheck size={18} />} />
         <PlatformNavLink href="#smtp" label="SMTP & E-Mail" icon={<Mail size={18} />} />
         <PlatformNavLink href="#captcha" label="Captcha" icon={<ShieldCheck size={18} />} />
+        <PlatformNavLink href="#vorgaben" label="Vorgaben" icon={<Database size={18} />} />
         <PlatformNavLink href="#recht" label="Rechtstexte" icon={<FileText size={18} />} />
         <PlatformNavLink href="#werkzeuge" label="Werkzeuge" icon={<Terminal size={18} />} />
         <PlatformNavLink href="#logs" label="Systemlogs" icon={<AlertTriangle size={18} />} />
@@ -149,6 +159,8 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
         <MailSettingsCard onConfiguredChange={setMailConfigured} />
 
         <CaptchaSettingsCard />
+
+        <PlatformDefaultsCard />
 
         <LegalSettingsCard />
 
@@ -301,6 +313,92 @@ function LegalSettingsCard() {
         <button disabled={state.loading} className="rounded-xl bg-[#173c32] px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{state.loading ? "Speichert …" : "Rechtstexte speichern"}</button>
         <Link href="/rechtliches/impressum" target="_blank" className="rounded-xl border border-black/10 px-5 py-3 text-sm font-bold">Vorschau öffnen</Link>
       </div>
+      {state.message && <p className="rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{state.message}</p>}
+      {state.error && <p className="rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{state.error}</p>}
+    </form>
+  </AdminCard>;
+}
+
+function PlatformDefaultsCard() {
+  const [modules, setModules] = useState<PlatformModule[]>([]);
+  const [settings, setSettings] = useState<PlatformSettings | null>(null);
+  const [state, setState] = useState({ loading: true, message: "", error: "" });
+
+  useEffect(() => {
+    fetch("/api/admin/system/platform-settings")
+      .then((response) => response.ok ? response.json() : null)
+      .then((payload: { settings: PlatformSettings; modules: PlatformModule[] } | null) => {
+        if (payload) {
+          setSettings(payload.settings);
+          setModules(payload.modules);
+        }
+        setState({ loading: false, message: "", error: "" });
+      })
+      .catch(() => setState({ loading: false, message: "", error: "Plattformvorgaben konnten nicht geladen werden." }));
+  }, []);
+
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!settings) return;
+    setState({ loading: true, message: "", error: "" });
+    const response = await fetch("/api/admin/system/platform-settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(settings)
+    });
+    setState({ loading: false, message: response.ok ? "Plattformvorgaben gespeichert. Neue Mandanten nutzen diese Werte." : "", error: response.ok ? "" : "Plattformvorgaben konnten nicht gespeichert werden." });
+  }
+
+  if (!settings) return <AdminCard id="vorgaben" title="Modul- & Integrations-Vorgaben" icon={<Database />}><p className="text-sm text-black/55">{state.loading ? "Lade Vorgaben …" : state.error}</p></AdminCard>;
+
+  return <AdminCard id="vorgaben" title="Modul- & Integrations-Vorgaben" icon={<Database />}>
+    <p className="text-sm leading-6 text-black/55">Diese Vorgaben gelten für neu angelegte Campingplätze. Bestehende Mandanten bleiben bewusst unverändert und können von dir einzeln in der Mandantenverwaltung angepasst werden.</p>
+    <form onSubmit={save} className="space-y-5">
+      <div className="grid gap-3 lg:grid-cols-2">
+        {modules.map((module) => <article key={module.id} className="rounded-xl border border-black/10 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0"><p className="font-bold">{module.label}</p><p className="mt-1 text-xs leading-5 text-black/50">{module.description}</p></div>
+            <label className="shrink-0 text-xs font-bold text-black/45">Verfügbar<br /><input type="checkbox" checked={settings.availableFeatures[module.id]} onChange={(event) => setSettings({ ...settings, availableFeatures: { ...settings.availableFeatures, [module.id]: event.target.checked }, defaultFeatures: { ...settings.defaultFeatures, [module.id]: event.target.checked ? settings.defaultFeatures[module.id] : false } })} className="mt-2 h-5 w-5 accent-[#286551]" /></label>
+          </div>
+          <label className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-[#f7f7f4] p-3 text-sm font-bold">
+            <span>Bei neuen Mandanten aktiv</span>
+            <input type="checkbox" disabled={!settings.availableFeatures[module.id]} checked={settings.defaultFeatures[module.id]} onChange={(event) => setSettings({ ...settings, defaultFeatures: { ...settings.defaultFeatures, [module.id]: event.target.checked } })} className="h-5 w-5 accent-[#286551] disabled:opacity-40" />
+          </label>
+        </article>)}
+      </div>
+
+      <div className="rounded-2xl bg-[#f7f7f4] p-4">
+        <h3 className="font-display text-2xl">Mandantenadmin-Rechte</h3>
+        <p className="mt-1 text-sm leading-6 text-black/55">Hier legst du fest, ob Betreiber eigene Integrationsbereiche sehen dürfen. SMTP bleibt immer global und ist nie mandantenänderbar.</p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          {[
+            ["integrations", "Integrationen-Menü sichtbar"],
+            ["analytics", "Analytics/Matomo änderbar"],
+            ["storage", "Upload-Regeln änderbar"],
+            ["backup", "Backup-Hinweise sichtbar"]
+          ].map(([key, label]) => <label key={key} className="flex items-center justify-between gap-3 rounded-xl bg-white p-3 text-sm font-bold">
+            <span>{label}</span>
+            <input type="checkbox" checked={settings.tenantAdminPermissions[key as keyof PlatformSettings["tenantAdminPermissions"]]} onChange={(event) => setSettings({ ...settings, tenantAdminPermissions: { ...settings.tenantAdminPermissions, [key]: event.target.checked } })} className="h-5 w-5 accent-[#286551]" />
+          </label>)}
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-2xl border border-black/10 p-4">
+          <h3 className="font-display text-2xl">Analytics-Default</h3>
+          <label className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-[#f7f7f4] p-3 text-sm font-bold"><span>Matomo standardmäßig aktiv</span><input type="checkbox" checked={settings.defaultTracking.enabled} onChange={(event) => setSettings({ ...settings, defaultTracking: { ...settings.defaultTracking, enabled: event.target.checked, provider: event.target.checked ? "matomo" : "none" } })} className="h-5 w-5 accent-[#286551]" /></label>
+          <MailInput label="Matomo-URL" value={settings.defaultTracking.matomoUrl} onChange={(matomoUrl) => setSettings({ ...settings, defaultTracking: { ...settings.defaultTracking, matomoUrl } })} />
+          <MailInput label="Matomo-Site-ID" value={settings.defaultTracking.matomoSiteId} onChange={(matomoSiteId) => setSettings({ ...settings, defaultTracking: { ...settings.defaultTracking, matomoSiteId, measurementId: matomoSiteId } })} />
+        </div>
+        <div className="rounded-2xl border border-black/10 p-4">
+          <h3 className="font-display text-2xl">Upload & Backup-Default</h3>
+          <MailInput label="Max. Upload MB" type="number" value={String(settings.defaultIntegrations.storage.maxUploadMb)} onChange={(maxUploadMb) => setSettings({ ...settings, defaultIntegrations: { ...settings.defaultIntegrations, storage: { ...settings.defaultIntegrations.storage, maxUploadMb: Number(maxUploadMb) } } })} />
+          <label className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-[#f7f7f4] p-3 text-sm font-bold"><span>Backups für neue Mandanten markieren</span><input type="checkbox" checked={settings.defaultIntegrations.backup.enabled} onChange={(event) => setSettings({ ...settings, defaultIntegrations: { ...settings.defaultIntegrations, backup: { ...settings.defaultIntegrations.backup, enabled: event.target.checked } } })} className="h-5 w-5 accent-[#286551]" /></label>
+          <MailInput label="Backup-Zeitplan" value={settings.defaultIntegrations.backup.schedule} onChange={(schedule) => setSettings({ ...settings, defaultIntegrations: { ...settings.defaultIntegrations, backup: { ...settings.defaultIntegrations.backup, schedule } } })} />
+        </div>
+      </div>
+
+      <button disabled={state.loading} className="rounded-xl bg-[#173c32] px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{state.loading ? "Speichert …" : "Vorgaben speichern"}</button>
       {state.message && <p className="rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{state.message}</p>}
       {state.error && <p className="rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{state.error}</p>}
     </form>

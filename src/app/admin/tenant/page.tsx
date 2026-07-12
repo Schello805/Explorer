@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { AdminConsole } from "@/components/admin-console";
 import { SystemError } from "@/components/system-error";
 import { canViewTenant, isPlatformAdminSession, verifyAdminSession } from "@/lib/auth";
+import { readPlatformSettings } from "@/lib/platform-settings";
 import { listTenants } from "@/lib/tenant-store";
 
 export const dynamic = "force-dynamic";
@@ -30,5 +31,6 @@ export default async function TenantAdminPage({ searchParams }: { searchParams: 
     if (isPlatformAdmin) redirect("/admin/platform");
     return <SystemError title="Noch kein Campingplatz zugeordnet" message="Deinem Zugang ist noch kein Campingplatz zugeordnet." />;
   }
-  return <AdminConsole tenant={tenant} tenants={visibleTenants} adminEmail={session.email} isPlatformAdmin={isPlatformAdmin} />;
+  const platformSettings = await readPlatformSettings();
+  return <AdminConsole tenant={tenant} tenants={visibleTenants} adminEmail={session.email} isPlatformAdmin={isPlatformAdmin} tenantAdminPermissions={platformSettings.tenantAdminPermissions} />;
 }
