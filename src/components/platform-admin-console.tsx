@@ -9,6 +9,7 @@ import type { AuditEntry, Tenant } from "@/lib/types";
 const platformLogo = "/icons/platzguide-logo.png";
 type PlatformAuditEntry = AuditEntry & { tenantName: string; tenantSlug?: string };
 type CaptchaProvider = "disabled" | "turnstile" | "hcaptcha" | "recaptcha";
+const maskedSecretPlaceholder = "••••••••••••";
 
 function slugify(value: string) {
   return value.toLowerCase().trim().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
@@ -307,9 +308,10 @@ function CaptchaSettingsCard() {
       <MailInput label="Öffentlicher Site-Key" value={config.siteKey} onChange={(siteKey) => setConfig({ ...config, siteKey })} placeholder="Site-Key aus der Anbieter-Konsole" />
       {config.provider !== "disabled" && <label className="text-sm font-bold">{secretLabel}
         <span className="mt-1 flex rounded-xl border border-black/10 bg-white">
-          <input type={showSecrets ? "text" : "password"} value={secretValue} onChange={(event) => updateSecret(event.target.value)} placeholder={hasSecret ? "Gespeichert · leer lassen zum Behalten" : "Secret-Key"} className="min-w-0 flex-1 rounded-xl px-3 py-3 outline-none" />
+          <input type={showSecrets ? "text" : "password"} value={secretValue} onChange={(event) => updateSecret(event.target.value)} placeholder={hasSecret ? maskedSecretPlaceholder : "Secret-Key"} autoComplete="new-password" className="min-w-0 flex-1 rounded-xl px-3 py-3 outline-none" />
           <button title="Secret anzeigen oder verbergen." type="button" onClick={() => setShowSecrets((value) => !value)} className="px-3 text-[#286551]">{showSecrets ? <EyeOff size={18} /> : <Eye size={18} />}</button>
         </span>
+        {hasSecret && !secretValue && <span className="mt-1 block text-xs font-normal text-black/45">Gespeichert. Nur ausfüllen, wenn du den Secret-Key ändern möchtest.</span>}
       </label>}
       <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-3 text-sm font-bold">
         <span>Öffentliche Registrierung aktivieren</span>
@@ -452,9 +454,10 @@ function MailSettingsCard({ onConfiguredChange }: { onConfiguredChange: (configu
         <MailInput label="SMTP Benutzer" value={config.smtpUser} onChange={(smtpUser) => setConfig({ ...config, smtpUser })} placeholder="user@example.de" />
         <label className="text-sm font-bold">SMTP Passwort
           <span className="mt-1 flex rounded-xl border border-black/10 bg-white">
-            <input type={showPassword ? "text" : "password"} value={config.smtpPassword} onChange={(event) => setConfig({ ...config, smtpPassword: event.target.value })} placeholder={config.hasSmtpPassword ? "Gespeichert · leer lassen zum Behalten" : "Passwort"} className="min-w-0 flex-1 rounded-xl px-3 py-3 outline-none" />
+            <input type={showPassword ? "text" : "password"} value={config.smtpPassword} onChange={(event) => setConfig({ ...config, smtpPassword: event.target.value })} placeholder={config.hasSmtpPassword ? maskedSecretPlaceholder : "Passwort"} autoComplete="new-password" className="min-w-0 flex-1 rounded-xl px-3 py-3 outline-none" />
             <button title="Passwort anzeigen oder verbergen." type="button" onClick={() => setShowPassword((value) => !value)} className="px-3 text-[#286551]">{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
           </span>
+          {config.hasSmtpPassword && !config.smtpPassword && <span className="mt-1 block text-xs font-normal text-black/45">Gespeichert. Nur ausfüllen, wenn du das Passwort ändern möchtest.</span>}
         </label>
         <MailInput label="Absender E-Mail" type="email" value={config.mailFrom} onChange={(mailFrom) => setConfig({ ...config, mailFrom })} required />
         <MailInput label="Absender Name" value={config.mailFromName} onChange={(mailFromName) => setConfig({ ...config, mailFromName })} required />
