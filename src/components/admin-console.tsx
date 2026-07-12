@@ -71,6 +71,13 @@ export function AdminConsole({ tenant, tenants, adminEmail, isPlatformAdmin = fa
     setEditing(null);
   }
 
+  async function placeTemplateStation(station: Station, position: { x: number; y: number }) {
+    const [centerLongitude, centerLatitude] = currentTenant.map.center;
+    const longitude = Number((centerLongitude + (position.x - 50) / 5000).toFixed(6));
+    const latitude = Number((centerLatitude - (position.y - 50) / 5000).toFixed(6));
+    await persistStation({ ...station, isTemplate: false, position, longitude, latitude });
+  }
+
   async function saveTenant(nextTenant: Tenant) {
     setSaving(true);
     const response = await fetch("/api/admin/tenant", {
@@ -148,7 +155,7 @@ export function AdminConsole({ tenant, tenants, adminEmail, isPlatformAdmin = fa
       </header>
       <div className="mx-auto min-w-0 w-[90%] py-5">
         {section === "overview" && <Overview key={currentTenant.id} tenant={currentTenant} stations={stations} stationCount={stations.filter((station) => !station.isTemplate).length} templateCount={stations.filter((station) => station.isTemplate).length} onNavigate={setSection} />}
-        {section === "stations" && <Stations key={currentTenant.id} tenant={currentTenant} stations={stations} onEdit={setEditing} onRemove={removeStation} onCreate={() => setEditing(blankStation(currentTenant.id))} onImport={importStations} />}
+        {section === "stations" && <Stations key={currentTenant.id} tenant={currentTenant} stations={stations} onEdit={setEditing} onRemove={removeStation} onCreate={() => setEditing(blankStation(currentTenant.id))} onImport={importStations} onPlaceTemplate={placeTemplateStation} />}
         {section === "categories" && <Categories key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "tenants" && <TenantSettings key={currentTenant.id} tenant={currentTenant} saving={saving} platformAdmin={isPlatformAdmin} onLifecycle={updateTenantLifecycle} onSave={saveTenant} />}
         {section === "branding" && <Branding key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
@@ -206,9 +213,9 @@ function SetupAssistant({ tenant, stations, onNavigate }: { tenant: Tenant; stat
   const steps = [
     { id: "tenants", label: "Kontakt & Link", done: Boolean(tenant.contact.email && tenant.slug) },
     { id: "branding", label: "Logo & Farben", done: Boolean(tenant.name && tenant.theme.primary && tenant.theme.surface) },
-    { id: "tenants", label: "Karte oder Platzplan", done: tenant.map.configured !== false },
-    { id: "stations", label: "Stationen aktivieren", done: activeStations.length > 0 },
-    { id: "legal", label: "Rechtstexte prüfen", done: Boolean(tenant.legal.imprint && tenant.legal.privacy && tenant.legal.cookies) },
+    { id: "tenants", label: "Platzfläche festlegen", done: tenant.map.configured !== false },
+    { id: "stations", label: "Standardstationen platzieren", done: activeStations.length >= 3 },
+    { id: "stations", label: "Details prüfen", done: activeStations.some((station) => station.description.trim().length > 20) },
     { id: "integrations", label: "Benachrichtigungen prüfen", done: true },
     { id: "billing", label: "Veröffentlichung freigeben", done: tenant.billing.publicEnabled }
   ];
@@ -230,21 +237,75 @@ function SetupAssistant({ tenant, stations, onNavigate }: { tenant: Tenant; stat
 
 function Metric({ label, value, note, icon }: { label: string; value: string; note: string; icon: React.ReactNode }) { return <div className="rounded-2xl bg-white p-5 shadow-sm"><div className="flex justify-between text-[#286551]"><p className="text-xs font-bold uppercase tracking-widest text-[#1b302a]/40">{label}</p>{icon}</div><p className="mt-4 font-display text-4xl">{value}</p><p className="mt-1 text-xs text-[#1b302a]/45">{note}</p></div>; }
 
-function Stations({ tenant, stations, onEdit, onRemove, onCreate, onImport }: { tenant: Tenant; stations: Station[]; onEdit: (station: Station) => void; onRemove: (id: string) => void; onCreate: () => void; onImport: (stations: Station[]) => Promise<void> }) {
+function Stations({ tenant, stations, onEdit, onRemove, onCreate, onImport, onPlaceTemplate }: { tenant: Tenant; stations: Station[]; onEdit: (station: Station) => void; onRemove: (id: string) => void; onCreate: () => void; onImport: (stations: Station[]) => Promise<void>; onPlaceTemplate: (station: Station, position: { x: number; y: number }) => Promise<void> }) {
+  const activeStations = stations.filter((station) => !station.isTemplate);
   return <section className="animate-enter overflow-hidden rounded-xl bg-white shadow-sm">
     <div className="flex flex-col gap-3 border-b border-black/5 p-4 sm:flex-row sm:items-center sm:justify-between">
       <div><h2 className="font-display text-2xl">Stationen</h2><p className="text-sm text-black/45">Orte, Services und Erlebnisse</p></div>
       <div className="flex flex-wrap gap-2"><StationImport tenantId={tenant.id} categories={tenant.categories} onImport={onImport} /><button onClick={onCreate} className="rounded-xl bg-[#173c32] px-4 py-3 text-sm font-bold text-white"><Plus size={17} className="mr-2 inline" /> Neue Station</button></div>
     </div>
+    <StationTemplateDropZone stations={stations} mapConfig={tenant.map} onEdit={onEdit} onPlaceTemplate={onPlaceTemplate} />
     <div className="p-3"><label className="flex w-full items-center gap-2 rounded-lg bg-[#f2f3ef] px-3 py-2.5"><Search size={17} /><input title="Filtere die Stationsliste nach Name, Kategorie oder Beschreibung." aria-label="Station suchen" placeholder="Station suchen …" className="min-w-0 w-full bg-transparent outline-none" /></label></div>
     <div className="divide-y divide-black/5 lg:hidden">
-      {stations.map((station) => <article key={station.id} className="p-4">
+      {activeStations.map((station) => <article key={station.id} className="p-4">
         <div className="flex min-w-0 items-start justify-between gap-3"><div className="min-w-0"><h3 className="break-words font-bold">{station.name}</h3><p className="mt-1 text-xs text-black/50">{station.categoryId} · {station.openingHours}</p></div><StationBadge station={station} /></div>
         <div className="mt-3 flex gap-4 text-sm"><button onClick={() => onEdit(station)} className="font-bold text-[#286551]">Bearbeiten</button><button onClick={() => onRemove(station.id)} className="text-red-600">Löschen</button></div>
       </article>)}
     </div>
-    <div className="hidden overflow-x-auto lg:block"><table className="w-full min-w-[720px] text-left text-sm"><thead className="border-y border-black/5 bg-[#fafaf8] text-xs uppercase tracking-wider text-black/40"><tr><th className="px-4 py-2">Station</th><th>Kategorie</th><th>Status</th><th>Öffnungszeiten</th><th className="px-4 text-right">Aktion</th></tr></thead><tbody>{stations.map((station) => <tr key={station.id} className="border-b border-black/5"><td className="px-4 py-3 font-bold">{station.name}</td><td>{station.categoryId}</td><td><StationBadge station={station} /></td><td className="text-black/55">{station.openingHours}</td><td className="px-4 text-right"><button onClick={() => onEdit(station)} className="font-bold text-[#286551]">Bearbeiten</button><button onClick={() => onRemove(station.id)} className="ml-4 text-red-600">Löschen</button></td></tr>)}</tbody></table></div>
+    <div className="hidden overflow-x-auto lg:block"><table className="w-full min-w-[720px] text-left text-sm"><thead className="border-y border-black/5 bg-[#fafaf8] text-xs uppercase tracking-wider text-black/40"><tr><th className="px-4 py-2">Station</th><th>Kategorie</th><th>Status</th><th>Öffnungszeiten</th><th className="px-4 text-right">Aktion</th></tr></thead><tbody>{activeStations.map((station) => <tr key={station.id} className="border-b border-black/5"><td className="px-4 py-3 font-bold">{station.name}</td><td>{station.categoryId}</td><td><StationBadge station={station} /></td><td className="text-black/55">{station.openingHours}</td><td className="px-4 text-right"><button onClick={() => onEdit(station)} className="font-bold text-[#286551]">Bearbeiten</button><button onClick={() => onRemove(station.id)} className="ml-4 text-red-600">Löschen</button></td></tr>)}</tbody></table></div>
   </section>;
+}
+
+function StationTemplateDropZone({ stations, mapConfig, onEdit, onPlaceTemplate }: { stations: Station[]; mapConfig: Tenant["map"]; onEdit: (station: Station) => void; onPlaceTemplate: (station: Station, position: { x: number; y: number }) => Promise<void> }) {
+  const dropRef = useRef<HTMLDivElement>(null);
+  const [placingId, setPlacingId] = useState<string | null>(null);
+  const templates = stations.filter((station) => station.isTemplate);
+  const placedStations = stations.filter((station) => !station.isTemplate);
+
+  async function place(station: Station, position: { x: number; y: number }) {
+    setPlacingId(station.id);
+    await onPlaceTemplate(station, position);
+    setPlacingId(null);
+  }
+
+  function dropStation(event: React.DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    const station = templates.find((item) => item.id === event.dataTransfer.getData("text/plain"));
+    const bounds = dropRef.current?.getBoundingClientRect();
+    if (!station || !bounds) return;
+    const x = Math.min(96, Math.max(4, ((event.clientX - bounds.left) / bounds.width) * 100));
+    const y = Math.min(92, Math.max(8, ((event.clientY - bounds.top) / bounds.height) * 100));
+    void place(station, { x: Math.round(x), y: Math.round(y) });
+  }
+
+  return <div className="grid gap-4 border-b border-black/5 p-4 xl:grid-cols-[320px_1fr]">
+    <div className="rounded-2xl bg-[#f7f7f4] p-4">
+      <p className="text-xs font-bold uppercase tracking-widest text-[#286551]">Schnellstart</p>
+      <h3 className="mt-2 font-display text-2xl">Standardstationen platzieren</h3>
+      <p className="mt-2 text-sm leading-6 text-black/55">Ziehe eine Vorlage auf die Karte. Auf dem Smartphone tippe einfach auf „Platzieren“ und verschiebe sie danach im Editor exakt.</p>
+      <div className="mt-4 space-y-2">
+        {templates.length === 0 && <p className="rounded-xl bg-white p-3 text-sm text-black/55">Alle Vorlagen sind aktiviert. Neue Orte kannst du jederzeit über „Neue Station“ anlegen.</p>}
+        {templates.map((station, index) => <div key={station.id} draggable onDragStart={(event) => event.dataTransfer.setData("text/plain", station.id)} className="cursor-grab rounded-xl border border-black/10 bg-white p-3 active:cursor-grabbing">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0"><p className="truncate font-bold">{station.name}</p><p className="mt-1 text-xs text-black/45">{station.shortDescription || "Vorlage aktivieren und bearbeiten"}</p></div>
+            <StationBadge station={station} />
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold">
+            <button onClick={() => place(station, { x: 28 + (index % 3) * 18, y: 34 + (index % 2) * 24 })} disabled={placingId === station.id} className="rounded-lg bg-[#173c32] px-3 py-2 text-white disabled:opacity-60">{placingId === station.id ? "Platziert …" : "Platzieren"}</button>
+            <button onClick={() => onEdit(station)} className="rounded-lg border border-black/10 px-3 py-2 text-[#286551]">Vorlage bearbeiten</button>
+          </div>
+        </div>)}
+      </div>
+    </div>
+    <div ref={dropRef} onDrop={dropStation} onDragOver={(event) => event.preventDefault()} className="relative min-h-[340px] overflow-hidden rounded-2xl border-4 border-white bg-[#dce9cf] shadow-inner map-texture">
+      {mapConfig.sitePlan?.imageUrl && <Image src={mapConfig.sitePlan.imageUrl} alt="Platzplan" fill className="object-cover opacity-80" />}
+      <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1.5 text-xs font-bold text-[#173c32] shadow-sm">Karte / Platzplan</div>
+      <div className="absolute bottom-4 left-4 right-4 rounded-xl bg-white/90 p-3 text-xs leading-5 text-black/60 shadow-sm">Die Position wird direkt gespeichert. Für GPS-Feinjustierung öffne danach die Station und setze den Marker exakt auf der Kartengrundlage.</div>
+      {placedStations.map((station) => <button key={station.id} onClick={() => onEdit(station)} style={{ left: `${station.position.x}%`, top: `${station.position.y}%` }} className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#173c32] px-3 py-2 text-xs font-bold text-white shadow-lg ring-4 ring-white/90">
+        {station.name}
+      </button>)}
+    </div>
+  </div>;
 }
 
 function StationBadge({ station }: { station: Station }) {

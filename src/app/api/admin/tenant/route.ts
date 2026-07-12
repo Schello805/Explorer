@@ -3,7 +3,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { canManageTenant, isPlatformAdminSession, verifyAdminSession } from "@/lib/auth";
 import { resolveAdminTenant } from "@/lib/admin-tenant-auth";
+import { sendMail, tenantAdminUrl, tenantPublicUrl } from "@/lib/mail";
 import { listTenants, saveTenantConfiguration } from "@/lib/tenant-store";
+import type { Tenant } from "@/lib/types";
 
 const uuid = z.string().uuid();
 const categorySchema = z.object({ id: z.string().min(1), name: z.string().min(1).max(80), icon: z.string().max(80), color: z.string().max(40) });
@@ -114,7 +116,13 @@ export async function POST(request: Request) {
   const safeTenant = platformAdmin
     ? { ...parsed.data, email: targetTenant.email, integrations: { ...parsed.data.integrations, mail: targetTenant.integrations.mail } }
     : restrictTenantAdminWrite(parsed.data as typeof targetTenant, targetTenant);
+  const previousBilling = targetTenant.billing;
   const tenant = await saveTenantConfiguration(targetTenant.id, safeTenant as typeof targetTenant, authorization.session.email);
+  if (platformAdmin && JSON.stringify(previousBilling) !== JSON.stringify(tenant.billing)) {
+    await sendBillingUpdateMails(tenant, authorization.session.email).catch((error) => {
+      console.warn("Abo-Mail konnte nicht gesendet werden.", error);
+    });
+  }
   return NextResponse.json(tenant);
 }
 
@@ -139,3 +147,42 @@ function restrictTenantAdminWrite(nextTenant: TenantPayload, currentTenant: Tena
     privacyRequests: currentTenant.privacyRequests
   };
 }
+
+async function sendBillingUpdateMails(tenant: Tenant, actorEmail: string) {
+  if (!process.env.SMTP_HOST || !process.env.MAIL_FROM) return;
+  const recipients = [...new Set(tenant.users
+    .filter((user) => user.role === "tenant-owner" || user.role === "tenant-editor")
+    .map((user) => user.email))];
+  if (recipients.length === 0) return;
+  const publicState = tenant.billing.publicEnabled && tenant.billing.status === "active"
+    ? "Besucher-App ist öffentlich sichtbar"
+    : "Besucher-App ist noch nicht öffentlich sichtbar";
+  const subject = tenant.billing.publicEnabled && tenant.billing.status === "active"
+    ? `Platzguide freigeschaltet · ${tenant.name}`
+    : `Abo aktualisiert · ${tenant.name}`;
+  await Promise.all(recipients.map((email) => sendMail({
+    to: email,
+    subject,
+    eyebrow: "Abo & Veröffentlichung",
+    title: publicState,
+    intro: `Die Abo- und Veröffentlichungsdaten für ${tenant.name} wurden aktualisiert.\n\nDu kannst deinen Platzguide weiterhin im Adminbereich pflegen.`,
+    text: `Abo aktualisiert für ${tenant.name}\n\nStatus: ${billingStatusLabel[tenant.billing.status]}\nPaket: ${tenant.billing.plan}\nBesucher-App: ${publicState}\n\nAdminbereich: ${tenantAdminUrl(tenant.slug)}\nBesucheransicht: ${tenantPublicUrl(tenant.slug)}`,
+    actionLabel: "Adminbereich öffnen",
+    actionUrl: tenantAdminUrl(tenant.slug),
+    rows: [
+      { label: "Campingplatz", value: tenant.name },
+      { label: "Paket", value: tenant.billing.plan === "pro" ? "Pro" : "Starter" },
+      { label: "Status", value: billingStatusLabel[tenant.billing.status] },
+      { label: "Besucher-App", value: publicState },
+      { label: "Ausgelöst von", value: actorEmail },
+      { label: "Öffentlicher Link", value: tenantPublicUrl(tenant.slug) }
+    ]
+  })));
+}
+
+const billingStatusLabel: Record<Tenant["billing"]["status"], string> = {
+  trial: "Testphase",
+  active: "Aktiv",
+  past_due: "Zahlung offen",
+  blocked: "Gesperrt"
+};
