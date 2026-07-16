@@ -6,6 +6,7 @@ import path from "node:path";
 import postgres from "postgres";
 import { applyBillingPlan } from "@/lib/billing";
 import { appUrl, sendMail, tenantAdminUrl, tenantPublicUrl } from "@/lib/mail";
+import { getAdminEmail } from "@/lib/auth";
 import { applyPlatformSettingsToTenant } from "@/lib/platform-settings";
 import { markUnpublishedChanges } from "@/lib/publishing";
 import { createDefaultStationTemplates, tenantDefaults } from "@/lib/tenant-defaults";
@@ -338,6 +339,7 @@ export async function createTenantInstance(input: {
       await sql.end();
     }
     if (shouldSendVerificationEmail) await sendTenantVerificationMail(tenant, input.ownerEmail, verificationToken);
+    await notifyPlatformAdminAboutTenant(tenant, input.ownerEmail, input.actorEmail).catch((error) => console.warn("Superadmin-Mail für neuen Campingplatz konnte nicht gesendet werden.", error));
     return tenant;
   }
 
@@ -345,7 +347,31 @@ export async function createTenantInstance(input: {
   localTenants.push(tenant);
   await writeLocalTenants(localTenants);
   if (shouldSendVerificationEmail) await sendTenantVerificationMail(tenant, input.ownerEmail, verificationToken);
+  await notifyPlatformAdminAboutTenant(tenant, input.ownerEmail, input.actorEmail).catch((error) => console.warn("Superadmin-Mail für neuen Campingplatz konnte nicht gesendet werden.", error));
   return tenant;
+}
+
+async function notifyPlatformAdminAboutTenant(tenant: Tenant, ownerEmail: string, actorEmail?: string) {
+  const adminEmail = getAdminEmail();
+  await sendMail({
+    to: adminEmail,
+    tenantSlug: tenant.slug,
+    subject: `Neuer Campingplatz angelegt · ${tenant.name}`,
+    eyebrow: "Neuer Mandant",
+    title: "Ein neuer Campingplatz wurde erstellt.",
+    intro: `${tenant.name} wurde in Platzguide angelegt.\n\nBitte prüfe den neuen Mandanten, Paketstatus, Veröffentlichung und ggf. die ersten Einstellungen.`,
+    text: `Neuer Campingplatz angelegt: ${tenant.name}\n\nBetreiber/Admin: ${ownerEmail}\nErstellt durch: ${actorEmail ?? ownerEmail}\nBesucherlink: ${tenantPublicUrl(tenant.slug)}\nAdminbereich: ${tenantAdminUrl(tenant.slug)}`,
+    actionLabel: "Mandant prüfen",
+    actionUrl: tenantAdminUrl(tenant.slug),
+    rows: [
+      { label: "Campingplatz", value: tenant.name },
+      { label: "Link-Kürzel", value: tenant.slug },
+      { label: "Mandantenadmin", value: ownerEmail.toLowerCase() },
+      { label: "Erstellt durch", value: actorEmail ?? ownerEmail },
+      { label: "Besucherlink", value: tenantPublicUrl(tenant.slug) }
+    ],
+    footerNote: "Diese interne Benachrichtigung wurde an den Platzguide-Superadmin gesendet."
+  });
 }
 
 export async function verifyTenantUserEmail(token: string) {
