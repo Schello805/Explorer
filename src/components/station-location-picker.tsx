@@ -53,7 +53,7 @@ export function StationLocationPicker({ mapConfig, longitude, latitude, onChange
         zoom: Math.max(mapConfig.zoom, 17),
         attributionControl: false
       });
-      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+      map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
       map.addControl(new maplibregl.AttributionControl({
         compact: true,
         customAttribution: "© OpenStreetMap-Mitwirkende · OpenFreeMap"

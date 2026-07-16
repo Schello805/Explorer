@@ -64,7 +64,7 @@ export function CampMap({
         zoom,
         attributionControl: false
       });
-      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
+      map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "bottom-right");
       map.addControl(new maplibregl.AttributionControl({
         compact: true,
         customAttribution: "© OpenStreetMap-Mitwirkende · OpenFreeMap"
