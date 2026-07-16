@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { Crosshair, MapPinned, RotateCcw, Search } from "lucide-react";
 import maplibregl from "maplibre-gl";
 import type { StyleSpecification } from "maplibre-gl";
+import { boundsCenter, boundsCorners, defaultBounds, normalizeBounds, resizeBoundsFromCorner, validBounds, type Bounds } from "@/lib/map-bounds";
 import type { Tenant } from "@/lib/types";
 
 const rasterMapStyle: StyleSpecification = {
@@ -19,7 +20,6 @@ const rasterMapStyle: StyleSpecification = {
   layers: [{ id: "osm", type: "raster", source: "osm" }]
 };
 
-type Bounds = [[number, number], [number, number]];
 type GeocodeResult = {
   label: string;
   center: [number, number];
@@ -78,9 +78,7 @@ export function CampAreaPicker({ mapConfig, onChange }: {
         .addTo(map);
       marker.on("dragend", () => {
         const movedPoint = marker.getLngLat();
-        const corners = boundsCorners(nextBounds);
-        corners[index] = [movedPoint.lng, movedPoint.lat];
-        commitBounds(boundsFromCorners(corners), "Fläche aktualisiert.");
+        commitBounds(resizeBoundsFromCorner(nextBounds, index, [movedPoint.lng, movedPoint.lat]), "Fläche aktualisiert.");
       });
       return marker;
     });
@@ -306,43 +304,6 @@ function boundsFeature(bounds: Bounds) {
       coordinates: [[...boundsCorners(bounds), boundsCorners(bounds)[0]]]
     }
   };
-}
-
-function boundsCorners(bounds: Bounds): [number, number][] {
-  const [[west, south], [east, north]] = bounds;
-  return [[west, north], [east, north], [east, south], [west, south]];
-}
-
-function boundsFromCorners(corners: [number, number][]): Bounds {
-  const longitudes = corners.map((point) => point[0]);
-  const latitudes = corners.map((point) => point[1]);
-  return normalizeBounds([
-    [Math.min(...longitudes), Math.min(...latitudes)],
-    [Math.max(...longitudes), Math.max(...latitudes)]
-  ]);
-}
-
-function normalizeBounds(bounds: Bounds): Bounds {
-  const west = Math.max(-180, Math.min(bounds[0][0], bounds[1][0]));
-  const east = Math.min(180, Math.max(bounds[0][0], bounds[1][0]));
-  const south = Math.max(-90, Math.min(bounds[0][1], bounds[1][1]));
-  const north = Math.min(90, Math.max(bounds[0][1], bounds[1][1]));
-  return [[west, south], [east, north]];
-}
-
-function defaultBounds(center: [number, number]): Bounds {
-  return normalizeBounds([
-    [center[0] - 0.004, center[1] - 0.0025],
-    [center[0] + 0.004, center[1] + 0.0025]
-  ]);
-}
-
-function boundsCenter(bounds: Bounds): [number, number] {
-  return [(bounds[0][0] + bounds[1][0]) / 2, (bounds[0][1] + bounds[1][1]) / 2];
-}
-
-function validBounds(value: unknown): value is Bounds {
-  return Array.isArray(value) && value.length === 2 && value.every((point) => Array.isArray(point) && point.length === 2 && point.every(Number.isFinite));
 }
 
 function fitBounds(map: import("maplibre-gl").Map, bounds: Bounds) {

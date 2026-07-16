@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { canManageTenant, canViewTenant } from "@/lib/auth";
 import { applyBillingPlan } from "@/lib/billing";
+import { resizeBoundsFromCorner } from "@/lib/map-bounds";
 import { rateLimit } from "@/lib/rate-limit";
 import { isPlatformHost, onlyTenantRecords, resolveTenant } from "@/lib/tenant-resolver";
 import { createDefaultStationTemplates, tenantDefaults } from "@/lib/tenant-defaults";
@@ -109,5 +110,13 @@ describe("tenant isolation", () => {
     expect(mapStripeSubscriptionStatus("past_due")).toBe("past_due");
     expect(mapStripeSubscriptionStatus("unpaid")).toBe("past_due");
     expect(mapStripeSubscriptionStatus("canceled")).toBe("blocked");
+  });
+
+  it("resizes the camp area rectangle from every corner", () => {
+    const bounds: [[number, number], [number, number]] = [[10, 49], [11, 50]];
+    expect(resizeBoundsFromCorner(bounds, 0, [10.2, 50.2])).toEqual([[10.2, 49], [11, 50.2]]);
+    expect(resizeBoundsFromCorner(bounds, 1, [10.8, 50.2])).toEqual([[10, 49], [10.8, 50.2]]);
+    expect(resizeBoundsFromCorner(bounds, 2, [10.8, 48.8])).toEqual([[10, 48.8], [10.8, 50]]);
+    expect(resizeBoundsFromCorner(bounds, 3, [10.2, 48.8])).toEqual([[10.2, 48.8], [11, 50]]);
   });
 });
