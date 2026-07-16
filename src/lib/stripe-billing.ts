@@ -3,6 +3,7 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { appUrl } from "@/lib/mail";
 import { applyBillingPlan } from "@/lib/billing";
+import { mapStripeSubscriptionStatus } from "@/lib/stripe-status";
 import { listTenants, saveTenantConfiguration } from "@/lib/tenant-store";
 import type { Tenant } from "@/lib/types";
 
@@ -173,12 +174,6 @@ function planFromPrice(priceId?: string) {
   if (!priceId) return "starter";
   if ([process.env.STRIPE_PRO_MONTHLY_PRICE_ID, process.env.STRIPE_PRO_YEARLY_PRICE_ID].includes(priceId)) return "pro";
   return "starter";
-}
-
-function mapStripeSubscriptionStatus(status?: string): Tenant["billing"]["status"] {
-  if (status === "active" || status === "trialing") return "active";
-  if (status === "past_due" || status === "unpaid") return "past_due";
-  return "blocked";
 }
 
 function stringValue(value: unknown) {

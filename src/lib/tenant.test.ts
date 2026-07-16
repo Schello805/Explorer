@@ -4,6 +4,7 @@ import { applyBillingPlan } from "@/lib/billing";
 import { rateLimit } from "@/lib/rate-limit";
 import { isPlatformHost, onlyTenantRecords, resolveTenant } from "@/lib/tenant-resolver";
 import { createDefaultStationTemplates, tenantDefaults } from "@/lib/tenant-defaults";
+import { mapStripeSubscriptionStatus } from "@/lib/stripe-status";
 import type { Tenant } from "@/lib/types";
 
 function testTenant(input: Pick<Tenant, "id" | "slug" | "hosts" | "name">): Tenant {
@@ -100,5 +101,13 @@ describe("tenant isolation", () => {
     expect(pro.billing.monthlyPriceCents).toBe(1999);
     expect(pro.billing.storageLimitMb).toBe(1024);
     expect(pro.billing.supportResponseHours).toBe(6);
+  });
+
+  it("maps Stripe subscription statuses to publication states", () => {
+    expect(mapStripeSubscriptionStatus("active")).toBe("active");
+    expect(mapStripeSubscriptionStatus("trialing")).toBe("active");
+    expect(mapStripeSubscriptionStatus("past_due")).toBe("past_due");
+    expect(mapStripeSubscriptionStatus("unpaid")).toBe("past_due");
+    expect(mapStripeSubscriptionStatus("canceled")).toBe("blocked");
   });
 });

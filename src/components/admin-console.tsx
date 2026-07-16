@@ -758,6 +758,7 @@ function Profile({ tenant, adminEmail }: { tenant: Tenant; adminEmail: string })
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [showPasswords, setShowPasswords] = useState(false);
+  const [bundleText, setBundleText] = useState("");
   const [state, setState] = useState({ loading: false, message: "", error: "" });
 
   async function saveAccount(event: React.FormEvent<HTMLFormElement>) {
@@ -788,6 +789,24 @@ function Profile({ tenant, adminEmail }: { tenant: Tenant; adminEmail: string })
     });
     alert(response.ok ? "Löschanfrage wurde protokolliert." : "Löschanfrage fehlgeschlagen.");
   }
+  async function importBundle() {
+    if (!bundleText.trim()) return alert("Bitte zuerst den Inhalt einer Platzguide-Exportdatei einfügen.");
+    if (!confirm("Bundle in diesen Campingplatz importieren? Der aktuelle Entwurf wird überschrieben, die Live-Version bleibt unverändert.")) return;
+    let bundle: unknown;
+    try {
+      bundle = JSON.parse(bundleText);
+    } catch {
+      alert("Die eingefügte Datei ist kein gültiges JSON.");
+      return;
+    }
+    const response = await fetch("/api/admin/tenant/bundle", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tenantId: tenant.id, bundle })
+    });
+    alert(response.ok ? "Bundle importiert. Die Seite wird neu geladen." : "Import fehlgeschlagen.");
+    if (response.ok) window.location.reload();
+  }
   return <div className="grid gap-6 xl:grid-cols-2">
     <SettingsCard title="Profil & Zugang" description="Ändere deine Login-E-Mail oder setze ein neues Passwort. Zur Sicherheit ist immer dein aktuelles Passwort nötig.">
       <form onSubmit={saveAccount} className="space-y-4">
@@ -804,6 +823,11 @@ function Profile({ tenant, adminEmail }: { tenant: Tenant; adminEmail: string })
       <a href="/api/admin/privacy" target="_blank" className="inline-flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold"><Download size={17} /> Datenexport öffnen</a>
       <button onClick={requestDeletion} className="ml-0 inline-flex items-center gap-2 rounded-xl border border-red-200 px-4 py-3 text-sm font-bold text-red-700 sm:ml-2"><Trash2 size={17} /> Löschanfrage erstellen</button>
       <p className="text-xs leading-5 text-black/45">Produktive Löschung sollte erst nach Identitätsprüfung und Backup-Frist final ausgeführt werden.</p>
+    </SettingsCard>
+    <SettingsCard title="Platzguide Export & Import" description="Exportiert Inhalte als Platzguide-Bundle. Stripe, Rechnungen, Passwörter und Auditlog werden nicht exportiert. Import landet als Entwurf.">
+      <a href={`/api/admin/tenant/bundle?tenantId=${tenant.id}`} target="_blank" className="inline-flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold"><Download size={17} /> Platzguide-Bundle exportieren</a>
+      <textarea value={bundleText} onChange={(event) => setBundleText(event.target.value)} rows={5} placeholder="Exportdatei hier einfügen, um sie als Entwurf zu importieren." className="mt-3 w-full rounded-xl border border-black/10 bg-[#fafaf8] p-3 text-sm" />
+      <button onClick={importBundle} className="rounded-xl bg-[#173c32] px-5 py-3 text-sm font-bold text-white">Bundle importieren</button>
     </SettingsCard>
   </div>;
 }

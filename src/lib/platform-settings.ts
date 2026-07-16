@@ -2,6 +2,7 @@ import "server-only";
 
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { readPlatformConfig, writePlatformConfig } from "@/lib/platform-config-store";
 import { tenantDefaults } from "@/lib/tenant-defaults";
 import type { Tenant } from "@/lib/types";
 
@@ -48,6 +49,8 @@ export const platformSettingsDefaults: PlatformSettings = {
 };
 
 export async function readPlatformSettings(): Promise<PlatformSettings> {
+  const databaseSettings = await readPlatformConfig<PlatformSettings>("platform-settings");
+  if (databaseSettings) return normalizePlatformSettings(databaseSettings);
   try {
     return normalizePlatformSettings(JSON.parse(await readFile(settingsFile, "utf8")));
   } catch {
@@ -57,6 +60,8 @@ export async function readPlatformSettings(): Promise<PlatformSettings> {
 
 export async function writePlatformSettings(settings: PlatformSettings) {
   const normalized = normalizePlatformSettings(settings);
+  const databaseSettings = await writePlatformConfig("platform-settings", normalized);
+  if (databaseSettings) return normalized;
   await mkdir(dataDirectory, { recursive: true });
   const temporaryFile = `${settingsFile}.tmp`;
   await writeFile(temporaryFile, JSON.stringify(normalized, null, 2));
