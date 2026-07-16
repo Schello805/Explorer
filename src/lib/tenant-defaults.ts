@@ -118,10 +118,14 @@ Es gilt deutsches Recht. Sollten einzelne Regelungen unwirksam sein, bleibt die 
     setupServicePriceCents: 19900,
     customDomainEnabled: false
   },
+  publishing: {
+    hasUnpublishedChanges: false,
+    versions: []
+  },
   integrations: {
     mail: { provider: "global-smtp" },
     captcha: { provider: "disabled", siteKey: "", requiredForSignup: true },
-    storage: { provider: "local", maxUploadMb: 100, allowedTypes: ["image/png", "image/jpeg", "image/webp", "application/pdf", "video/mp4", "video/webm"] },
+    storage: { provider: "local", maxUploadMb: 30, allowedTypes: ["image/png", "image/jpeg", "image/webp", "application/pdf", "video/mp4", "video/webm"] },
     database: { provider: "postgresql", rlsRequired: true },
     backup: { enabled: false, schedule: "daily", retentionDays: 14 }
   },

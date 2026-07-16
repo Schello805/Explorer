@@ -9,11 +9,24 @@ import type { Tenant } from "@/lib/types";
 
 const uuid = z.string().uuid();
 const categorySchema = z.object({ id: z.string().min(1), name: z.string().min(1).max(80), icon: z.string().max(80), color: z.string().max(40) });
+const publicSnapshotSchema = z.object({
+  id: z.string(),
+  version: z.number(),
+  createdAt: z.string(),
+  createdBy: z.string(),
+  tenant: z.unknown()
+});
 const tenantSchema = z.object({
   id: uuid,
   slug: z.string().min(2).max(80).regex(/^[a-z0-9-]+$/),
   hosts: z.array(z.string().min(1).max(255)),
   archivedAt: z.string().optional(),
+  publishing: z.object({
+    hasUnpublishedChanges: z.boolean(),
+    publishedAt: z.string().optional(),
+    publishedVersion: z.number().optional(),
+    versions: z.array(publicSnapshotSchema)
+  }).optional(),
   name: z.string().min(2).max(120),
   tagline: z.string().max(180),
   logoMark: z.string().min(1).max(4),
@@ -62,7 +75,16 @@ const tenantSchema = z.object({
     supportResponseHours: z.number().min(1).max(168),
     setupServiceBooked: z.boolean().optional(),
     setupServicePriceCents: z.number().min(0).max(100000),
-    customDomainEnabled: z.boolean()
+    customDomainEnabled: z.boolean(),
+    stripeCustomerId: z.string().optional(),
+    stripeSubscriptionId: z.string().optional(),
+    stripePriceId: z.string().optional(),
+    stripeCurrentPeriodEnd: z.string().optional(),
+    stripeLatestInvoiceUrl: z.string().optional(),
+    stripeCheckoutSessionId: z.string().optional(),
+    stripePortalUrl: z.string().optional(),
+    manualOverride: z.boolean().optional(),
+    manualOverrideReason: z.string().optional()
   }),
   integrations: z.object({
     mail: z.object({

@@ -7,6 +7,7 @@ import postgres from "postgres";
 import { applyBillingPlan } from "@/lib/billing";
 import { appUrl, sendMail, tenantAdminUrl, tenantPublicUrl } from "@/lib/mail";
 import { applyPlatformSettingsToTenant } from "@/lib/platform-settings";
+import { markUnpublishedChanges } from "@/lib/publishing";
 import { createDefaultStationTemplates, tenantDefaults } from "@/lib/tenant-defaults";
 import type { AuditEntry, FeedbackMessage, PrivacyRequest, Station, Tenant } from "@/lib/types";
 
@@ -67,6 +68,12 @@ function normalizeTenant(tenant: Tenant): Tenant {
     tracking: { ...tenantDefaults.tracking, ...tenant.tracking },
     email: { ...tenantDefaults.email, ...tenant.email },
     billing: { ...tenantDefaults.billing, ...tenant.billing },
+    publishing: {
+      hasUnpublishedChanges: tenant.publishing?.hasUnpublishedChanges ?? false,
+      publishedAt: tenant.publishing?.publishedAt,
+      publishedVersion: tenant.publishing?.publishedVersion,
+      versions: tenant.publishing?.versions ?? []
+    },
     integrations: {
       mail: normalizeMailIntegration(tenant.integrations?.mail),
       captcha: { ...tenantDefaults.integrations.captcha, ...tenant.integrations?.captcha },
@@ -147,7 +154,8 @@ async function canReachDatabase(databaseUrl: string, timeoutMs: number) {
 
 export async function saveTenantConfiguration(tenantId: string, tenant: Tenant, actorEmail: string) {
   if (tenant.id !== tenantId) throw new Error("Cross-tenant configuration write rejected");
-  const normalized = normalizeTenant(tenant);
+  const shouldMarkDraft = !["stripe-webhook", "publish-system"].includes(actorEmail);
+  const normalized = normalizeTenant(shouldMarkDraft ? markUnpublishedChanges(tenant) : tenant);
   if (process.env.DATABASE_URL) {
     const sql = postgres(process.env.DATABASE_URL, { connect_timeout: 3, idle_timeout: 5, max: 1 });
     try {
@@ -231,6 +239,8 @@ export async function deleteTenantPermanently(tenantId: string, actorEmail: stri
     } finally {
       await sql.end();
     }
+    const tenant = (await listTenants()).find((candidate) => candidate.id === tenantId);
+    if (tenant) await saveTenantConfiguration(tenantId, markUnpublishedChanges(tenant), actorEmail);
     return;
   }
 
@@ -483,6 +493,8 @@ export async function saveStation(tenantId: string, station: Station, actorEmail
     } finally {
       await sql.end();
     }
+    const tenant = (await listTenants()).find((candidate) => candidate.id === tenantId);
+    if (tenant) await saveTenantConfiguration(tenantId, markUnpublishedChanges(tenant), actorEmail);
     return station;
   }
 
@@ -492,6 +504,7 @@ export async function saveStation(tenantId: string, station: Station, actorEmail
   const index = tenant.stations.findIndex((candidate) => candidate.id === station.id);
   if (index >= 0) tenant.stations[index] = station;
   else tenant.stations.unshift(station);
+  tenant.publishing = { ...(tenant.publishing ?? { versions: [] }), hasUnpublishedChanges: true };
   await writeLocalTenants(tenants);
   return station;
 }
@@ -517,6 +530,7 @@ export async function deleteStation(tenantId: string, stationId: string, actorEm
   const tenant = tenants.find((candidate) => candidate.id === tenantId);
   if (!tenant) throw new Error("Tenant not found");
   tenant.stations = tenant.stations.filter((station) => station.id !== stationId);
+  tenant.publishing = { ...(tenant.publishing ?? { versions: [] }), hasUnpublishedChanges: true };
   await writeLocalTenants(tenants);
 }
 

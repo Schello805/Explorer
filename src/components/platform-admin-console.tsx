@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Activity, AlertTriangle, CheckCircle2, Database, Eye, EyeOff, FileText, HardDrive, Mail, Plus, ShieldCheck, Terminal, Users } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle2, CreditCard, Database, Eye, EyeOff, FileText, HardDrive, Mail, Plus, ShieldCheck, Terminal, Users } from "lucide-react";
 import type { AuditEntry, Tenant } from "@/lib/types";
 
 const platformLogo = "/icons/platzguide-logo.png";
@@ -83,6 +83,8 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
         <PlatformNavLink href="#mandanten" label="Mandanten" icon={<Users size={18} />} />
         <PlatformNavLink href="#profil" label="Profil" icon={<ShieldCheck size={18} />} />
         <PlatformNavLink href="#smtp" label="SMTP & E-Mail" icon={<Mail size={18} />} />
+        <PlatformNavLink href="#rundmail" label="Rundmail" icon={<Mail size={18} />} />
+        <PlatformNavLink href="#stripe" label="Stripe" icon={<CreditCard size={18} />} />
         <PlatformNavLink href="#captcha" label="Captcha" icon={<ShieldCheck size={18} />} />
         <PlatformNavLink href="#vorgaben" label="Vorgaben" icon={<Database size={18} />} />
         <PlatformNavLink href="#recht" label="Rechtstexte" icon={<FileText size={18} />} />
@@ -157,6 +159,10 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
         <PlatformAccountCard adminEmail={adminEmail} />
 
         <MailSettingsCard onConfiguredChange={setMailConfigured} />
+
+        <BroadcastMailCard />
+
+        <StripeSettingsCard />
 
         <CaptchaSettingsCard />
 
@@ -675,6 +681,202 @@ function MailInput({ label, value, onChange, type = "text", placeholder, require
   return <label className="text-sm font-bold">{label}
     <input type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} required={required} className="mt-1 w-full rounded-xl border border-black/10 bg-white px-3 py-3" />
   </label>;
+}
+
+function BroadcastMailCard() {
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [groups, setGroups] = useState<string[]>(["trial"]);
+  const [testSent, setTestSent] = useState(false);
+  const [state, setState] = useState({ loading: false, message: "", error: "" });
+  const options = [
+    ["trial", "Testnutzer"],
+    ["starter", "Starter"],
+    ["pro", "Pro"],
+    ["active", "Aktiv"],
+    ["past_due", "Zahlung offen"],
+    ["blocked", "Gesperrt"]
+  ];
+  async function send(testOnly: boolean) {
+    setState({ loading: true, message: "", error: "" });
+    const response = await fetch("/api/admin/system/broadcast-mail", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subject, body, groups, testOnly })
+    });
+    const payload = await response.json().catch(() => null) as { recipients?: number; error?: string } | null;
+    setState({ loading: false, message: response.ok ? `${testOnly ? "Testmail" : "Rundmail"} versendet an ${payload?.recipients ?? 0} Empfänger.` : "", error: response.ok ? "" : payload?.error ?? "Rundmail konnte nicht versendet werden." });
+    if (response.ok && testOnly) setTestSent(true);
+  }
+  return <AdminCard id="rundmail" title="Rundmail" icon={<Mail />}>
+    <p className="text-sm leading-6 text-black/55">Sende Produktinfos oder wichtige Hinweise an Mandantenadmins. Vor echtem Versand muss zuerst eine Testmail an deinen Superadmin-Zugang gesendet werden.</p>
+    <div className="grid gap-2 sm:grid-cols-3">
+      {options.map(([id, label]) => <label key={id} className="flex items-center gap-2 rounded-xl border border-black/10 p-3 text-sm font-bold"><input type="checkbox" checked={groups.includes(id)} onChange={(event) => setGroups((current) => event.target.checked ? [...current, id] : current.filter((item) => item !== id))} className="h-4 w-4 accent-[#286551]" />{label}</label>)}
+    </div>
+    <MailInput label="Betreff" value={subject} onChange={(value) => { setSubject(value); setTestSent(false); }} placeholder="Wichtige Neuigkeit zu Platzguide" />
+    <label className="text-sm font-bold">Mailtext
+      <textarea value={body} onChange={(event) => { setBody(event.target.value); setTestSent(false); }} rows={6} placeholder="Kurzer, klarer Text. HTML-Scripts sind nicht erlaubt; Links bitte als normale URL einfügen." className="mt-1 w-full rounded-xl border border-black/10 bg-white px-3 py-3" />
+    </label>
+    <div className="flex flex-wrap gap-2">
+      <button type="button" disabled={state.loading} onClick={() => send(true)} className="rounded-xl border border-black/10 px-5 py-3 text-sm font-bold disabled:opacity-50">Testmail senden</button>
+      <button type="button" disabled={state.loading || !testSent} onClick={() => send(false)} className="rounded-xl bg-[#173c32] px-5 py-3 text-sm font-bold text-white disabled:opacity-50">Rundmail senden</button>
+    </div>
+    {state.message && <p className="rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{state.message}</p>}
+    {state.error && <p className="rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{state.error}</p>}
+  </AdminCard>;
+}
+
+type StripeConfig = {
+  enabled: boolean;
+  publishableKey: string;
+  secretKey: string;
+  webhookSecret: string;
+  hasSecretKey: boolean;
+  hasWebhookSecret: boolean;
+  starterMonthlyPriceId: string;
+  starterYearlyPriceId: string;
+  proMonthlyPriceId: string;
+  proYearlyPriceId: string;
+  setupServicePriceId: string;
+  taxMode: "small_business_de" | "regular_de";
+  webhookUrl: string;
+  configured: boolean;
+};
+
+function StripeSettingsCard() {
+  const [config, setConfig] = useState<StripeConfig>({
+    enabled: false,
+    publishableKey: "",
+    secretKey: "",
+    webhookSecret: "",
+    hasSecretKey: false,
+    hasWebhookSecret: false,
+    starterMonthlyPriceId: "",
+    starterYearlyPriceId: "",
+    proMonthlyPriceId: "",
+    proYearlyPriceId: "",
+    setupServicePriceId: "",
+    taxMode: "small_business_de",
+    webhookUrl: "",
+    configured: false
+  });
+  const [showSecrets, setShowSecrets] = useState(false);
+  const [state, setState] = useState({ loading: false, message: "", error: "", copied: "" });
+
+  useEffect(() => {
+    fetch("/api/admin/system/stripe-config")
+      .then((response) => response.ok ? response.json() : null)
+      .then((payload: Omit<StripeConfig, "secretKey" | "webhookSecret"> | null) => {
+        if (!payload) return;
+        setConfig({ ...payload, secretKey: "", webhookSecret: "" });
+      })
+      .catch(() => undefined);
+  }, []);
+
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setState({ loading: true, message: "", error: "", copied: "" });
+    const response = await fetch("/api/admin/system/stripe-config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(config)
+    });
+    if (!response.ok) {
+      setState({ loading: false, message: "", error: "Stripe-Konfiguration konnte nicht gespeichert werden.", copied: "" });
+      return;
+    }
+    setConfig((current) => ({
+      ...current,
+      secretKey: "",
+      webhookSecret: "",
+      hasSecretKey: current.hasSecretKey || Boolean(current.secretKey),
+      hasWebhookSecret: current.hasWebhookSecret || Boolean(current.webhookSecret),
+      configured: Boolean(current.publishableKey && (current.hasSecretKey || current.secretKey) && (current.hasWebhookSecret || current.webhookSecret))
+    }));
+    setState({ loading: false, message: "Stripe-Konfiguration gespeichert.", error: "", copied: "" });
+  }
+
+  async function copy(value: string, label: string) {
+    if (!value) return;
+    await navigator.clipboard?.writeText(value).catch(() => undefined);
+    setState((current) => ({ ...current, copied: `${label} kopiert.` }));
+  }
+
+  const requiredEvents = [
+    "checkout.session.completed",
+    "customer.subscription.created",
+    "customer.subscription.updated",
+    "customer.subscription.deleted",
+    "invoice.payment_failed",
+    "invoice.payment_succeeded"
+  ];
+  const setupSteps = [
+    { label: "Stripe-Produkte und Preise für Starter, Pro und Einrichtung angelegt", done: Boolean(config.starterMonthlyPriceId && config.starterYearlyPriceId && config.proMonthlyPriceId && config.proYearlyPriceId && config.setupServicePriceId) },
+    { label: "Öffentlicher Schlüssel eingetragen", done: Boolean(config.publishableKey) },
+    { label: "Geheimer Schlüssel gespeichert", done: config.hasSecretKey || Boolean(config.secretKey) },
+    { label: "Webhook-Endpunkt in Stripe angelegt", done: config.hasWebhookSecret || Boolean(config.webhookSecret) },
+    { label: "Kleinunternehmer-Hinweis in Stripe-Rechnungstext gepflegt", done: config.taxMode === "small_business_de" }
+  ];
+
+  return <AdminCard id="stripe" title="Stripe Billing" icon={<CreditCard />}>
+    <p className="text-sm leading-6 text-black/55">Stripe verwaltet Abos, Rechnungen, Kündigungen und Zahlungsdaten. Platzguide speichert nur Schlüssel, Price-IDs, Webhook-Status und später Stripe-Referenzen am Mandanten.</p>
+    <div className="rounded-xl bg-[#f7f7f4] p-4 text-sm leading-6 text-black/60">
+      <p className="font-bold text-[#173c32]">Beim Stripe-Setup auswählen:</p>
+      <p>Online-Zahlungen, Abonnements erstellen und Rechnungen senden. Nicht nötig sind Stripe Connect/Plattform, Vor-Ort-Zahlungen, Kartenausgabe oder Identitätsprüfung.</p>
+    </div>
+    <div className="grid gap-3 lg:grid-cols-2">
+      {setupSteps.map((step) => <p key={step.label} className="flex items-start gap-3 rounded-xl border border-black/10 p-3 text-sm"><CheckCircle2 size={18} className={step.done ? "mt-0.5 shrink-0 text-emerald-600" : "mt-0.5 shrink-0 text-black/25"} /><span>{step.label}</span></p>)}
+    </div>
+    <form onSubmit={save} className="space-y-3">
+      <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-3 text-sm font-bold">
+        <span>Stripe aktivieren</span>
+        <input type="checkbox" checked={config.enabled} onChange={(event) => setConfig({ ...config, enabled: event.target.checked })} className="h-5 w-5 accent-[#286551]" />
+      </label>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <MailInput label="Öffentlicher Schlüssel" value={config.publishableKey} onChange={(publishableKey) => setConfig({ ...config, publishableKey })} placeholder="pk_test_…" />
+        <label className="text-sm font-bold">Geheimer Schlüssel
+          <span className="mt-1 flex rounded-xl border border-black/10 bg-white">
+            <input type={showSecrets ? "text" : "password"} value={config.secretKey} onChange={(event) => setConfig({ ...config, secretKey: event.target.value })} placeholder={config.hasSecretKey ? maskedSecretPlaceholder : "sk_test_…"} autoComplete="new-password" className="min-w-0 flex-1 rounded-xl px-3 py-3 outline-none" />
+            <button title="Schlüssel anzeigen oder verbergen." type="button" onClick={() => setShowSecrets((value) => !value)} className="px-3 text-[#286551]">{showSecrets ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+          </span>
+          {config.hasSecretKey && !config.secretKey && <span className="mt-1 block text-xs font-normal text-black/45">Gespeichert. Nur ausfüllen, wenn du den Schlüssel ändern möchtest.</span>}
+        </label>
+        <label className="text-sm font-bold">Webhook Secret
+          <input type={showSecrets ? "text" : "password"} value={config.webhookSecret} onChange={(event) => setConfig({ ...config, webhookSecret: event.target.value })} placeholder={config.hasWebhookSecret ? maskedSecretPlaceholder : "whsec_…"} autoComplete="new-password" className="mt-1 w-full rounded-xl border border-black/10 bg-white px-3 py-3" />
+          {config.hasWebhookSecret && !config.webhookSecret && <span className="mt-1 block text-xs font-normal text-black/45">Gespeichert. Nur ausfüllen, wenn du das Webhook-Secret ändern möchtest.</span>}
+        </label>
+        <label className="text-sm font-bold">Steuermodus
+          <select value={config.taxMode} onChange={(event) => setConfig({ ...config, taxMode: event.target.value as StripeConfig["taxMode"] })} className="mt-1 w-full rounded-xl border border-black/10 bg-white px-3 py-3">
+            <option value="small_business_de">Kleinunternehmerregelung §19 UStG</option>
+            <option value="regular_de">Regelbesteuerung Deutschland</option>
+          </select>
+        </label>
+      </div>
+      <div className="rounded-xl border border-black/10 p-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-bold">Webhook-URL für Stripe</p>
+            <code className="mt-1 block break-all rounded-lg bg-[#f7f7f4] px-3 py-2 text-xs">{config.webhookUrl || "/api/stripe/webhook"}</code>
+          </div>
+          <button type="button" onClick={() => copy(config.webhookUrl, "Webhook-URL")} className="rounded-xl border border-black/10 px-4 py-3 text-sm font-bold">Kopieren</button>
+        </div>
+        <p className="mt-3 text-xs font-bold uppercase tracking-widest text-black/35">Benötigte Events</p>
+        <div className="mt-2 flex flex-wrap gap-2">{requiredEvents.map((event) => <button key={event} type="button" onClick={() => copy(event, event)} className="rounded-full bg-[#f7f7f4] px-3 py-1.5 text-xs font-bold text-black/60">{event}</button>)}</div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <MailInput label="Starter monatlich Price-ID" value={config.starterMonthlyPriceId} onChange={(starterMonthlyPriceId) => setConfig({ ...config, starterMonthlyPriceId })} placeholder="price_…" />
+        <MailInput label="Starter jährlich Price-ID" value={config.starterYearlyPriceId} onChange={(starterYearlyPriceId) => setConfig({ ...config, starterYearlyPriceId })} placeholder="price_…" />
+        <MailInput label="Pro monatlich Price-ID" value={config.proMonthlyPriceId} onChange={(proMonthlyPriceId) => setConfig({ ...config, proMonthlyPriceId })} placeholder="price_…" />
+        <MailInput label="Pro jährlich Price-ID" value={config.proYearlyPriceId} onChange={(proYearlyPriceId) => setConfig({ ...config, proYearlyPriceId })} placeholder="price_…" />
+        <MailInput label="Einrichtungsservice Price-ID" value={config.setupServicePriceId} onChange={(setupServicePriceId) => setConfig({ ...config, setupServicePriceId })} placeholder="price_…" />
+      </div>
+      <div className="rounded-xl bg-[#fff7e6] p-3 text-xs leading-5 text-[#73510d]">Für Kleinunternehmer in Stripe als Rechnungstext hinterlegen: „Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.“</div>
+      <button disabled={state.loading} className="rounded-xl bg-[#173c32] px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{state.loading ? "Speichert …" : "Stripe speichern"}</button>
+      {state.message && <p className="rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{state.message}</p>}
+      {state.error && <p className="rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{state.error}</p>}
+      {state.copied && <p className="rounded-xl bg-[#f7f7f4] p-3 text-sm font-bold text-[#286551]">{state.copied}</p>}
+    </form>
+  </AdminCard>;
 }
 
 function Metric({ icon, label, value, note }: { icon: React.ReactNode; label: string; value: string; note: string }) {

@@ -38,7 +38,7 @@ export function applyBillingPlan(tenant: Tenant, plan: Tenant["billing"]["plan"]
       ...tenant.integrations,
       storage: {
         ...tenant.integrations.storage,
-        maxUploadMb: Math.min(100, definition.storageLimitMb)
+        maxUploadMb: Math.min(30, definition.storageLimitMb)
       }
     }
   };

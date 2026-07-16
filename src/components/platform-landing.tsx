@@ -164,7 +164,7 @@ export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey }
     </section>
 
     <footer className="mx-auto flex w-[min(90%,1180px)] flex-col gap-3 border-t border-[#18332b]/10 py-6 text-sm text-[#18332b]/55 sm:flex-row sm:items-center sm:justify-between">
-      <p>© Michael Schellenberger · Platzguide · Revision {revision}</p>
+      <p>© Michael Schellenberger · Platzguide · Version v{revision}</p>
       <nav className="flex flex-wrap gap-x-5 gap-y-2">
         <Link href="/rechtliches/impressum">Impressum</Link>
         <Link href="/rechtliches/datenschutz">Datenschutz</Link>

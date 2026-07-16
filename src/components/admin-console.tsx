@@ -43,7 +43,7 @@ export function AdminConsole({ tenant, tenants, adminEmail, isPlatformAdmin = fa
   const [editing, setEditing] = useState<Station | null>(null);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
-  const tenantAdminHiddenSections = new Set(["modules", "billing", "security", ...(tenantAdminPermissions?.integrations ? [] : ["integrations"])]);
+  const tenantAdminHiddenSections = new Set(["modules", "security", ...(tenantAdminPermissions?.integrations ? [] : ["integrations"])]);
   const platformNavigation = isPlatformAdmin
     ? navigation.filter((item) => tenantAdminHiddenSections.has(item.id))
     : [];
@@ -97,6 +97,49 @@ export function AdminConsole({ tenant, tenants, adminEmail, isPlatformAdmin = fa
     setStations(saved.stations);
     setAvailableTenants((items) => items.map((item) => item.id === saved.id ? saved : item));
     flashNotice("Änderungen gespeichert.");
+  }
+
+  async function publishCurrentTenant() {
+    setSaving(true);
+    const response = await fetch("/api/admin/tenant/publish", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tenantId: currentTenant.id, action: "publish" })
+    });
+    setSaving(false);
+    const payload = await response.json().catch(() => null) as Tenant | { error?: string } | null;
+    if (!response.ok) {
+      alert(payload && "error" in payload ? payload.error : "Veröffentlichung fehlgeschlagen.");
+      return;
+    }
+    const saved = payload as Tenant;
+    setCurrentTenant(saved);
+    setStations(saved.stations);
+    setAvailableTenants((items) => items.map((item) => item.id === saved.id ? saved : item));
+    flashNotice("Änderungen veröffentlicht.");
+  }
+
+  async function rollbackCurrentTenant() {
+    const latest = currentTenant.publishing?.versions?.[0];
+    if (!latest) return;
+    if (!confirm(`Auf Version ${latest.version} zurückrollen? Der aktuelle Entwurf wird überschrieben.`)) return;
+    setSaving(true);
+    const response = await fetch("/api/admin/tenant/publish", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tenantId: currentTenant.id, action: "rollback", versionId: latest.id })
+    });
+    setSaving(false);
+    const payload = await response.json().catch(() => null) as Tenant | { error?: string } | null;
+    if (!response.ok) {
+      alert(payload && "error" in payload ? payload.error : "Rollback fehlgeschlagen.");
+      return;
+    }
+    const saved = payload as Tenant;
+    setCurrentTenant(saved);
+    setStations(saved.stations);
+    setAvailableTenants((items) => items.map((item) => item.id === saved.id ? saved : item));
+    flashNotice("Letzte Live-Version als Entwurf wiederhergestellt.");
   }
 
   function flashNotice(message: string) {
@@ -160,7 +203,7 @@ export function AdminConsole({ tenant, tenants, adminEmail, isPlatformAdmin = fa
 
     <main className="min-w-0 overflow-x-hidden lg:ml-60">
       <header className="sticky top-0 z-20 flex min-h-16 flex-wrap items-center justify-between gap-3 border-b border-black/5 bg-[#f2f3ef]/90 px-[5%] py-2 backdrop-blur-xl">
-        <button aria-label="Menü öffnen" className="shrink-0 lg:hidden" onClick={() => setMenuOpen(true)}><Menu /></button><div className="hidden min-w-0 sm:block"><p className="text-xs font-bold uppercase tracking-widest text-[#1b302a]/40">Plattformverwaltung</p><h1 className="truncate font-display text-2xl">{visibleNavigation.find((item) => item.id === section)?.label}</h1></div><div className="flex min-w-0 flex-1 justify-end gap-2"><select title="Wähle aus, welchen Campingplatz du gerade ansehen oder bearbeiten möchtest." aria-label="Mandant wählen" value={currentTenant.id} onChange={(event) => { const nextTenant = availableTenants.find((item) => item.id === event.target.value); if (!nextTenant) return; setCurrentTenant(nextTenant); setStations(nextTenant.stations); setEditing(null); }} className="min-w-0 max-w-[46vw] rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm font-bold"><option value="" disabled>Mandant wählen</option>{availableTenants.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><a href={`/c/${currentTenant.slug}`} target="_blank" className="rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm font-bold"><Globe2 size={16} className="sm:mr-2 sm:inline" /><span className="hidden sm:inline">Besucheransicht</span></a><button aria-label="Benachrichtigungen" className="rounded-xl border border-black/10 bg-white p-2.5"><Bell size={18} /></button></div>
+        <button aria-label="Menü öffnen" className="shrink-0 lg:hidden" onClick={() => setMenuOpen(true)}><Menu /></button><div className="hidden min-w-0 sm:block"><p className="text-xs font-bold uppercase tracking-widest text-[#1b302a]/40">Plattformverwaltung</p><h1 className="truncate font-display text-2xl">{visibleNavigation.find((item) => item.id === section)?.label}</h1></div><div className="flex min-w-0 flex-1 justify-end gap-2"><PublishStatus tenant={currentTenant} /><select title="Wähle aus, welchen Campingplatz du gerade ansehen oder bearbeiten möchtest." aria-label="Mandant wählen" value={currentTenant.id} onChange={(event) => { const nextTenant = availableTenants.find((item) => item.id === event.target.value); if (!nextTenant) return; setCurrentTenant(nextTenant); setStations(nextTenant.stations); setEditing(null); }} className="min-w-0 max-w-[34vw] rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm font-bold"><option value="" disabled>Mandant wählen</option>{availableTenants.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><button onClick={publishCurrentTenant} disabled={saving || currentTenant.billing.status !== "active" || !currentTenant.billing.publicEnabled} className="rounded-xl bg-[#173c32] px-3 py-2.5 text-sm font-bold text-white disabled:opacity-40">Veröffentlichen</button><button onClick={rollbackCurrentTenant} disabled={saving || !currentTenant.publishing?.versions?.length} className="hidden rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm font-bold disabled:opacity-40 sm:block">Rollback</button><a href={`/c/${currentTenant.slug}`} target="_blank" className="rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm font-bold"><Globe2 size={16} className="sm:mr-2 sm:inline" /><span className="hidden sm:inline">Vorschau</span></a><button aria-label="Benachrichtigungen" className="rounded-xl border border-black/10 bg-white p-2.5"><Bell size={18} /></button></div>
       </header>
       <div className="mx-auto min-w-0 w-[90%] py-5">
         {section === "overview" && <Overview key={currentTenant.id} tenant={currentTenant} stations={stations} stationCount={stations.filter((station) => !station.isTemplate).length} templateCount={stations.filter((station) => station.isTemplate).length} onNavigate={setSection} />}
@@ -172,7 +215,7 @@ export function AdminConsole({ tenant, tenants, adminEmail, isPlatformAdmin = fa
         {section === "legal" && <Legal key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "modules" && <Modules key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "integrations" && <Integrations key={currentTenant.id} tenant={currentTenant} saving={saving} platformAdmin={isPlatformAdmin} tenantAdminPermissions={tenantAdminPermissions} onSave={saveTenant} />}
-        {section === "billing" && <Billing key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
+        {section === "billing" && <Billing key={currentTenant.id} tenant={currentTenant} saving={saving} platformAdmin={isPlatformAdmin} onSave={saveTenant} />}
         {section === "events" && <Events key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "tours" && <Tours key={currentTenant.id} tenant={currentTenant} stations={stations} saving={saving} onSave={saveTenant} />}
         {section === "rewards" && <Rewards key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
@@ -194,6 +237,14 @@ function NavGroup({ title, items, section, onSelect }: { title: string; items: t
     <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[.18em] text-white/35">{title}</p>
     <div className="space-y-1">{items.map((item) => <button key={item.id} onClick={() => onSelect(item.id)} className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-bold transition", section === item.id ? "bg-white text-[#173c32]" : "text-white/65 hover:bg-white/10 hover:text-white")}><item.icon size={18} />{item.label}</button>)}</div>
   </div>;
+}
+
+function PublishStatus({ tenant }: { tenant: Tenant }) {
+  const hasLive = Boolean(tenant.publishing?.versions?.length);
+  const changed = Boolean(tenant.publishing?.hasUnpublishedChanges);
+  const label = !hasLive ? "Nicht live" : changed ? "Entwurf geändert" : "Live";
+  const className = !hasLive ? "bg-amber-50 text-amber-700" : changed ? "bg-orange-50 text-orange-700" : "bg-emerald-50 text-emerald-700";
+  return <span className={cn("hidden shrink-0 rounded-xl px-3 py-2.5 text-xs font-bold lg:inline-flex", className)}>{label}</span>;
 }
 
 function Overview({ tenant, stations, stationCount, templateCount, onNavigate }: { tenant: Tenant; stations: Station[]; stationCount: number; templateCount: number; onNavigate: (id: string) => void }) {
@@ -514,13 +565,42 @@ function Integrations({ tenant, saving, platformAdmin, tenantAdminPermissions, o
   </div>;
 }
 
-function Billing({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) {
+function Billing({ tenant, saving, platformAdmin, onSave }: { tenant: Tenant; saving: boolean; platformAdmin: boolean; onSave: (tenant: Tenant) => void }) {
   const [draft, setDraft] = useState(tenant);
+  const [billingState, setBillingState] = useState({ loading: "", error: "" });
   const usedMb = storageUsedMb(draft);
   const yearlyPrice = Math.round(draft.billing.monthlyPriceCents * 12 * (1 - draft.billing.yearlyDiscountPercent / 100));
   const frontendState = draft.billing.publicEnabled && draft.billing.status === "active" ? "öffentlich sichtbar" : "nur für Admins/Betreiber testbar";
   function choosePlan(plan: Tenant["billing"]["plan"]) {
     setDraft((current) => applyBillingPlan(current, plan));
+  }
+  async function startCheckout(plan: Tenant["billing"]["plan"], interval: "monthly" | "yearly") {
+    setBillingState({ loading: `${plan}-${interval}`, error: "" });
+    const response = await fetch("/api/billing/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tenantId: tenant.id, plan, interval })
+    });
+    const payload = await response.json().catch(() => null) as { url?: string; error?: string } | null;
+    if (!response.ok || !payload?.url) {
+      setBillingState({ loading: "", error: payload?.error ?? "Stripe Checkout konnte nicht geöffnet werden." });
+      return;
+    }
+    window.location.assign(payload.url);
+  }
+  async function openPortal() {
+    setBillingState({ loading: "portal", error: "" });
+    const response = await fetch("/api/billing/portal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tenantId: tenant.id })
+    });
+    const payload = await response.json().catch(() => null) as { url?: string; error?: string } | null;
+    if (!response.ok || !payload?.url) {
+      setBillingState({ loading: "", error: payload?.error ?? "Stripe Portal konnte nicht geöffnet werden." });
+      return;
+    }
+    window.location.assign(payload.url);
   }
   return <div className="space-y-6">
     <div className="grid gap-4 md:grid-cols-4">
@@ -529,9 +609,9 @@ function Billing({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; 
       <Metric label="Speicher" value={`${usedMb} MB`} note={`von ${draft.billing.storageLimitMb} MB genutzt`} icon={<ImageIcon />} />
       <Metric label="Support" value={`${draft.billing.supportResponseHours}h`} note="max. Reaktionszeit" icon={<LifeBuoy />} />
     </div>
-    <SettingsCard title="Pakete" description="Der Betreiber kann einrichten und testen. Öffentlich wird die App erst nach manueller Freigabe.">
+    <SettingsCard title="Pakete" description="Du kannst den Platz kostenlos einrichten und testen. Öffentlich wird die Besucher-App erst mit aktivem Abo oder Superadmin-Freigabe.">
       <div className="grid gap-4 lg:grid-cols-2">
-        {Object.entries(billingPlans).map(([id, plan]) => <button key={id} onClick={() => choosePlan(id as Tenant["billing"]["plan"])} className={cn("rounded-2xl border p-4 text-left transition", draft.billing.plan === id ? "border-[#173c32] bg-[#eff3ec]" : "border-black/10 bg-white hover:border-[#173c32]/40")}>
+        {Object.entries(billingPlans).map(([id, plan]) => <article key={id} className={cn("rounded-2xl border p-4 text-left transition", draft.billing.plan === id ? "border-[#173c32] bg-[#eff3ec]" : "border-black/10 bg-white")}>
           <p className="text-xs font-bold uppercase tracking-widest text-[#286551]">{plan.label}</p>
           <p className="mt-2 font-display text-4xl">{formatEuro(plan.monthlyPriceCents)}</p>
           <p className="text-sm text-black/55">monatlich kündbar</p>
@@ -539,25 +619,39 @@ function Billing({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; 
             <li>{plan.storageLimitMb >= 1024 ? "1 GB" : `${plan.storageLimitMb} MB`} Speicher</li>
             <li>Support innerhalb {plan.supportResponseHours}h</li>
             <li>{plan.customDomainEnabled ? "Eigene Domain möglich" : "Platzguide-Link inklusive"}</li>
-            <li>Öffentlich erst nach manueller Freigabe</li>
+            <li>Öffentlich nach aktivem Abo und Veröffentlichung</li>
           </ul>
-        </button>)}
+          {platformAdmin
+            ? <button onClick={() => choosePlan(id as Tenant["billing"]["plan"])} className="mt-4 rounded-xl border border-black/10 px-4 py-3 text-sm font-bold">Als Paket setzen</button>
+            : <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              <button onClick={() => startCheckout(id as Tenant["billing"]["plan"], "monthly")} disabled={Boolean(billingState.loading)} className="rounded-xl bg-[#173c32] px-4 py-3 text-sm font-bold text-white disabled:opacity-50">{billingState.loading === `${id}-monthly` ? "Öffnet …" : "Monatlich buchen"}</button>
+              <button onClick={() => startCheckout(id as Tenant["billing"]["plan"], "yearly")} disabled={Boolean(billingState.loading)} className="rounded-xl border border-black/10 px-4 py-3 text-sm font-bold disabled:opacity-50">{billingState.loading === `${id}-yearly` ? "Öffnet …" : "Jährlich buchen"}</button>
+            </div>}
+        </article>)}
       </div>
       <div className="rounded-xl bg-[#f7f7f4] p-4 text-sm leading-6 text-black/65">
         <p><strong>Jahreszahlung:</strong> {draft.billing.yearlyDiscountPercent}% Rabatt, aktuell {formatEuro(yearlyPrice)} pro Jahr.</p>
         <p><strong>Einrichtungsservice:</strong> optional durch Michael für {formatEuro(draft.billing.setupServicePriceCents)} einmalig.</p>
+        <p><strong>Rechnungen & Kündigung:</strong> werden sicher über Stripe verwaltet. Zahlungsdaten speichert Platzguide nicht.</p>
       </div>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" onClick={openPortal} disabled={billingState.loading === "portal" || !draft.billing.stripeCustomerId} className="rounded-xl border border-black/10 px-5 py-3 text-sm font-bold disabled:opacity-50">{billingState.loading === "portal" ? "Öffnet …" : "Abo & Rechnungen verwalten"}</button>
+        {draft.billing.stripeLatestInvoiceUrl && <a href={draft.billing.stripeLatestInvoiceUrl} target="_blank" rel="noreferrer" className="rounded-xl border border-black/10 px-5 py-3 text-sm font-bold">Letzte Rechnung öffnen</a>}
+      </div>
+      {billingState.error && <p className="rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{billingState.error}</p>}
     </SettingsCard>
-    <SettingsCard title="Veröffentlichung" description="Du steuerst manuell, ob Besucher den Platzguide-Link sehen dürfen.">
-      <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-4 text-sm font-bold"><span className="inline-flex items-center gap-1.5">Besucher-App öffentlich freischalten<HelpBubble text="Erst wenn dieses Feld aktiv ist und der Status aktiv ist, können anonyme Besucher den Platzguide sehen." /></span><input title="Erst wenn dieses Feld aktiv ist und der Status aktiv ist, können anonyme Besucher den Platzguide sehen." type="checkbox" checked={draft.billing.publicEnabled} onChange={(event) => setDraft({ ...draft, billing: { ...draft.billing, publicEnabled: event.target.checked, status: event.target.checked ? "active" : draft.billing.status } })} className="h-5 w-5 accent-[#286551]" /></label>
-      <Select label="Status" value={draft.billing.status} options={["trial", "active", "past_due", "blocked"]} onChange={(status) => setDraft({ ...draft, billing: { ...draft.billing, status: status as Tenant["billing"]["status"], publicEnabled: status === "active" ? draft.billing.publicEnabled : false } })} />
-      <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-4 text-sm font-bold"><span className="inline-flex items-center gap-1.5">Einrichtungsservice gebucht<HelpBubble text="Markiert, ob die optionale Einrichtung durch dich gebucht wurde." /></span><input title="Markiert, ob die optionale Einrichtung durch dich gebucht wurde." type="checkbox" checked={draft.billing.setupServiceBooked ?? false} onChange={(event) => setDraft({ ...draft, billing: { ...draft.billing, setupServiceBooked: event.target.checked } })} className="h-5 w-5 accent-[#286551]" /></label>
+    <SettingsCard title="Veröffentlichung" description={platformAdmin ? "Du kannst Status und Freigabe manuell übersteuern." : "Eine Zahlung schaltet nur die Berechtigung frei. Öffentlich wird dein Platz erst nach bewusster Veröffentlichung."}>
+      {platformAdmin && <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-4 text-sm font-bold"><span className="inline-flex items-center gap-1.5">Besucher-App öffentlich freischalten<HelpBubble text="Erst wenn dieses Feld aktiv ist und der Status aktiv ist, können anonyme Besucher den Platzguide sehen." /></span><input title="Erst wenn dieses Feld aktiv ist und der Status aktiv ist, können anonyme Besucher den Platzguide sehen." type="checkbox" checked={draft.billing.publicEnabled} onChange={(event) => setDraft({ ...draft, billing: { ...draft.billing, publicEnabled: event.target.checked, status: event.target.checked ? "active" : draft.billing.status, manualOverride: true } })} className="h-5 w-5 accent-[#286551]" /></label>}
+      {platformAdmin && <Select label="Status" value={draft.billing.status} options={["trial", "active", "past_due", "blocked"]} onChange={(status) => setDraft({ ...draft, billing: { ...draft.billing, status: status as Tenant["billing"]["status"], publicEnabled: status === "active" ? draft.billing.publicEnabled : false, manualOverride: true } })} />}
+      {platformAdmin && <Field label="Interner Freigabegrund" value={draft.billing.manualOverrideReason ?? ""} onChange={(manualOverrideReason) => setDraft({ ...draft, billing: { ...draft.billing, manualOverrideReason, manualOverride: Boolean(manualOverrideReason) } })} />}
+      {platformAdmin && <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-4 text-sm font-bold"><span className="inline-flex items-center gap-1.5">Einrichtungsservice gebucht<HelpBubble text="Markiert, ob die optionale Einrichtung durch dich gebucht wurde." /></span><input title="Markiert, ob die optionale Einrichtung durch dich gebucht wurde." type="checkbox" checked={draft.billing.setupServiceBooked ?? false} onChange={(event) => setDraft({ ...draft, billing: { ...draft.billing, setupServiceBooked: event.target.checked } })} className="h-5 w-5 accent-[#286551]" /></label>}
       <div className="rounded-xl bg-[#f7f7f4] p-4 text-sm leading-6 text-black/65">
         <p><strong>Speicher:</strong> {usedMb} MB von {draft.billing.storageLimitMb} MB genutzt.</p>
         <p><strong>Frontend:</strong> {frontendState}.</p>
-        <p><strong>Statuslogik:</strong> Nur <code>active</code> plus Freischaltung macht die Besucher-App öffentlich. <code>trial</code>, <code>past_due</code> und <code>blocked</code> bleiben gesperrt.</p>
+        <p><strong>Statuslogik:</strong> Nur <code>active</code> plus Veröffentlichung macht die Besucher-App öffentlich. <code>trial</code>, <code>past_due</code> und <code>blocked</code> bleiben gesperrt.</p>
+        {draft.billing.stripeCurrentPeriodEnd && <p><strong>Aktueller Stripe-Zeitraum bis:</strong> {new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(new Date(draft.billing.stripeCurrentPeriodEnd))}</p>}
       </div>
-      <Save saving={saving} onClick={() => onSave(draft)} />
+      {platformAdmin && <Save saving={saving} onClick={() => onSave(draft)} />}
     </SettingsCard>
   </div>;
 }

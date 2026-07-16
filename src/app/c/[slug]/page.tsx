@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { TenantExperience } from "@/components/tenant-experience";
+import { canShowPublicTenant } from "@/lib/publishing";
 import { listTenants } from "@/lib/tenant-store";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     title: `${tenant.name} · Platzguide`,
     description: tenant.tagline,
     alternates: { canonical: `/c/${tenant.slug}` },
+    robots: canShowPublicTenant(tenant) ? undefined : { index: false, follow: false },
     openGraph: {
       title: `${tenant.name} · Platzguide`,
       description: tenant.tagline,

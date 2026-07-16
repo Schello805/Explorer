@@ -7,6 +7,7 @@ import { resolveAdminTenant } from "@/lib/admin-tenant-auth";
 import { listTenants, saveTenantConfiguration } from "@/lib/tenant-store";
 
 const fallbackTypes = ["image/png", "image/jpeg", "image/webp", "application/pdf", "video/mp4", "video/webm"];
+const blockedExtensions = new Set([".svg", ".html", ".htm", ".js", ".mjs", ".exe", ".sh", ".php", ".bat", ".cmd", ".jar", ".zip"]);
 
 async function authorize(requestedTenantId?: string) {
   const cookieStore = await cookies();
@@ -31,22 +32,26 @@ export async function POST(request: Request) {
   const purpose = String(formData.get("purpose") ?? "media");
   if (!(file instanceof File)) return NextResponse.json({ error: "Datei fehlt" }, { status: 400 });
 
-  const maxUploadMb = authorization.tenant.integrations.storage.maxUploadMb || Number(process.env.UPLOAD_MAX_MB ?? 10);
+  const maxUploadMb = authorization.tenant.integrations.storage.maxUploadMb || Number(process.env.UPLOAD_MAX_MB ?? 30);
   const allowedTypes = authorization.tenant.integrations.storage.allowedTypes.length
     ? authorization.tenant.integrations.storage.allowedTypes
     : fallbackTypes;
   const usedBytes = authorization.tenant.media.reduce((sum, asset) => sum + (asset.sizeBytes ?? 0), 0);
   const limitBytes = authorization.tenant.billing.storageLimitMb * 1024 * 1024;
+  const originalExtension = path.extname(file.name).toLowerCase();
+  if (blockedExtensions.has(originalExtension)) return NextResponse.json({ error: "Dieser Dateityp ist aus Sicherheitsgründen nicht erlaubt." }, { status: 415 });
   if (file.size > maxUploadMb * 1024 * 1024) return NextResponse.json({ error: `Datei ist größer als ${maxUploadMb} MB` }, { status: 413 });
   if (usedBytes + file.size > limitBytes) return NextResponse.json({ error: `Speicherlimit von ${authorization.tenant.billing.storageLimitMb} MB erreicht` }, { status: 413 });
   if (!allowedTypes.includes(file.type)) return NextResponse.json({ error: "Dateityp ist nicht erlaubt" }, { status: 415 });
+  const buffer = Buffer.from(await file.arrayBuffer());
+  if (!matchesMagicBytes(file.type, buffer)) return NextResponse.json({ error: "Dateiinhalt passt nicht zum angegebenen Dateityp." }, { status: 415 });
 
   const extension = extensionFor(file.type);
   const safeName = `${Date.now()}-${crypto.randomUUID()}${extension}`;
   const relativeUrl = `/uploads/${authorization.tenant.id}/${safeName}`;
   const targetDirectory = path.join(process.cwd(), "public", "uploads", authorization.tenant.id);
   await mkdir(targetDirectory, { recursive: true });
-  await writeFile(path.join(targetDirectory, safeName), Buffer.from(await file.arrayBuffer()), { mode: 0o640 });
+  await writeFile(path.join(targetDirectory, safeName), buffer, { mode: 0o640 });
 
   if (purpose === "sitePlan") {
     const center = authorization.tenant.map.center;
@@ -92,4 +97,14 @@ function extensionFor(type: string) {
   if (type === "video/mp4") return ".mp4";
   if (type === "video/webm") return ".webm";
   return ".bin";
+}
+
+function matchesMagicBytes(type: string, buffer: Buffer) {
+  if (type === "image/png") return buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  if (type === "image/jpeg") return buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+  if (type === "image/webp") return buffer.subarray(0, 4).toString("ascii") === "RIFF" && buffer.subarray(8, 12).toString("ascii") === "WEBP";
+  if (type === "application/pdf") return buffer.subarray(0, 5).toString("ascii") === "%PDF-";
+  if (type === "video/mp4") return buffer.includes(Buffer.from("ftyp"), 4);
+  if (type === "video/webm") return buffer[0] === 0x1a && buffer[1] === 0x45 && buffer[2] === 0xdf && buffer[3] === 0xa3;
+  return false;
 }

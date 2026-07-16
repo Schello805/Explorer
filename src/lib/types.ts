@@ -125,6 +125,14 @@ export type PrivacyRequest = {
   createdAt: string;
 };
 
+export type TenantPublicSnapshot = {
+  id: string;
+  version: number;
+  createdAt: string;
+  createdBy: string;
+  tenant: Tenant;
+};
+
 export type Station = {
   id: string;
   tenantId: string;
@@ -147,6 +155,12 @@ export type Tenant = {
   slug: string;
   hosts: string[];
   archivedAt?: string;
+  publishing?: {
+    hasUnpublishedChanges: boolean;
+    publishedAt?: string;
+    publishedVersion?: number;
+    versions: TenantPublicSnapshot[];
+  };
   name: string;
   tagline: string;
   logoMark: string;
@@ -188,6 +202,15 @@ export type Tenant = {
     setupServiceBooked?: boolean;
     setupServicePriceCents: number;
     customDomainEnabled: boolean;
+    stripeCustomerId?: string;
+    stripeSubscriptionId?: string;
+    stripePriceId?: string;
+    stripeCurrentPeriodEnd?: string;
+    stripeLatestInvoiceUrl?: string;
+    stripeCheckoutSessionId?: string;
+    stripePortalUrl?: string;
+    manualOverride?: boolean;
+    manualOverrideReason?: string;
   };
   integrations: {
     mail: { provider: "global-smtp" };

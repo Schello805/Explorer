@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import Image from "next/image";
-import { Activity, Bell, BookOpen, CalendarDays, CheckCircle2, ChevronRight, Compass, Gift, Heart, Info, List, Map, MessageSquareWarning, Navigation, Route, Search, ShieldAlert, SlidersHorizontal, X } from "lucide-react";
+import { Activity, Bell, BookOpen, CalendarDays, ChevronRight, Compass, Gift, Heart, Info, List, Map, MessageSquareWarning, Navigation, Route, Search, ShieldAlert, X } from "lucide-react";
 import type { Station, Tenant } from "@/lib/types";
 import { cn, statusLabel } from "@/lib/utils";
 import { CampMap } from "@/components/camp-map";
@@ -11,12 +11,12 @@ import { CampMap } from "@/components/camp-map";
 const platformLogo = "/icons/platzguide-logo.png";
 
 export function PlatzguideApp({ tenant, basePath = "" }: { tenant: Tenant; basePath?: string }) {
-  const [view, setView] = useState<"map" | "list">("list");
+  const [view, setView] = useState<"map" | "list">("map");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [selected, setSelected] = useState<Station | null>(null);
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [checkins, setCheckins] = useState<string[]>([]);
   const [feedback, setFeedback] = useState("");
   const [feedbackSent, setFeedbackSent] = useState(false);
 
@@ -30,10 +30,6 @@ export function PlatzguideApp({ tenant, basePath = "" }: { tenant: Tenant; baseP
 
   function toggleFavorite(id: string) {
     setFavorites((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
-  }
-
-  function toggleCheckin(id: string) {
-    setCheckins((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
   }
 
   async function sendFeedback(event: FormEvent<HTMLFormElement>) {
@@ -68,12 +64,11 @@ export function PlatzguideApp({ tenant, basePath = "" }: { tenant: Tenant; baseP
             <p className="mb-1 flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-[var(--secondary)]"><Compass size={15} /> Vor Ort</p>
             <h1 className="font-display text-3xl leading-[1.05] sm:text-4xl">Orte auf dem Platz</h1>
           </div>
-          <label className="mt-5 flex w-full items-center gap-3 rounded-xl bg-white px-4 py-3 text-[#18332b] shadow-xl">
+          {searchOpen && <label className="mt-5 flex w-full items-center gap-3 rounded-xl bg-white px-4 py-3 text-[#18332b] shadow-xl">
             <Search size={20} className="text-[#18332b]/50" />
             <span className="sr-only">Stationen suchen</span>
             <input title="Suche nach Stationen, Kategorien oder Begriffen wie Dusche, Restaurant oder Spielplatz." aria-label="Stationen suchen" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Spielplatz, Dusche, Restaurant …" className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-[#18332b]/40" />
-            <SlidersHorizontal size={19} />
-          </label>
+          </label>}
         </div>
       </header>
 
@@ -86,6 +81,7 @@ export function PlatzguideApp({ tenant, basePath = "" }: { tenant: Tenant; baseP
         <div className="mt-3 flex items-center justify-between">
           <p className="text-sm font-bold">{stations.length} Orte gefunden</p>
           <div className="flex rounded-xl bg-white p-1 shadow-sm">
+            <button onClick={() => setSearchOpen((value) => !value)} className={cn("rounded-lg px-3 py-2 text-sm font-bold", searchOpen && "bg-[var(--primary)] text-white")}><Search size={16} className="inline -mt-0.5 mr-1" /> Suche</button>
             <button onClick={() => mapConfigured && setView("map")} disabled={!mapConfigured} className={cn("rounded-lg px-3 py-2 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-40", view === "map" && "bg-[var(--primary)] text-white")}><Map size={16} className="inline -mt-0.5 mr-1" /> Karte</button>
             <button onClick={() => setView("list")} className={cn("rounded-lg px-3 py-2 text-sm font-bold", view === "list" && "bg-[var(--primary)] text-white")}><List size={16} className="inline -mt-0.5 mr-1" /> Liste</button>
           </div>
@@ -127,7 +123,6 @@ export function PlatzguideApp({ tenant, basePath = "" }: { tenant: Tenant; baseP
           {tenant.tours.filter((tour) => tour.active).map((tour) => <CompactItem key={tour.id} title={tour.title} text={`${tour.durationMinutes} Minuten · ${tour.stops.length} Stationen`} />)}
         </ModuleCard>}
         {tenant.features.rewards && tenant.rewards.filter((reward) => reward.active).length > 0 && <ModuleCard icon={<Gift />} title="Platzguide-Pass">
-          <p className="text-sm text-[#18332b]/60">{checkins.length} Check-ins gesammelt.</p>
           {tenant.rewards.filter((reward) => reward.active).map((reward) => <CompactItem key={reward.id} title={reward.title} text={`${reward.requiredCheckins} Check-ins · ${reward.description}`} />)}
         </ModuleCard>}
         {tenant.features.guestGuide && tenant.guestGuide.length > 0 && <ModuleCard icon={<BookOpen />} title="Gästemappe">
@@ -142,7 +137,7 @@ export function PlatzguideApp({ tenant, basePath = "" }: { tenant: Tenant; baseP
         </ModuleCard>}
       </section>
 
-      {selected && <StationSheet station={selected} favorite={favorites.includes(selected.id)} checkedIn={checkins.includes(selected.id)} checkinsEnabled={tenant.features.checkins} onCheckin={() => toggleCheckin(selected.id)} onFavorite={() => toggleFavorite(selected.id)} onClose={() => setSelected(null)} />}
+      {selected && <StationSheet station={selected} favorite={favorites.includes(selected.id)} onFavorite={() => toggleFavorite(selected.id)} onClose={() => setSelected(null)} />}
     </main>
   );
 }
@@ -174,6 +169,6 @@ const occupancyLabel = {
   closed: "Geschlossen"
 };
 
-function StationSheet({ station, favorite, checkedIn, checkinsEnabled, onCheckin, onFavorite, onClose }: { station: Station; favorite: boolean; checkedIn: boolean; checkinsEnabled?: boolean; onCheckin: () => void; onFavorite: () => void; onClose: () => void }) {
-  return <div className="fixed inset-0 z-40 flex items-end bg-black/35 p-2 sm:items-center sm:justify-center" onClick={onClose}><article onClick={(event) => event.stopPropagation()} className="animate-enter max-h-[90vh] w-full max-w-lg overflow-auto rounded-[2rem] bg-white shadow-2xl"><div className="relative h-52" style={{ background: station.image }}><button onClick={onClose} aria-label="Schließen" className="absolute right-4 top-4 rounded-full bg-white p-2 shadow"><X /></button></div><div className="p-6"><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-widest text-[var(--primary)]">{statusLabel[station.status]}</p><h2 className="mt-1 font-display text-3xl">{station.name}</h2></div><button onClick={onFavorite} className="rounded-full border p-3"><Heart fill={favorite ? "currentColor" : "none"} className={favorite ? "text-red-500" : ""} /></button></div><p className="mt-4 leading-7 text-[#18332b]/70">{station.description}</p><div className="mt-5 rounded-2xl bg-[var(--surface)] p-4 text-sm"><strong>Öffnungszeiten</strong><p className="mt-1 text-[#18332b]/65">{station.openingHours}</p></div><div className="mt-5 grid gap-2 sm:grid-cols-2"><a href={`https://www.openstreetmap.org/directions?to=${station.latitude},${station.longitude}`} target="_blank" rel="noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-5 py-3.5 font-bold text-white"><Navigation size={19} /> Navigation</a>{checkinsEnabled && <button onClick={onCheckin} className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--primary)] px-5 py-3.5 font-bold text-[var(--primary)]"><CheckCircle2 size={19} /> {checkedIn ? "Eingecheckt" : "Check-in"}</button>}</div></div></article></div>;
+function StationSheet({ station, favorite, onFavorite, onClose }: { station: Station; favorite: boolean; onFavorite: () => void; onClose: () => void }) {
+  return <div className="fixed inset-0 z-40 flex items-end bg-black/35 p-2 sm:items-center sm:justify-center" onClick={onClose}><article onClick={(event) => event.stopPropagation()} className="animate-enter max-h-[90vh] w-full max-w-lg overflow-auto rounded-[2rem] bg-white shadow-2xl"><div className="relative h-52" style={{ background: station.image }}><button onClick={onClose} aria-label="Schließen" className="absolute right-4 top-4 rounded-full bg-white p-2 shadow"><X /></button></div><div className="p-6"><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-widest text-[var(--primary)]">{statusLabel[station.status]}</p><h2 className="mt-1 font-display text-3xl">{station.name}</h2></div><button onClick={onFavorite} className="rounded-full border p-3"><Heart fill={favorite ? "currentColor" : "none"} className={favorite ? "text-red-500" : ""} /></button></div><p className="mt-4 leading-7 text-[#18332b]/70">{station.description}</p><div className="mt-5 rounded-2xl bg-[var(--surface)] p-4 text-sm"><strong>Öffnungszeiten</strong><p className="mt-1 text-[#18332b]/65">{station.openingHours}</p></div><div className="mt-5 grid gap-2"><a href={`https://www.openstreetmap.org/directions?to=${station.latitude},${station.longitude}`} target="_blank" rel="noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-5 py-3.5 font-bold text-white"><Navigation size={19} /> Navigation</a></div></div></article></div>;
 }

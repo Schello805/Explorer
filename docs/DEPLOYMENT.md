@@ -39,6 +39,32 @@ Alte Variablen wie `MAIL_PROVIDER`, `MAIL_WEBHOOK_URL`, `RESEND_API_KEY`,
 - `NEXT_PUBLIC_CAPTCHA_SITE_KEY`
 - `TURNSTILE_SECRET_KEY`, `HCAPTCHA_SECRET_KEY` oder `RECAPTCHA_SECRET_KEY`
 
+Stripe Billing wird zentral im Superadmin unter `/admin/platform#stripe`
+eingerichtet. Platzguide erstellt keine Stripe-Produkte automatisch; die
+Price-IDs werden aus Stripe übernommen. Für v1 werden benötigt:
+
+- `STRIPE_ENABLED`
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `STRIPE_STARTER_MONTHLY_PRICE_ID`
+- `STRIPE_STARTER_YEARLY_PRICE_ID`
+- `STRIPE_PRO_MONTHLY_PRICE_ID`
+- `STRIPE_PRO_YEARLY_PRICE_ID`
+- `STRIPE_SETUP_SERVICE_PRICE_ID`
+- `STRIPE_TAX_MODE=small_business_de`
+
+Im Stripe-Onboarding genügen Online-Zahlungen, Abonnements und Rechnungen.
+Nicht nötig sind Stripe Connect/Plattform, Kartenausgabe, Vor-Ort-Zahlungen
+oder Identitätsprüfung. Der Rechnungstext sollte für die
+Kleinunternehmerregelung lauten: `Gemäß § 19 UStG wird keine Umsatzsteuer
+berechnet.`
+
+Webhook-URL: `https://platzguide.de/api/stripe/webhook`. Benötigte Events:
+`checkout.session.completed`, `customer.subscription.created`,
+`customer.subscription.updated`, `customer.subscription.deleted`,
+`invoice.payment_failed` und `invoice.payment_succeeded`.
+
 Monitoring kann `/api/health` abfragen. Der Endpunkt liefert App-Name,
 Revision, Mandantenanzahl und Latenz oder Status `503`, wenn der Datenzugriff
 fehlschlägt. Für aktive Alarmierung per E-Mail gibt es zusätzlich

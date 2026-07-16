@@ -24,7 +24,7 @@ export function Footer({ tenant, basePath = "" }: { tenant: Tenant; basePath?: s
         <a href={githubUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 hover:text-white">
           <GitHubIcon /> Open Source von Michael Schellenberger
         </a>
-        <span>Revision {revision}</span>
+        <span>Version v{revision}</span>
       </div>
     </footer>
   );
