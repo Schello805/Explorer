@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { Crosshair, MapPinned, RotateCcw, Search } from "lucide-react";
 import maplibregl from "maplibre-gl";
 import type { StyleSpecification } from "maplibre-gl";
-import { boundsCenter, boundsCorners, defaultBounds, normalizeBounds, resizeBoundsFromCorner, validBounds, type Bounds } from "@/lib/map-bounds";
+import { boundsCenter, boundsCorners, defaultBounds, defaultMapStyleUrl, normalizeBounds, resizeBoundsFromCorner, validBounds, type Bounds } from "@/lib/map-bounds";
 import type { Tenant } from "@/lib/types";
 
 const rasterMapStyle: StyleSpecification = {
@@ -56,7 +56,7 @@ export function CampAreaPicker({ mapConfig, onChange }: {
     const nextZoom = map ? Math.round(map.getZoom() * 10) / 10 : latestMapConfigRef.current.zoom;
     onChangeRef.current({
       ...latestMapConfigRef.current,
-      styleUrl: "",
+      styleUrl: latestMapConfigRef.current.styleUrl || defaultMapStyleUrl,
       configured: true,
       center,
       zoom: nextZoom,

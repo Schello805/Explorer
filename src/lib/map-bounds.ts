@@ -1,4 +1,5 @@
 export type Bounds = [[number, number], [number, number]];
+export const defaultMapStyleUrl = "https://tiles.openfreemap.org/styles/liberty";
 
 export function boundsCorners(bounds: Bounds): [number, number][] {
   const [[west, south], [east, north]] = bounds;

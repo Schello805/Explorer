@@ -4,6 +4,7 @@ import { z } from "zod";
 import { canManageTenant, isPlatformAdminSession, verifyAdminSession } from "@/lib/auth";
 import { resolveAdminTenant } from "@/lib/admin-tenant-auth";
 import { sendMail, tenantAdminUrl, tenantPublicUrl } from "@/lib/mail";
+import { defaultMapStyleUrl } from "@/lib/map-bounds";
 import { listTenants, saveTenantConfiguration } from "@/lib/tenant-store";
 import type { Tenant } from "@/lib/types";
 
@@ -34,7 +35,7 @@ const tenantSchema = z.object({
   map: z.object({
     center: z.tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)]),
     zoom: z.number().min(1).max(22),
-    styleUrl: z.string().url(),
+    styleUrl: z.string().optional().transform((value) => value || defaultMapStyleUrl),
     configured: z.boolean().optional(),
     bounds: z.tuple([
       z.tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)]),

@@ -1,4 +1,5 @@
 import type { Category, Station, Tenant } from "@/lib/types";
+import { defaultMapStyleUrl } from "@/lib/map-bounds";
 
 export const defaultCategories: Category[] = [
   { id: "service", name: "Service", icon: "Sparkles", color: "#256f5b" },
@@ -16,7 +17,7 @@ export const tenantDefaults: Omit<Tenant, "id" | "slug" | "hosts" | "name" | "us
   map: {
     center: [10.0, 51.0],
     zoom: 6,
-    styleUrl: "https://tiles.openfreemap.org/styles/liberty",
+    styleUrl: defaultMapStyleUrl,
     configured: false,
     bounds: undefined
   },
