@@ -55,11 +55,15 @@ export function AdminConsole({ tenant, tenants, adminEmail, isPlatformAdmin = fa
   const visibleNavigation = [...platformNavigation, ...tenantNavigation];
 
   async function removeStation(id: string) {
-    if (!confirm("Station wirklich löschen?")) return;
+    if (!confirm("Station wirklich löschen?")) return false;
     const response = await fetch(`/api/admin/stations?id=${encodeURIComponent(id)}&tenantId=${encodeURIComponent(currentTenant.id)}`, { method: "DELETE" });
-    if (!response.ok) return alert("Die Station konnte nicht gelöscht werden.");
+    if (!response.ok) {
+      alert("Die Station konnte nicht gelöscht werden.");
+      return false;
+    }
     setStations((items) => items.filter((item) => item.id !== id));
     flashNotice("Station gelöscht.");
+    return true;
   }
 
   async function persistStation(station: Station) {
@@ -233,7 +237,7 @@ export function AdminConsole({ tenant, tenants, adminEmail, isPlatformAdmin = fa
         {section === "media" && <Media tenant={currentTenant} saving={saving} onSave={saveTenant} />}
       </div>
     </main>
-    {editing && <StationEditor station={editing} categories={currentTenant.categories} mapConfig={currentTenant.map} onClose={() => setEditing(null)} onSave={persistStation} />}
+    {editing && <StationEditor station={editing} categories={currentTenant.categories} mapConfig={currentTenant.map} canDelete={stations.some((station) => station.id === editing.id)} onClose={() => setEditing(null)} onSave={persistStation} onDelete={async (stationId) => { const deleted = await removeStation(stationId); if (deleted) setEditing(null); }} />}
   </div>;
 }
 
@@ -982,17 +986,25 @@ function CategoryPicker({ categories, value, onChange }: { categories: Tenant["c
     </div>
   </div>;
 }
-function StationEditor({ station, categories, mapConfig, onClose, onSave }: {
+function StationEditor({ station, categories, mapConfig, canDelete, onClose, onSave, onDelete }: {
   station: Station;
   categories: Tenant["categories"];
   mapConfig: Tenant["map"];
+  canDelete: boolean;
   onClose: () => void;
   onSave: (station: Station) => void | Promise<void>;
+  onDelete: (stationId: string) => void | Promise<void>;
 }) {
   const [draft, setDraft] = useState(station);
   return <div className="fixed inset-0 z-50 flex justify-end overflow-hidden bg-black/35">
     <form onSubmit={(event) => { event.preventDefault(); onSave(draft); }} className="h-full w-full max-w-xl overflow-x-hidden overflow-y-auto bg-white p-4 shadow-2xl sm:p-6">
-      <div className="flex items-center justify-between"><div><p className="text-xs font-bold uppercase tracking-widest text-[#286551]">Stationseditor</p><h2 className="font-display text-3xl">{station.name || "Neue Station"}</h2></div><button type="button" onClick={onClose} className="rounded-full bg-black/5 p-2"><X /></button></div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0"><p className="text-xs font-bold uppercase tracking-widest text-[#286551]">Stationseditor</p><h2 className="break-words font-display text-3xl">{station.name || "Neue Station"}</h2></div>
+        <div className="flex shrink-0 items-center gap-2">
+          {canDelete && <button type="button" aria-label="Station löschen" title="Station löschen" onClick={() => onDelete(station.id)} className="rounded-full bg-red-50 p-2 text-red-700 transition hover:bg-red-100"><Trash2 size={20} /></button>}
+          <button type="button" aria-label="Editor schließen" onClick={onClose} className="rounded-full bg-black/5 p-2"><X /></button>
+        </div>
+      </div>
       <div className="mt-5 grid gap-2 rounded-2xl bg-[#f7f7f4] p-3 text-xs font-bold text-black/55 sm:grid-cols-3">
         <p className="rounded-xl bg-white p-3">1. Kategorie wählen</p>
         <p className="rounded-xl bg-white p-3">2. Texte ergänzen</p>
