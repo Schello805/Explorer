@@ -407,6 +407,7 @@ async function sendTenantVerificationMail(tenant: Tenant, email: string, token: 
   const verifyUrl = appUrl(`/api/auth/verify-email?token=${encodeURIComponent(token)}`);
   await sendMail({
     to: email,
+    tenantSlug: tenant.slug,
     subject: `Platzguide bestätigen · ${tenant.name}`,
     eyebrow: "Registrierung",
     title: "Bestätige deine E-Mail-Adresse.",
@@ -426,6 +427,7 @@ async function sendTenantVerificationMail(tenant: Tenant, email: string, token: 
 async function sendTenantWelcomeMail(tenant: Tenant, email: string) {
   await sendMail({
     to: email,
+    tenantSlug: tenant.slug,
     subject: `Willkommen bei Platzguide · ${tenant.name}`,
     eyebrow: "Bereit",
     title: "Dein Zugang ist bestätigt.",
@@ -444,6 +446,7 @@ async function sendTenantPasswordResetMail(tenant: Tenant, email: string, token:
   const resetUrl = appUrl(`/admin/login?reset=${encodeURIComponent(token)}`);
   await sendMail({
     to: email,
+    tenantSlug: tenant.slug,
     subject: `Passwort zurücksetzen · ${tenant.name}`,
     eyebrow: "Sicherheit",
     title: "Setze dein Passwort zurück.",
@@ -462,6 +465,7 @@ async function sendTenantPasswordResetMail(tenant: Tenant, email: string, token:
 async function sendTenantPasswordChangedMail(tenant: Tenant, email: string) {
   await sendMail({
     to: email,
+    tenantSlug: tenant.slug,
     subject: `Passwort geändert · ${tenant.name}`,
     eyebrow: "Sicherheit",
     title: "Dein Passwort wurde geändert.",
@@ -630,6 +634,7 @@ async function notifyTenantAdminsAboutFeedback(tenant: Tenant, feedback: Feedbac
   if (recipients.length === 0) return;
   await sendMail({
     to: recipients.join(","),
+    tenantSlug: tenant.slug,
     subject: `Neue Meldung · ${tenant.name}`,
     eyebrow: "Feedback",
     title: "Eine neue Besuchermeldung ist eingegangen.",

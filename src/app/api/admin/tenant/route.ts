@@ -191,6 +191,7 @@ async function sendBillingUpdateMails(tenant: Tenant, actorEmail: string) {
     : `Abo aktualisiert · ${tenant.name}`;
   await Promise.all(recipients.map((email) => sendMail({
     to: email,
+    tenantSlug: tenant.slug,
     subject,
     eyebrow: "Abo & Veröffentlichung",
     title: publicState,

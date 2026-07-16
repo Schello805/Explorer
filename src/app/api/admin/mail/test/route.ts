@@ -42,6 +42,7 @@ export async function POST(request: Request) {
 
   await sendMail({
     to: uniqueRecipients.join(","),
+    tenantSlug: authorization.tenant.slug,
     subject: `Platzguide Testmail · ${authorization.tenant.name}`,
     eyebrow: "SMTP-Test",
     title: "Dein Mailversand funktioniert.",

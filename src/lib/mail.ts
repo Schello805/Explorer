@@ -7,6 +7,7 @@ type Mail = {
   subject: string;
   text: string;
   html?: string;
+  tenantSlug?: string;
   logoUrl?: string;
   eyebrow?: string;
   title?: string;
@@ -26,6 +27,7 @@ export async function sendMail(mail: Omit<Mail, "createdAt">) {
     ...mail,
     logoUrl,
     html: mail.html || renderMailHtml({ ...mail, logoUrl }),
+    text: appendTextFooter(mail.text, mail),
     createdAt: new Date().toISOString()
   };
   const host = process.env.SMTP_HOST;
@@ -70,6 +72,7 @@ function formatFrom(name: string, email: string) {
 function renderMailHtml(mail: Omit<Mail, "createdAt">) {
   const title = mail.title || mail.subject;
   const intro = mail.intro || mail.text;
+  const footerLinks = mailFooterLinks(mail);
   const action = mail.actionUrl && mail.actionLabel
     ? `<tr><td style="padding:8px 0 24px"><a href="${escapeHtml(mail.actionUrl)}" style="display:inline-block;border-radius:14px;background:#195f4c;color:#ffffff;font-weight:700;text-decoration:none;padding:14px 20px">${escapeHtml(mail.actionLabel)}</a></td></tr>`
     : "";
@@ -98,11 +101,32 @@ function renderMailHtml(mail: Omit<Mail, "createdAt">) {
       </td></tr>
       <tr><td style="padding:18px 8px 0;font-size:12px;line-height:1.6;color:#7d8b84;text-align:center">
         ${escapeHtml(mail.footerNote || "Diese E-Mail wurde automatisch von Platzguide gesendet.")}
+        <br>${footerLinks.map((link) => `<a href="${escapeHtml(link.href)}" style="color:#195f4c;text-decoration:none">${escapeHtml(link.label)}</a>`).join(" · ")}
         <br>© ${new Date().getFullYear()} Platzguide · Michael Schellenberger
       </td></tr>
     </table>
   </body>
 </html>`;
+}
+
+function appendTextFooter(text: string, mail: Omit<Mail, "createdAt">) {
+  const links = mailFooterLinks(mail).map((link) => `${link.label}: ${link.href}`).join("\n");
+  return `${text.trim()}\n\n--\n${mail.footerNote || "Diese E-Mail wurde automatisch von Platzguide gesendet."}\n${links}\n© ${new Date().getFullYear()} Platzguide · Michael Schellenberger`;
+}
+
+function mailFooterLinks(mail: Pick<Mail, "tenantSlug">) {
+  const links = [
+    { label: "Platzguide", href: appUrl("/") },
+    { label: "AGB", href: appUrl("/rechtliches/agb") },
+    { label: "Datenschutz", href: appUrl("/rechtliches/datenschutz") }
+  ];
+  if (mail.tenantSlug) {
+    links.push(
+      { label: "Campingplatz", href: tenantPublicUrl(mail.tenantSlug) },
+      { label: "Adminbereich", href: tenantAdminUrl(mail.tenantSlug) }
+    );
+  }
+  return links;
 }
 
 function escapeHtml(value: string) {

@@ -31,6 +31,7 @@ export async function POST(request: Request) {
   const uniqueRecipients = [...new Map(recipients.map((recipient) => [`${recipient.email}-${recipient.tenantSlug}`, recipient])).values()];
   await Promise.all(uniqueRecipients.map((recipient) => sendMail({
     to: recipient.email,
+    tenantSlug: recipient.tenantSlug || undefined,
     subject: parsed.data.testOnly ? `[Test] ${parsed.data.subject}` : parsed.data.subject,
     eyebrow: "Platzguide",
     title: parsed.data.subject,
