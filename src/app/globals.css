@@ -89,11 +89,10 @@ button, a { -webkit-tap-highlight-color: transparent; }
   background: transparent;
   cursor: pointer;
   filter: drop-shadow(0 12px 14px rgba(20, 50, 40, .28));
-  transition: transform .16s ease, filter .16s ease;
+  transition: filter .16s ease;
 }
 .platzguide-station-pin:hover,
 .platzguide-station-pin:focus-visible {
-  transform: translateY(-3px) scale(1.06);
   filter: drop-shadow(0 16px 18px rgba(20, 50, 40, .32));
 }
 .platzguide-station-pin__shape {
@@ -109,6 +108,11 @@ button, a { -webkit-tap-highlight-color: transparent; }
   background: var(--pin-color, #195f4c);
   color: white;
   transform: rotate(-45deg);
+  transition: transform .16s ease;
+}
+.platzguide-station-pin:hover .platzguide-station-pin__shape,
+.platzguide-station-pin:focus-visible .platzguide-station-pin__shape {
+  transform: translateY(-3px) rotate(-45deg) scale(1.06);
 }
 .platzguide-station-pin__icon {
   transform: rotate(45deg);
