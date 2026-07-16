@@ -9,6 +9,7 @@ import { createDefaultStationTemplates } from "@/lib/tenant-defaults";
 import type { Category, EventItem, GuestGuideItem, MediaAsset, OccupancyStatus, PushMessage, Reward, Station, Tenant, Tour } from "@/lib/types";
 import { cn, statusLabel } from "@/lib/utils";
 import { boundsCenter, coordinateToMapPosition, defaultBounds, validBounds } from "@/lib/map-bounds";
+import { setStationPinDragImage } from "@/lib/map-marker";
 import { StationLocationPicker } from "@/components/station-location-picker";
 import { StationImport } from "@/components/station-import";
 import { CampAreaPicker } from "@/components/camp-area-picker";
@@ -345,6 +346,13 @@ function StationTemplateDropZone({ tenantId, stations, categories, mapConfig, on
     if (station) void place(station, coordinate);
   }
 
+  function startTemplateDrag(event: React.DragEvent<HTMLDivElement>, station: Station) {
+    const category = categories.find((item) => item.id === station.categoryId);
+    event.dataTransfer.effectAllowed = "copy";
+    event.dataTransfer.setData("text/plain", station.id);
+    setStationPinDragImage(event.nativeEvent, { label: station.name, color: category?.color ?? "#173c32" });
+  }
+
   return <div className="grid gap-4 border-b border-black/5 p-4 xl:grid-cols-[320px_1fr]">
     <div className="rounded-2xl bg-[#f7f7f4] p-4">
       <p className="text-xs font-bold uppercase tracking-widest text-[#286551]">Schnellstart</p>
@@ -352,7 +360,7 @@ function StationTemplateDropZone({ tenantId, stations, categories, mapConfig, on
       <p className="mt-2 text-sm leading-6 text-black/55">Ziehe eine Vorlage auf die Karte. Auf dem Smartphone tippe auf „Platzieren“ und setze die exakte GPS-Position danach im Editor.</p>
       <div className="mt-4 space-y-2">
         {templates.length === 0 && <p className="rounded-xl bg-white p-3 text-sm text-black/55">Noch keine Vorlagen vorhanden. Neue Orte kannst du jederzeit über „Neue Station“ anlegen.</p>}
-        {templates.map((station, index) => <div key={station.id} draggable onDragStart={(event) => event.dataTransfer.setData("text/plain", station.id)} className="cursor-grab rounded-xl border border-black/10 bg-white p-3 active:cursor-grabbing">
+        {templates.map((station, index) => <div key={station.id} draggable onDragStart={(event) => startTemplateDrag(event, station)} className="cursor-grab rounded-xl border border-black/10 bg-white p-3 active:cursor-grabbing">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0"><p className="truncate font-bold">{station.name}</p><p className="mt-1 text-xs text-black/45">{station.shortDescription || "Vorlage aktivieren und bearbeiten"}</p></div>
             <StationBadge station={station} />

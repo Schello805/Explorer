@@ -117,6 +117,14 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .platzguide-station-pin__icon {
   transform: rotate(45deg);
 }
+.platzguide-station-drag-image {
+  position: fixed;
+  left: -1000px;
+  top: -1000px;
+  width: 46px;
+  height: 58px;
+  pointer-events: none;
+}
 .captcha-frame {
   max-width: 100%;
   overflow: hidden;

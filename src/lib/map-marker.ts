@@ -20,3 +20,12 @@ export function createStationPinElement({ label, color, onClick }: {
   element.addEventListener("click", onClick);
   return element;
 }
+
+export function setStationPinDragImage(event: DragEvent, { label, color }: { label: string; color: string }) {
+  const preview = document.createElement("div");
+  preview.className = "platzguide-station-drag-image";
+  preview.appendChild(createStationPinElement({ label, color, onClick: () => undefined }));
+  document.body.appendChild(preview);
+  event.dataTransfer?.setDragImage(preview, 23, 52);
+  window.setTimeout(() => preview.remove(), 0);
+}
