@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Activity, AlertTriangle, Bell, CheckCircle2, CreditCard, Database, Eye, EyeOff, FileText, HardDrive, Mail, Plus, ShieldCheck, Terminal, Users } from "lucide-react";
+import { Activity, AlertTriangle, Bell, CheckCircle2, ChevronRight, CreditCard, Database, Eye, EyeOff, FileText, HardDrive, Mail, Plus, ShieldCheck, Terminal, Users } from "lucide-react";
 import type { AuditEntry, Tenant } from "@/lib/types";
 
 const platformLogo = "/icons/platzguide-logo.png";
@@ -950,17 +950,18 @@ function Metric({ icon, label, value, note }: { icon: React.ReactNode; label: st
 }
 
 function AdminCard({ id, title, complete = false, icon, children }: { id?: string; title: string; complete?: boolean; icon: React.ReactNode; children: React.ReactNode }) {
-  return <section id={id} className="scroll-mt-6 rounded-[1.5rem] bg-white p-5 shadow-sm">
-    <div className="flex items-start justify-between gap-3">
+  const [open, setOpen] = useState(false);
+  return <section id={id} className="overflow-hidden scroll-mt-6 rounded-[1.5rem] bg-white shadow-sm">
+    <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)} className="flex w-full items-start justify-between gap-3 p-5 text-left">
       <div className="min-w-0">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <h2 className="break-words font-display text-2xl">{title}</h2>
+          <span role="heading" aria-level={2} className="break-words font-display text-2xl">{title}</span>
           {complete && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700"><CheckCircle2 size={14} /> vollständig</span>}
         </div>
       </div>
-      <span className="shrink-0 text-[#286551]">{complete ? <CheckCircle2 /> : icon}</span>
-    </div>
-    <div className="mt-4 space-y-3">{children}</div>
+      <span className="flex shrink-0 items-center gap-2 text-[#286551]">{complete ? <CheckCircle2 /> : icon}<ChevronRight className={open ? "rotate-90 transition" : "transition"} size={20} /></span>
+    </button>
+    {open && <div className="space-y-3 px-5 pb-5">{children}</div>}
   </section>;
 }
 

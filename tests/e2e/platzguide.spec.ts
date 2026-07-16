@@ -30,8 +30,10 @@ test("platform admin can preview and publish a tenant manually", async ({ page, 
   await page.getByLabel("Mandant wählen").selectOption({ label: "Camping Publishplatz" });
   await page.getByRole("button", { name: /Abo & Veröffentlichung/i }).click();
   await expect(page.getByRole("heading", { name: "Pakete" })).toBeVisible();
+  await page.getByRole("button", { name: /Pakete/i }).click();
   await expect(page.getByRole("button", { name: /Starter.*100 MB/s })).toBeVisible();
   await expect(page.getByText("19,99")).toBeVisible();
+  await page.getByRole("button", { name: /^Veröffentlichung\b/i }).click();
   const publicToggle = page.locator('label:has-text("Besucher-App öffentlich freischalten") input[type="checkbox"]');
   if (!await publicToggle.isChecked()) await publicToggle.check();
   await Promise.all([
@@ -70,6 +72,7 @@ test("platform admin can open system logs, audit and cleanup tools", async ({ pa
   await expect(page.getByRole("heading", { name: "Platzguide Admin" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Systemlogs" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Upload-Cleanup" })).toBeVisible();
+  await page.getByRole("button", { name: /Systemlogs/i }).click();
   await page.getByRole("button", { name: "Logs aktualisieren" }).click();
   await expect(page.locator("pre").filter({ hasText: /Noch keine Logs geladen|next start|Ready|journalctl/i })).toBeVisible();
   await page.getByRole("button", { name: "Monitoring prüfen" }).click();
