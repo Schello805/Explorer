@@ -191,14 +191,14 @@ export function AdminConsole({ tenant, tenants, adminEmail, isPlatformAdmin = fa
 
   return <div className="min-h-screen overflow-x-hidden bg-[#f2f3ef] text-[#1b302a]">
     {menuOpen && <button aria-label="Menü schließen" onClick={() => setMenuOpen(false)} className="fixed inset-0 z-20 bg-black/35 lg:hidden" />}
-    <aside className={cn("fixed inset-y-0 left-0 z-30 flex w-60 flex-col overflow-y-auto overflow-x-hidden bg-[#173c32] p-4 text-white transition-transform lg:translate-x-0", menuOpen ? "translate-x-0" : "-translate-x-full")}>
+    <aside className={cn("fixed inset-y-0 left-0 z-30 flex w-60 flex-col overflow-hidden bg-[#173c32] p-4 text-white transition-transform lg:translate-x-0", menuOpen ? "translate-x-0" : "-translate-x-full")}>
       <div className="flex items-center justify-between"><a href="https://platzguide.de" className="flex min-w-0 items-center gap-3"><span className="grid h-12 w-12 place-items-center rounded-xl bg-white/95 p-1.5 shadow-sm"><Image src={platformLogo} alt="Platzguide" width={40} height={40} className="h-full w-full object-contain" priority /></span><div className="min-w-0"><p className="font-display text-xl">Platzguide</p><p className="text-[10px] uppercase tracking-widest text-white/45">Plattform Admin</p></div></a><button className="lg:hidden" onClick={() => setMenuOpen(false)}><X /></button></div>
-      <nav className="mt-6 space-y-5">
+      <nav className="mt-6 min-h-0 flex-1 space-y-5 overflow-y-auto overflow-x-hidden pr-1 pb-4">
         {isPlatformAdmin && <Link href="/admin/platform" className="flex items-center gap-3 rounded-lg bg-white/10 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-white hover:text-[#173c32]"><Server size={18} /> Plattformverwaltung</Link>}
         {platformNavigation.length > 0 && <NavGroup title="Superadmin am Mandanten" items={platformNavigation} section={section} onSelect={(id) => { setSection(id); setMenuOpen(false); }} />}
         <NavGroup title="Mandantenverwaltung" items={tenantNavigation} section={section} onSelect={(id) => { setSection(id); setMenuOpen(false); }} />
       </nav>
-      <div className="mt-auto shrink-0 rounded-xl bg-white/5 p-3"><p className="truncate text-xs font-bold">{adminEmail}</p><p className="mt-1 text-[10px] uppercase tracking-wider text-white/35">{isPlatformAdmin ? "Superadmin" : "Mandantenadmin"}</p><form action="/api/auth/logout" method="post"><button className="mt-3 text-xs text-[#e8b65f]">Sicher abmelden</button></form></div>
+      <div className="mt-4 shrink-0 rounded-xl bg-white/5 p-3"><p className="truncate text-xs font-bold">{adminEmail}</p><p className="mt-1 text-[10px] uppercase tracking-wider text-white/35">{isPlatformAdmin ? "Superadmin" : "Mandantenadmin"}</p><form action="/api/auth/logout" method="post"><button className="mt-3 text-xs text-[#e8b65f]">Sicher abmelden</button></form></div>
     </aside>
 
     <main className="min-w-0 overflow-x-hidden lg:ml-60">

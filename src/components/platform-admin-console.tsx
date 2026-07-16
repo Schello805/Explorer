@@ -73,12 +73,12 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
   }
 
   return <div className="min-h-screen bg-[#f2f3ef] text-[#1b302a]">
-    <aside className="border-b border-white/10 bg-[#173c32] p-4 text-white lg:fixed lg:inset-y-0 lg:left-0 lg:w-64 lg:border-b-0">
+    <aside className="flex min-h-0 flex-col border-b border-white/10 bg-[#173c32] p-4 text-white lg:fixed lg:inset-y-0 lg:left-0 lg:h-screen lg:w-64 lg:border-b-0">
       <a href="https://platzguide.de" className="flex min-w-0 items-center gap-3">
         <span className="grid h-12 w-12 place-items-center rounded-xl bg-white/95 p-1.5 shadow-sm"><Image src={platformLogo} alt="Platzguide" width={40} height={40} className="h-full w-full object-contain" priority /></span>
         <div className="min-w-0"><p className="font-display text-xl">Platzguide</p><p className="text-[10px] uppercase tracking-widest text-white/45">Superadmin</p></div>
       </a>
-      <nav className="mt-6 space-y-2">
+      <nav className="mt-6 min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden pr-1 pb-4">
         <PlatformNavLink href="#plattform" label="Übersicht" icon={<Activity size={18} />} />
         <PlatformNavLink href="#mandanten" label="Mandanten" icon={<Users size={18} />} />
         <PlatformNavLink href="#profil" label="Profil" icon={<ShieldCheck size={18} />} />
@@ -95,7 +95,7 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
           ? <Link href="/admin/tenant" className="mt-5 flex items-center gap-3 rounded-xl bg-white px-3 py-3 text-sm font-bold text-[#173c32]"><Database size={18} />Mandantenverwaltung</Link>
           : <p className="mt-5 rounded-xl bg-white/5 px-3 py-3 text-xs font-bold leading-5 text-white/45">Mandantenverwaltung erscheint nach dem ersten Campingplatz.</p>}
       </nav>
-      <div className="mt-8 rounded-xl bg-white/5 p-3 lg:absolute lg:bottom-4 lg:left-4 lg:right-4">
+      <div className="mt-4 shrink-0 rounded-xl bg-white/5 p-3">
         <p className="truncate text-xs font-bold">{adminEmail}</p>
         <p className="mt-1 text-[10px] uppercase tracking-wider text-white/35">Zentraler Superadmin</p>
         <form action="/api/auth/logout" method="post"><button className="mt-3 text-xs font-bold text-[#e8b65f]">Sicher abmelden</button></form>
@@ -532,7 +532,7 @@ function formatPlatformDate(value: string) {
 }
 
 function PlatformNavLink({ href, label, icon }: { href: string; label: string; icon: React.ReactNode }) {
-  return <a href={href} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-white/70 transition hover:bg-white/10 hover:text-white">{icon}{label}</a>;
+  return <a href={href} className="flex min-w-0 items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-white/70 transition hover:bg-white/10 hover:text-white"><span className="shrink-0">{icon}</span><span className="min-w-0 truncate">{label}</span></a>;
 }
 
 export function CreateTenantForm({ compact = false }: { compact?: boolean }) {
