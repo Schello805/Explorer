@@ -67,10 +67,11 @@ export function AdminConsole({ tenant, tenants, adminEmail, isPlatformAdmin = fa
   }
 
   async function persistStation(station: Station) {
+    const stationToSave = normalizeStationLocationForMap(station, currentTenant.map);
     const response = await fetch("/api/admin/stations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(station)
+      body: JSON.stringify(stationToSave)
     });
     if (!response.ok) return alert("Die Station konnte nicht gespeichert werden.");
     const saved = await response.json() as Station;
@@ -968,6 +969,17 @@ function tooltipForLabel(label: string) {
   return "Trage hier den passenden Wert für dieses Feld ein.";
 }
 function Save({ saving, onClick }: { saving: boolean; onClick: () => void }) { return <button onClick={onClick} disabled={saving} className="rounded-xl bg-[#173c32] px-5 py-3 text-sm font-bold text-white disabled:opacity-60">{saving ? "Speichert …" : "Änderungen speichern"}</button>; }
+
+function normalizeStationLocationForMap(station: Station, mapConfig: Tenant["map"]): Station {
+  if (!Number.isFinite(station.longitude) || !Number.isFinite(station.latitude) || station.longitude === 0 && station.latitude === 0) return station;
+  const mapBounds = validBounds(mapConfig.bounds) ? mapConfig.bounds : defaultBounds(mapConfig.center);
+  return {
+    ...station,
+    longitude: Number(station.longitude.toFixed(6)),
+    latitude: Number(station.latitude.toFixed(6)),
+    position: coordinateToMapPosition(mapBounds, [station.longitude, station.latitude])
+  };
+}
 
 function blankStation(tenantId: string): Station { return { id: crypto.randomUUID(), tenantId, categoryId: "service", name: "", shortDescription: "", description: "", openingHours: "Durchgehend geöffnet", status: "open", latitude: 0, longitude: 0, position: { x: 50, y: 50 }, image: "linear-gradient(135deg, #c9d8c2, #527761)" }; }
 const categoryIconMap = { Sparkles, Droplets, Recycle, Utensils, Caravan, Footprints, MapPinned, Settings };

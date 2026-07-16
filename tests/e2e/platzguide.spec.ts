@@ -89,6 +89,25 @@ test("camp area map can be dragged and applied", async ({ page, isMobile }) => {
   await expect(page.getByText("Aktueller Kartenausschnitt wurde als Campingplatzfläche gesetzt.")).toBeVisible();
 });
 
+test("placed station marker does not move when another station is added", async ({ page, isMobile }) => {
+  test.skip(isMobile, "desktop marker stability is covered here; mobile covers viewport behavior");
+  await loginAsPlatformAdmin(page);
+  await page.goto("/admin/tenant");
+  await page.getByRole("button", { name: "Stationen", exact: true }).click();
+
+  await placeTemplateFromQuickstart(page, "Rezeption");
+  const firstMarker = page.getByLabel("Rezeption öffnen");
+  await expect(firstMarker).toBeVisible();
+  const firstPosition = await markerCenter(firstMarker);
+
+  await placeTemplateFromQuickstart(page, "Sanitärgebäude 1");
+  await expect(page.getByLabel("Sanitärgebäude 1 öffnen")).toBeVisible();
+  const firstPositionAfterSecondStation = await markerCenter(firstMarker);
+
+  expect(Math.abs(firstPositionAfterSecondStation.x - firstPosition.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(firstPositionAfterSecondStation.y - firstPosition.y)).toBeLessThanOrEqual(1);
+});
+
 test("platform admin can open system logs, audit and cleanup tools", async ({ page, isMobile }) => {
   test.skip(isMobile, "system tools are covered on desktop");
   await loginAsPlatformAdmin(page);
@@ -111,6 +130,23 @@ async function loginAsPlatformAdmin(page: import("@playwright/test").Page) {
     page.getByRole("button", { name: /Sicher anmelden/i }).click()
   ]);
   await page.waitForLoadState("domcontentloaded");
+}
+
+async function placeTemplateFromQuickstart(page: import("@playwright/test").Page, stationName: string) {
+  const card = page.locator('div[draggable="true"]').filter({ hasText: stationName }).first();
+  await expect(card).toBeVisible();
+  await Promise.all([
+    page.waitForResponse((response) => response.url().includes("/api/admin/stations") && response.ok()),
+    card.getByRole("button", { name: "Platzieren" }).click()
+  ]);
+  await expect(page.getByText("Station gespeichert.")).toBeVisible();
+}
+
+async function markerCenter(locator: import("@playwright/test").Locator) {
+  const box = await locator.boundingBox();
+  expect(box).not.toBeNull();
+  if (!box) return { x: 0, y: 0 };
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
 async function expectNoHorizontalOverflow(page: import("@playwright/test").Page) {

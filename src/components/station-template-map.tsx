@@ -35,12 +35,13 @@ export function StationTemplateMap({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import("maplibre-gl").Map | null>(null);
-  const markersRef = useRef<import("maplibre-gl").Marker[]>([]);
+  const markersRef = useRef<Map<string, import("maplibre-gl").Marker>>(new Map());
   const bounds = useMemo(() => validBounds(mapConfig.bounds) ? mapConfig.bounds : defaultBounds(mapConfig.center), [mapConfig.bounds, mapConfig.center]);
   const center = useMemo(() => boundsCenter(bounds), [bounds]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+    const markerMap = markersRef.current;
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: rasterMapStyle,
@@ -61,8 +62,8 @@ export function StationTemplateMap({
     });
     mapRef.current = map;
     return () => {
-      markersRef.current.forEach((marker) => marker.remove());
-      markersRef.current = [];
+      markerMap.forEach((marker) => marker.remove());
+      markerMap.clear();
       map.remove();
       mapRef.current = null;
     };
@@ -79,12 +80,24 @@ export function StationTemplateMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    markersRef.current.forEach((marker) => marker.remove());
-    markersRef.current = stations.filter((station) => !station.isTemplate && hasCoordinates(station)).map((station) => {
+    const visibleStations = stations.filter((station) => !station.isTemplate && hasCoordinates(station));
+    const visibleIds = new Set(visibleStations.map((station) => station.id));
+    markersRef.current.forEach((marker, stationId) => {
+      if (!visibleIds.has(stationId)) {
+        marker.remove();
+        markersRef.current.delete(stationId);
+      }
+    });
+    for (const station of visibleStations) {
+      const existingMarker = markersRef.current.get(station.id);
+      if (existingMarker) {
+        existingMarker.setLngLat([station.longitude, station.latitude]);
+        continue;
+      }
       const category = categories.find((item) => item.id === station.categoryId);
       const element = createStationPinElement({ label: station.name, color: category?.color ?? "#173c32", onClick: () => onEdit(station) });
-      return new maplibregl.Marker({ element, anchor: "bottom" }).setLngLat([station.longitude, station.latitude]).addTo(map);
-    });
+      markersRef.current.set(station.id, new maplibregl.Marker({ element, anchor: "bottom" }).setLngLat([station.longitude, station.latitude]).addTo(map));
+    }
   }, [categories, onEdit, stations]);
 
   function handleDrop(event: React.DragEvent<HTMLDivElement>) {
