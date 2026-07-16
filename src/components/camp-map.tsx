@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Layers3, LocateFixed, Map as MapIcon } from "lucide-react";
 import maplibregl from "maplibre-gl";
 import type { StyleSpecification } from "maplibre-gl";
+import { createStationPinElement } from "@/lib/map-marker";
 import type { Station, Tenant } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -119,12 +120,9 @@ export function CampMap({
         }
 
         markersRef.current = validStations.map((station) => {
-          const element = document.createElement("button");
-          element.className = "grid h-11 w-11 place-items-center rounded-full border-4 border-white bg-[#195f4c] text-white shadow-lg transition hover:scale-110";
-          element.setAttribute("aria-label", station.name);
-          element.innerHTML = '<svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5Z"/></svg>';
-          element.addEventListener("click", () => onSelect(station));
-          return new maplibregl.Marker({ element })
+          const category = tenant.categories.find((item) => item.id === station.categoryId);
+          const element = createStationPinElement({ label: station.name, color: category?.color ?? "#195f4c", onClick: () => onSelect(station) });
+          return new maplibregl.Marker({ element, anchor: "bottom" })
             .setLngLat([station.longitude, station.latitude])
             .addTo(map);
         });

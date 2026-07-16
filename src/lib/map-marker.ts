@@ -1,0 +1,22 @@
+export function createStationPinElement({ label, color, onClick }: {
+  label: string;
+  color: string;
+  onClick: () => void;
+}) {
+  const element = document.createElement("button");
+  element.type = "button";
+  element.className = "platzguide-station-pin";
+  element.style.setProperty("--pin-color", color);
+  element.setAttribute("aria-label", `${label} öffnen`);
+  element.title = label;
+  element.innerHTML = `
+    <span class="platzguide-station-pin__shape" aria-hidden="true">
+      <svg class="platzguide-station-pin__icon" viewBox="0 0 24 24" width="18" height="18" fill="none">
+        <path d="M12 3.75 14.05 9.95 20.25 12 14.05 14.05 12 20.25 9.95 14.05 3.75 12 9.95 9.95 12 3.75Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        <circle cx="12" cy="12" r="2.1" fill="currentColor"/>
+      </svg>
+    </span>
+  `;
+  element.addEventListener("click", onClick);
+  return element;
+}

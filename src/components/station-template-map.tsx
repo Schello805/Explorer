@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import type { StyleSpecification } from "maplibre-gl";
 import { boundsCenter, boundsCorners, defaultBounds, validBounds } from "@/lib/map-bounds";
+import { createStationPinElement } from "@/lib/map-marker";
 import type { Category, Station, Tenant } from "@/lib/types";
 
 const rasterMapStyle: StyleSpecification = {
@@ -81,14 +82,8 @@ export function StationTemplateMap({
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = stations.filter((station) => !station.isTemplate && hasCoordinates(station)).map((station) => {
       const category = categories.find((item) => item.id === station.categoryId);
-      const element = document.createElement("button");
-      element.type = "button";
-      element.className = "max-w-[180px] rounded-full px-3 py-2 text-xs font-bold text-white shadow-lg ring-4 ring-white/90";
-      element.style.backgroundColor = category?.color ?? "#173c32";
-      element.textContent = station.name;
-      element.setAttribute("aria-label", `${station.name} bearbeiten`);
-      element.addEventListener("click", () => onEdit(station));
-      return new maplibregl.Marker({ element }).setLngLat([station.longitude, station.latitude]).addTo(map);
+      const element = createStationPinElement({ label: station.name, color: category?.color ?? "#173c32", onClick: () => onEdit(station) });
+      return new maplibregl.Marker({ element, anchor: "bottom" }).setLngLat([station.longitude, station.latitude]).addTo(map);
     });
   }, [categories, onEdit, stations]);
 
