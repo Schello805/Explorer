@@ -106,6 +106,10 @@ test("placed station marker does not move when another station is added", async 
 
   expect(Math.abs(firstPositionAfterSecondStation.x - firstPosition.x)).toBeLessThanOrEqual(1);
   expect(Math.abs(firstPositionAfterSecondStation.y - firstPosition.y)).toBeLessThanOrEqual(1);
+
+  await firstMarker.click();
+  await expect(page.getByRole("heading", { name: "Rezeption" })).toBeVisible();
+  await expect(page.getByLabel("Stationsposition öffnen")).toBeVisible();
 });
 
 test("platform admin can open system logs, audit and cleanup tools", async ({ page, isMobile }) => {

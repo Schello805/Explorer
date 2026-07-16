@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Crosshair, LocateFixed, MapPin } from "lucide-react";
 import maplibregl from "maplibre-gl";
 import type { StyleSpecification } from "maplibre-gl";
+import { createStationPinElement } from "@/lib/map-marker";
 import type { Tenant } from "@/lib/types";
 
 const rasterMapStyle: StyleSpecification = {
@@ -48,7 +49,7 @@ export function StationLocationPicker({ mapConfig, longitude, latitude, onChange
     if (!cancelled && containerRef.current) {
       const map = new maplibregl.Map({
         container: containerRef.current,
-        style: getMapStyle(mapConfig.styleUrl),
+        style: rasterMapStyle,
         center: initialPositionRef.current,
         zoom: Math.max(mapConfig.zoom, 17),
         attributionControl: false
@@ -74,7 +75,9 @@ export function StationLocationPicker({ mapConfig, longitude, latitude, onChange
           paint: { "line-color": "#195f4c", "line-width": 2, "line-dasharray": [2, 1] }
         });
       });
-      const marker = new maplibregl.Marker({ color: "#c44f34", draggable: true })
+      const markerElement = createStationPinElement({ label: "Stationsposition", color: "#c44f34", onClick: () => undefined });
+      markerElement.classList.add("platzguide-station-pin--dragging");
+      const marker = new maplibregl.Marker({ element: markerElement, anchor: "bottom", draggable: true })
         .setLngLat(initialPositionRef.current)
         .addTo(map);
       marker.on("dragend", () => {
@@ -141,11 +144,6 @@ export function StationLocationPicker({ mapConfig, longitude, latitude, onChange
     {(locationMessage || positionMessage) && <p className="mt-2 rounded-xl bg-[#f7f7f4] p-3 text-xs font-bold leading-5 text-black/60">{locationMessage || positionMessage}</p>}
     <p className="mt-2 flex items-start gap-2 text-xs font-normal leading-5 text-black/45"><MapPin size={14} className="mt-0.5 shrink-0" /> GPS funktioniert am besten direkt an der Station und auf einem Smartphone.</p>
   </section>;
-}
-
-function getMapStyle(styleUrl: string) {
-  if (!styleUrl) return rasterMapStyle;
-  return styleUrl;
 }
 
 function hasLngLat(value: unknown): value is [number, number] {
