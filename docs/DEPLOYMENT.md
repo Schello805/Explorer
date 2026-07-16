@@ -65,6 +65,16 @@ Webhook-URL: `https://platzguide.de/api/stripe/webhook`. Benötigte Events:
 `customer.subscription.updated`, `customer.subscription.deleted`,
 `invoice.payment_failed` und `invoice.payment_succeeded`.
 
+Web-Push wird zentral im Superadmin unter `/admin/platform#push` eingerichtet.
+Benötigt werden:
+
+- `NEXT_PUBLIC_VAPID_PUBLIC_KEY`
+- `VAPID_PRIVATE_KEY`
+
+Schlüssel lassen sich einmalig mit `npx web-push generate-vapid-keys`
+erzeugen. Ohne VAPID-Schlüssel bleiben Mitteilungen als In-App-Hinweise
+sichtbar, werden aber nicht als Geräte-Push verschickt.
+
 Monitoring kann `/api/health` abfragen. Der Endpunkt liefert App-Name,
 Revision, Mandantenanzahl und Latenz oder Status `503`, wenn der Datenzugriff
 fehlschlägt. Für aktive Alarmierung per E-Mail gibt es zusätzlich

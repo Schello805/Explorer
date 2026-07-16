@@ -419,14 +419,14 @@ function TenantSettings({ tenant, saving, platformAdmin, onLifecycle, onSave }: 
     setDraft({ ...draft, map: { ...draft.map, sitePlan: { ...draft.map.sitePlan, coordinates } } });
   }
   return <div className="space-y-6">
-    <SettingsCard title="Campingplatz & Link" description="Standardmäßig läuft jeder Campingplatz unter platzguide.de/c/link-kuerzel. Eigene Domains können später optional ergänzt werden.">
+    <SettingsCard title="Campingplatz & Link" description="Standardmäßig läuft jeder Campingplatz unter platzguide.de/c/link-kuerzel. Pro-Mandanten können zusätzlich eigene Domains verwenden.">
       <Field label="Name" value={draft.name} onChange={(name) => setDraft({ ...draft, name })} />
       <Field label="Link-Kürzel" value={draft.slug} onChange={(slug) => setDraft({ ...draft, slug })} />
       <Field label="Optionale eigene Domains" value={hostText} onChange={(hosts) => setDraft({ ...draft, hosts: hosts.split(",").map((host) => host.trim()).filter(Boolean) })} />
       <div className="rounded-xl bg-[#f7f7f4] p-4 text-sm leading-6 text-black/65">
         <p className="font-bold text-[#1b302a]">Öffentlicher Link</p>
         <p>Standard-Link: <code>/c/{draft.slug}</code>. Dafür ist kein Wildcard-DNS und kein Wildcard-Zertifikat nötig.</p>
-        <p>Eigene Domains sind später optional möglich: Domain per A-/CNAME-Record auf die Plattform zeigen lassen und hier eintragen.</p>
+        <p>Eigene Domains: Domain per A-/CNAME-Record auf die Plattform zeigen lassen, TLS im Reverse Proxy aktivieren und die Domain hier eintragen. Platzguide ordnet den Aufruf dann diesem Mandanten zu.</p>
       </div>
       <Field label="Kontakt-Telefon" value={draft.contact.phone} onChange={(phone) => setDraft({ ...draft, contact: { ...draft.contact, phone } })} />
       <Field label="Kontakt-E-Mail" value={draft.contact.email} onChange={(email) => setDraft({ ...draft, contact: { ...draft.contact, email } })} />
@@ -474,11 +474,11 @@ function Modules({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; 
   const modules = [
     { id: "events", label: "Veranstaltungen", state: "Funktionsfähig", note: "Termine in der Besucher-App anzeigen.", details: "Betreiber können Veranstaltungen mit Titel, Startzeit, Ort und Beschreibung pflegen. Aktive Termine erscheinen in der Besucher-App im Modulbereich. Es gibt aktuell noch keine Wiederholungsregeln, Kalender-Abo oder automatische Erinnerungen." },
     { id: "tours", label: "Rundgänge", state: "Funktionsfähig", note: "Geführte Wege über mehrere Stationen.", details: "Betreiber erstellen Rundgänge mit Dauer, Beschreibung und einer Liste von Stations-IDs. Besucher sehen aktive Rundgänge als Übersicht. Eine echte Schritt-für-Schritt-Navigation oder automatische Reihenfolge auf der Karte ist noch nicht ausgebaut." },
-    { id: "checkins", label: "Check-ins", state: "Basis funktionsfähig", note: "Einfacher Check-in an Stationen.", details: "Ist das Modul aktiv, erscheint in Stationsdetails ein Check-in-Button. Check-ins werden aktuell lokal im Browser des Besuchers gespeichert. QR-Code-Validierung, serverseitige Historie und Betrugsschutz sind vorbereitet, aber noch nicht als vollständiger Backend-Prozess umgesetzt." },
-    { id: "rewards", label: "Platzguide-Pass", state: "Basis funktionsfähig", note: "Belohnungen anhand gesammelter Check-ins anzeigen.", details: "Betreiber können Belohnungen mit benötigter Check-in-Anzahl pflegen. Besucher sehen ihren lokalen Check-in-Zähler und verfügbare Belohnungen. Eine automatische Einlösung, Gutscheincodes oder Personalprüfung ist noch nicht enthalten." },
+    { id: "checkins", label: "Check-ins", state: "Funktionsfähig", note: "Serverseitiger Check-in an Stationen.", details: "Ist das Modul aktiv, erscheint in Stationsdetails ein Check-in-Button. Check-ins werden mandantengebunden mit anonymer Geräte-ID gespeichert. Mehrfach-Check-ins derselben Station auf demselben Gerät werden nicht doppelt gezählt." },
+    { id: "rewards", label: "Platzguide-Pass", state: "Funktionsfähig", note: "Belohnungen anhand gesammelter Check-ins anzeigen.", details: "Betreiber können Belohnungen mit benötigter Check-in-Anzahl pflegen. Besucher sehen ihren Check-in-Zähler auf dem Gerät und können so erkennen, welche Belohnungen erreichbar sind." },
     { id: "guestGuide", label: "Digitale Gästemappe", state: "Funktionsfähig", note: "Mandantengebundene Infos für Gäste.", details: "Betreiber pflegen kurze Gästeinfos mit Titel, Text und Sortierung. Aktive Inhalte erscheinen in der Besucher-App, sobald das Modul aktiviert ist. Typische Inhalte sind WLAN, Ruhezeiten, Anreise, Brötchenservice oder Notfallinfos." },
-    { id: "feedback", label: "Feedback & Fehlermeldungen", state: "Funktionsfähig", note: "Meldungen von Besuchern empfangen.", details: "Besucher können eine kurze Meldung senden. Die Meldung wird mandantengebunden gespeichert und im Adminbereich mit Status Neu, Geprüft oder Erledigt verwaltet. Anhänge, Kategorien und automatische E-Mail-Benachrichtigungen sind noch nicht erweitert." },
-    { id: "push", label: "Mitteilungen", state: "Basis funktionsfähig", note: "Aktuelle Hinweise in der Besucher-App anzeigen.", details: "Betreiber können Mitteilungen mit Titel und Text pflegen. Aktive Mitteilungen erscheinen direkt in der Besucher-App. Echter nativer Geräte-Push mit Abos, Web-Push-Schlüsseln und Versandwarteschlange ist weiterhin ein späterer Ausbau." },
+    { id: "feedback", label: "Feedback & Fehlermeldungen", state: "Funktionsfähig", note: "Meldungen von Besuchern empfangen.", details: "Besucher können Meldungen mit optionalem Kontakt und einem Bild/PDF-Anhang senden. Meldungen werden mandantengebunden gespeichert, per E-Mail an Mandantenadmins gemeldet und im Adminbereich mit Status Neu, Geprüft oder Erledigt verwaltet." },
+    { id: "push", label: "Mitteilungen", state: "Funktionsfähig", note: "In-App-Hinweise und Web-Push senden.", details: "Betreiber können Mitteilungen mit Titel und Text pflegen. Aktive Mitteilungen erscheinen in der Besucher-App. Wenn VAPID-Keys konfiguriert sind und Besucher Push erlauben, kann die Mitteilung zusätzlich als Browser-Push versendet werden." },
     { id: "occupancy", label: "Belegungs-/Statusanzeigen", state: "Basis funktionsfähig", note: "Manuelle Ampelanzeigen veröffentlichen.", details: "Betreiber können Bereiche oder Services mit Status Frei, Gut besucht, Voll oder Geschlossen pflegen. Aktive Einträge erscheinen in der Besucher-App. Sensoren, automatische Zähler oder externe Datenquellen sind noch nicht angebunden." }
   ];
   return <SettingsCard title="Funktionsmodule" description="Funktionen lassen sich je Campingplatz aktivieren. Die aufklappbaren Infos sagen klar, was heute wirklich enthalten ist.">
@@ -710,15 +710,36 @@ function Rewards({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; 
 }
 function PushMessages({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean; onSave: (tenant: Tenant) => void }) {
   const [draft, setDraft] = useState(tenant);
+  const [pushResult, setPushResult] = useState("");
   const add = () => setDraft({ ...draft, pushMessages: [{ id: crypto.randomUUID(), tenantId: draft.id, title: "Neue Mitteilung", body: "", audience: "guests", active: true, createdAt: new Date().toISOString() }, ...(draft.pushMessages ?? [])] });
   const update = (id: string, changes: Partial<PushMessage>) => setDraft({ ...draft, pushMessages: (draft.pushMessages ?? []).map((item) => item.id === id ? { ...item, ...changes } : item) });
-  return <SettingsCard title="Mitteilungen" description="Aktuelle Hinweise in der Besucher-App anzeigen. Web-Push-Versand kann später darauf aufbauen.">
-    <p className="rounded-xl bg-[#f7f7f4] p-3 text-sm leading-6 text-black/55">Diese Funktion zeigt Mitteilungen direkt in der Besucher-App an. Es werden noch keine nativen Geräte-Pushs versendet.</p>
+  async function sendPush(messageId: string) {
+    const response = await fetch("/api/admin/tenant/push", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tenantId: draft.id, messageId })
+    });
+    const payload = await response.json().catch(() => null) as { configured?: boolean; sentCount?: number; failedCount?: number; subscriptions?: number; error?: string } | null;
+    if (!response.ok) {
+      setPushResult(payload?.error ?? "Push konnte nicht gesendet werden.");
+      return;
+    }
+    setPushResult(payload?.configured
+      ? `Push gesendet: ${payload.sentCount ?? 0} erfolgreich, ${payload.failedCount ?? 0} fehlgeschlagen.`
+      : `Mitteilung gespeichert. Für echten Geräte-Push fehlen noch VAPID-Keys. Abos: ${payload?.subscriptions ?? 0}.`);
+  }
+  return <SettingsCard title="Mitteilungen" description="Aktuelle Hinweise in der Besucher-App anzeigen und optional als Web-Push senden.">
+    <p className="rounded-xl bg-[#f7f7f4] p-3 text-sm leading-6 text-black/55">Aktive Mitteilungen erscheinen sofort in der Besucher-App. Web-Push wird gesendet, wenn VAPID-Keys gesetzt sind und Besucher Push erlaubt haben.</p>
+    {pushResult && <p className="rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{pushResult}</p>}
     <ModuleListHeader onAdd={add} saving={saving} onSave={() => onSave(draft)} />
     {(draft.pushMessages ?? []).map((message) => <AdminItem key={message.id} active={message.active} onToggle={(active) => update(message.id, { active })} onRemove={() => setDraft({ ...draft, pushMessages: (draft.pushMessages ?? []).filter((item) => item.id !== message.id) })}>
       <Field label="Titel" value={message.title} onChange={(title) => update(message.id, { title })} />
       <Area label="Text" value={message.body} onChange={(body) => update(message.id, { body })} />
       <Select label="Zielgruppe" value={message.audience} options={["guests", "all"]} onChange={(audience) => update(message.id, { audience: audience as PushMessage["audience"] })} />
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" onClick={() => sendPush(message.id)} className="rounded-xl border border-black/10 px-4 py-3 text-sm font-bold">Als Push senden</button>
+        {message.sentAt && <span className="text-xs text-black/45">Zuletzt gesendet: {formatStableDate(message.sentAt)} · {message.sentCount ?? 0} Geräte</span>}
+      </div>
     </AdminItem>)}
   </SettingsCard>;
 }
@@ -746,7 +767,7 @@ function Feedback({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean;
   const [draft, setDraft] = useState(tenant);
   return <SettingsCard title="Feedback & Fehlermeldungen" description="Eingänge prüfen und Status setzen.">
     {draft.feedback.length === 0 && <p className="rounded-xl bg-[#f7f7f4] p-4 text-sm text-black/55">Noch keine Meldungen vorhanden.</p>}
-    {draft.feedback.map((message) => <div key={message.id} className="rounded-xl border border-black/10 p-4"><p className="text-xs text-black/45">{formatStableDate(message.createdAt)}</p><p className="mt-2">{message.message}</p><select title="Bearbeitungsstatus dieser Meldung setzen." aria-label="Feedback-Status" value={message.status} onChange={(event) => setDraft({ ...draft, feedback: draft.feedback.map((item) => item.id === message.id ? { ...item, status: event.target.value as typeof message.status } : item) })} className="mt-3 rounded-xl border p-3"><option value="new">Neu</option><option value="reviewed">Geprüft</option><option value="resolved">Erledigt</option></select></div>)}
+    {draft.feedback.map((message) => <div key={message.id} className="rounded-xl border border-black/10 p-4"><p className="text-xs text-black/45">{formatStableDate(message.createdAt)}</p><p className="mt-2 whitespace-pre-line">{message.message}</p>{message.contact && <p className="mt-2 text-sm text-black/55"><strong>Kontakt:</strong> {message.contact}</p>}{message.stationId && <p className="mt-1 text-sm text-black/55"><strong>Station:</strong> {tenant.stations.find((station) => station.id === message.stationId)?.name ?? message.stationId}</p>}{message.attachments?.length ? <div className="mt-3 flex flex-wrap gap-2">{message.attachments.map((attachment) => <a key={attachment.id} href={attachment.url} target="_blank" rel="noreferrer" className="rounded-xl border border-black/10 px-3 py-2 text-sm font-bold">Anhang öffnen · {Math.round(attachment.sizeBytes / 1024)} KB</a>)}</div> : null}<select title="Bearbeitungsstatus dieser Meldung setzen." aria-label="Feedback-Status" value={message.status} onChange={(event) => setDraft({ ...draft, feedback: draft.feedback.map((item) => item.id === message.id ? { ...item, status: event.target.value as typeof message.status } : item) })} className="mt-3 rounded-xl border p-3"><option value="new">Neu</option><option value="reviewed">Geprüft</option><option value="resolved">Erledigt</option></select></div>)}
     <Save saving={saving} onClick={() => onSave(draft)} />
   </SettingsCard>;
 }

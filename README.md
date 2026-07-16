@@ -25,6 +25,8 @@ bleiben je Mandant getrennt.
   Kartenquellen, E-Mail, Tracking und Funktionsmodulen
 - Optionale Module: Veranstaltungen, Rundgänge, Platzguide-Pass, Feedback,
   Check-ins, Statusanzeigen und digitale Gästemappe
+- Web-Push-Abos und serverseitige Check-ins mandantengebunden
+- Feedback mit optionalem Kontakt, Bild/PDF-Anhang und E-Mail an Mandantenadmins
 - Healthcheck unter `/api/health` für Monitoring und Deployments
 - Plattform-Admin mit Systemlog-, Auditlog-, Monitoring- und Upload-Cleanup-Ansicht
 - Uptime-Check mit SMTP-Alarm an den Plattform-Admin
@@ -70,8 +72,9 @@ Build-Zeit-Variable erscheint automatisch im Footer.
 - Für kommerzielle Nutzung ist eine separate schriftliche Lizenz erforderlich.
 - Neue Mandanten laufen standardmäßig ohne Wildcard-DNS unter
   `https://platzguide.de/c/{link-kuerzel}`.
-- Eigene Domains können später optional ergänzt und im Adminbereich beim
-  Mandanten hinterlegt werden.
+- Eigene Domains können im Pro-Paket beim Mandanten hinterlegt werden. DNS/TLS
+  wird am Reverse Proxy eingerichtet, Platzguide löst den Host dann dem
+  richtigen Mandanten zu.
 - SMTP, Captcha, Upload-Limit und Self-Service werden per Server-Konfiguration
   gesetzt; Details stehen in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 

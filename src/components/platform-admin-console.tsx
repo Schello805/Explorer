@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Activity, AlertTriangle, CheckCircle2, CreditCard, Database, Eye, EyeOff, FileText, HardDrive, Mail, Plus, ShieldCheck, Terminal, Users } from "lucide-react";
+import { Activity, AlertTriangle, Bell, CheckCircle2, CreditCard, Database, Eye, EyeOff, FileText, HardDrive, Mail, Plus, ShieldCheck, Terminal, Users } from "lucide-react";
 import type { AuditEntry, Tenant } from "@/lib/types";
 
 const platformLogo = "/icons/platzguide-logo.png";
@@ -85,6 +85,7 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
         <PlatformNavLink href="#smtp" label="SMTP & E-Mail" icon={<Mail size={18} />} />
         <PlatformNavLink href="#rundmail" label="Rundmail" icon={<Mail size={18} />} />
         <PlatformNavLink href="#stripe" label="Stripe" icon={<CreditCard size={18} />} />
+        <PlatformNavLink href="#push" label="Web-Push" icon={<Bell size={18} />} />
         <PlatformNavLink href="#captcha" label="Captcha" icon={<ShieldCheck size={18} />} />
         <PlatformNavLink href="#vorgaben" label="Vorgaben" icon={<Database size={18} />} />
         <PlatformNavLink href="#recht" label="Rechtstexte" icon={<FileText size={18} />} />
@@ -163,6 +164,8 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
         <BroadcastMailCard />
 
         <StripeSettingsCard />
+
+        <PushSettingsCard />
 
         <CaptchaSettingsCard />
 
@@ -671,6 +674,58 @@ function MailSettingsCard({ onConfiguredChange }: { onConfiguredChange: (configu
         <button disabled={state.loading} className="rounded-xl bg-[#173c32] px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{state.loading ? "Speichert …" : "SMTP speichern"}</button>
         <button type="button" disabled={state.testing || !config.configured && !config.smtpHost} onClick={sendTestMail} className="rounded-xl border border-black/10 px-5 py-3 text-sm font-bold disabled:opacity-50">{state.testing ? "Sendet …" : "Testmail senden"}</button>
       </div>
+      {state.message && <p className="rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{state.message}</p>}
+      {state.error && <p className="rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{state.error}</p>}
+    </form>
+  </AdminCard>;
+}
+
+type PushConfig = {
+  publicKey: string;
+  privateKey: string;
+  hasPrivateKey: boolean;
+  configured: boolean;
+};
+
+function PushSettingsCard() {
+  const [config, setConfig] = useState<PushConfig>({ publicKey: "", privateKey: "", hasPrivateKey: false, configured: false });
+  const [showSecret, setShowSecret] = useState(false);
+  const [state, setState] = useState({ loading: false, message: "", error: "" });
+
+  useEffect(() => {
+    fetch("/api/admin/system/push-config")
+      .then((response) => response.ok ? response.json() : null)
+      .then((payload: Omit<PushConfig, "privateKey"> | null) => {
+        if (payload) setConfig({ ...payload, privateKey: "" });
+      })
+      .catch(() => undefined);
+  }, []);
+
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setState({ loading: true, message: "", error: "" });
+    const response = await fetch("/api/admin/system/push-config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(config)
+    });
+    setState({ loading: false, message: response.ok ? "Web-Push-Konfiguration gespeichert." : "", error: response.ok ? "" : "Web-Push konnte nicht gespeichert werden." });
+    if (response.ok) setConfig((current) => ({ ...current, privateKey: "", hasPrivateKey: current.hasPrivateKey || Boolean(current.privateKey), configured: Boolean(current.publicKey && (current.hasPrivateKey || current.privateKey)) }));
+  }
+
+  return <AdminCard id="push" title="Web-Push" icon={<Bell />}>
+    <p className="text-sm leading-6 text-black/55">Web-Push nutzt VAPID-Schlüssel. Besucher müssen Push in der PWA aktiv erlauben; danach können Mandantenadmins aktive Mitteilungen zusätzlich als Geräte-Push senden.</p>
+    <p className="rounded-xl bg-[#f7f7f4] p-3 text-xs leading-5 text-black/55">Schlüssel erzeugst du z. B. einmalig mit <code>npx web-push generate-vapid-keys</code>. Der öffentliche Schlüssel darf im Frontend stehen, der private Schlüssel bleibt geheim.</p>
+    <form onSubmit={save} className="space-y-3">
+      <MailInput label="VAPID Public Key" value={config.publicKey} onChange={(publicKey) => setConfig({ ...config, publicKey })} placeholder="B..." />
+      <label className="text-sm font-bold">VAPID Private Key
+        <span className="mt-1 flex rounded-xl border border-black/10 bg-white">
+          <input type={showSecret ? "text" : "password"} value={config.privateKey} onChange={(event) => setConfig({ ...config, privateKey: event.target.value })} placeholder={config.hasPrivateKey ? maskedSecretPlaceholder : "Private Key"} autoComplete="new-password" className="min-w-0 flex-1 rounded-xl px-3 py-3 outline-none" />
+          <button title="Schlüssel anzeigen oder verbergen." type="button" onClick={() => setShowSecret((value) => !value)} className="px-3 text-[#286551]">{showSecret ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+        </span>
+        {config.hasPrivateKey && !config.privateKey && <span className="mt-1 block text-xs font-normal text-black/45">Gespeichert. Nur ausfüllen, wenn du den Schlüssel ändern möchtest.</span>}
+      </label>
+      <button disabled={state.loading} className="rounded-xl bg-[#173c32] px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{state.loading ? "Speichert …" : "Web-Push speichern"}</button>
       {state.message && <p className="rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{state.message}</p>}
       {state.error && <p className="rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{state.error}</p>}
     </form>

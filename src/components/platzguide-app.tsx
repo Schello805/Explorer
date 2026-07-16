@@ -18,7 +18,11 @@ export function PlatzguideApp({ tenant, basePath = "" }: { tenant: Tenant; baseP
   const [selected, setSelected] = useState<Station | null>(null);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [feedback, setFeedback] = useState("");
+  const [feedbackContact, setFeedbackContact] = useState("");
+  const [feedbackFile, setFeedbackFile] = useState<File | null>(null);
   const [feedbackSent, setFeedbackSent] = useState(false);
+  const [pushState, setPushState] = useState("");
+  const [checkins, setCheckins] = useState<string[]>([]);
 
   const stations = useMemo(() => tenant.stations.filter((station) => {
     if (station.isTemplate) return false;
@@ -35,15 +39,57 @@ export function PlatzguideApp({ tenant, basePath = "" }: { tenant: Tenant; baseP
   async function sendFeedback(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!feedback.trim()) return;
-    const response = await fetch("/api/feedback", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: feedback, tenantSlug: tenant.slug })
-    });
+    const formData = new FormData();
+    formData.set("message", feedback);
+    formData.set("contact", feedbackContact);
+    formData.set("tenantSlug", tenant.slug);
+    if (feedbackFile) formData.set("file", feedbackFile);
+    const response = await fetch("/api/feedback", { method: "POST", body: formData });
     if (response.ok) {
       setFeedback("");
+      setFeedbackContact("");
+      setFeedbackFile(null);
       setFeedbackSent(true);
     }
+  }
+
+  async function enablePush() {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      setPushState("Push wird von diesem Gerät nicht unterstützt.");
+      return;
+    }
+    const config = await fetch("/api/push/subscribe").then((response) => response.json()) as { publicKey?: string; configured?: boolean };
+    if (!config.publicKey) {
+      setPushState("Push ist noch nicht vollständig konfiguriert.");
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") {
+      setPushState("Push wurde nicht erlaubt.");
+      return;
+    }
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(config.publicKey)
+    });
+    const response = await fetch("/api/push/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tenantSlug: tenant.slug, subscription: subscription.toJSON() })
+    });
+    setPushState(response.ok ? "Push ist für diesen Platzguide aktiv." : "Push-Abo konnte nicht gespeichert werden.");
+  }
+
+  async function checkIn(stationId: string) {
+    const deviceId = getDeviceId();
+    const response = await fetch("/api/checkins", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tenantSlug: tenant.slug, stationId, deviceId })
+    });
+    if (!response.ok) return;
+    setCheckins((current) => current.includes(stationId) ? current : [...current, stationId]);
   }
 
   return (
@@ -111,6 +157,8 @@ export function PlatzguideApp({ tenant, basePath = "" }: { tenant: Tenant; baseP
 
       <section className="mx-auto grid w-[90%] gap-4 py-2 md:grid-cols-2">
         {tenant.features.push && (tenant.pushMessages ?? []).filter((message) => message.active).length > 0 && <ModuleCard icon={<Bell />} title="Aktuelle Mitteilungen">
+          <button onClick={enablePush} className="rounded-xl border border-black/10 px-4 py-3 text-sm font-bold">Push aktivieren</button>
+          {pushState && <p className="text-sm text-[#18332b]/60">{pushState}</p>}
           {(tenant.pushMessages ?? []).filter((message) => message.active).map((message) => <CompactItem key={message.id} title={message.title} text={message.body} />)}
         </ModuleCard>}
         {tenant.features.occupancy && (tenant.occupancyStatuses ?? []).filter((item) => item.active).length > 0 && <ModuleCard icon={<Activity />} title="Status vor Ort">
@@ -123,6 +171,7 @@ export function PlatzguideApp({ tenant, basePath = "" }: { tenant: Tenant; baseP
           {tenant.tours.filter((tour) => tour.active).map((tour) => <CompactItem key={tour.id} title={tour.title} text={`${tour.durationMinutes} Minuten · ${tour.stops.length} Stationen`} />)}
         </ModuleCard>}
         {tenant.features.rewards && tenant.rewards.filter((reward) => reward.active).length > 0 && <ModuleCard icon={<Gift />} title="Platzguide-Pass">
+          <p className="rounded-xl bg-[#f7f4ed] p-3 text-sm font-bold">{checkins.length} Check-ins auf diesem Gerät</p>
           {tenant.rewards.filter((reward) => reward.active).map((reward) => <CompactItem key={reward.id} title={reward.title} text={`${reward.requiredCheckins} Check-ins · ${reward.description}`} />)}
         </ModuleCard>}
         {tenant.features.guestGuide && tenant.guestGuide.length > 0 && <ModuleCard icon={<BookOpen />} title="Gästemappe">
@@ -132,12 +181,14 @@ export function PlatzguideApp({ tenant, basePath = "" }: { tenant: Tenant; baseP
           {feedbackSent && <p className="rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">Danke, die Meldung ist angekommen.</p>}
           <form onSubmit={sendFeedback} className="space-y-3">
             <textarea title="Beschreibe kurz, was am Platzguide geprüft oder korrigiert werden soll." aria-label="Feedback oder Fehlermeldung" value={feedback} onChange={(event) => setFeedback(event.target.value)} rows={3} placeholder="Was sollen wir prüfen?" className="w-full rounded-xl border border-black/10 bg-[#fafaf8] p-3 text-sm outline-none" />
+            <input title="Optional: E-Mail oder Telefonnummer für Rückfragen." aria-label="Kontakt für Rückfragen" value={feedbackContact} onChange={(event) => setFeedbackContact(event.target.value)} placeholder="Kontakt optional" className="w-full rounded-xl border border-black/10 bg-[#fafaf8] p-3 text-sm outline-none" />
+            <label className="block rounded-xl border border-dashed border-black/10 bg-[#fafaf8] p-3 text-sm font-bold">Foto oder PDF optional<input type="file" accept="image/png,image/jpeg,image/webp,application/pdf" onChange={(event) => setFeedbackFile(event.target.files?.[0] ?? null)} className="mt-2 block w-full text-sm font-normal" /></label>
             <button className="rounded-xl bg-[var(--primary)] px-4 py-3 text-sm font-bold text-white">Meldung senden</button>
           </form>
         </ModuleCard>}
       </section>
 
-      {selected && <StationSheet station={selected} favorite={favorites.includes(selected.id)} onFavorite={() => toggleFavorite(selected.id)} onClose={() => setSelected(null)} />}
+      {selected && <StationSheet station={selected} checkinsEnabled={tenant.features.checkins || tenant.features.rewards} checkedIn={checkins.includes(selected.id)} favorite={favorites.includes(selected.id)} onFavorite={() => toggleFavorite(selected.id)} onCheckin={() => checkIn(selected.id)} onClose={() => setSelected(null)} />}
     </main>
   );
 }
@@ -169,6 +220,22 @@ const occupancyLabel = {
   closed: "Geschlossen"
 };
 
-function StationSheet({ station, favorite, onFavorite, onClose }: { station: Station; favorite: boolean; onFavorite: () => void; onClose: () => void }) {
-  return <div className="fixed inset-0 z-40 flex items-end bg-black/35 p-2 sm:items-center sm:justify-center" onClick={onClose}><article onClick={(event) => event.stopPropagation()} className="animate-enter max-h-[90vh] w-full max-w-lg overflow-auto rounded-[2rem] bg-white shadow-2xl"><div className="relative h-52" style={{ background: station.image }}><button onClick={onClose} aria-label="Schließen" className="absolute right-4 top-4 rounded-full bg-white p-2 shadow"><X /></button></div><div className="p-6"><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-widest text-[var(--primary)]">{statusLabel[station.status]}</p><h2 className="mt-1 font-display text-3xl">{station.name}</h2></div><button onClick={onFavorite} className="rounded-full border p-3"><Heart fill={favorite ? "currentColor" : "none"} className={favorite ? "text-red-500" : ""} /></button></div><p className="mt-4 leading-7 text-[#18332b]/70">{station.description}</p><div className="mt-5 rounded-2xl bg-[var(--surface)] p-4 text-sm"><strong>Öffnungszeiten</strong><p className="mt-1 text-[#18332b]/65">{station.openingHours}</p></div><div className="mt-5 grid gap-2"><a href={`https://www.openstreetmap.org/directions?to=${station.latitude},${station.longitude}`} target="_blank" rel="noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-5 py-3.5 font-bold text-white"><Navigation size={19} /> Navigation</a></div></div></article></div>;
+function StationSheet({ station, favorite, checkinsEnabled, checkedIn, onFavorite, onCheckin, onClose }: { station: Station; favorite: boolean; checkinsEnabled: boolean; checkedIn: boolean; onFavorite: () => void; onCheckin: () => void; onClose: () => void }) {
+  return <div className="fixed inset-0 z-40 flex items-end bg-black/35 p-2 sm:items-center sm:justify-center" onClick={onClose}><article onClick={(event) => event.stopPropagation()} className="animate-enter max-h-[90vh] w-full max-w-lg overflow-auto rounded-[2rem] bg-white shadow-2xl"><div className="relative h-52" style={{ background: station.image }}><button onClick={onClose} aria-label="Schließen" className="absolute right-4 top-4 rounded-full bg-white p-2 shadow"><X /></button></div><div className="p-6"><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-widest text-[var(--primary)]">{statusLabel[station.status]}</p><h2 className="mt-1 font-display text-3xl">{station.name}</h2></div><button onClick={onFavorite} className="rounded-full border p-3"><Heart fill={favorite ? "currentColor" : "none"} className={favorite ? "text-red-500" : ""} /></button></div><p className="mt-4 leading-7 text-[#18332b]/70">{station.description}</p><div className="mt-5 rounded-2xl bg-[var(--surface)] p-4 text-sm"><strong>Öffnungszeiten</strong><p className="mt-1 text-[#18332b]/65">{station.openingHours}</p></div><div className="mt-5 grid gap-2">{checkinsEnabled && <button onClick={onCheckin} disabled={checkedIn} className="rounded-xl border border-black/10 px-5 py-3.5 font-bold disabled:opacity-60">{checkedIn ? "Bereits eingecheckt" : "Hier einchecken"}</button>}<a href={`https://www.openstreetmap.org/directions?to=${station.latitude},${station.longitude}`} target="_blank" rel="noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-5 py-3.5 font-bold text-white"><Navigation size={19} /> Navigation</a></div></div></article></div>;
+}
+
+function getDeviceId() {
+  const key = "platzguide-device-id";
+  const existing = localStorage.getItem(key);
+  if (existing) return existing;
+  const next = crypto.randomUUID();
+  localStorage.setItem(key, next);
+  return next;
+}
+
+function urlBase64ToUint8Array(value: string) {
+  const padding = "=".repeat((4 - value.length % 4) % 4);
+  const base64 = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = window.atob(base64);
+  return Uint8Array.from([...raw].map((char) => char.charCodeAt(0)));
 }

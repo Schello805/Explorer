@@ -9,7 +9,7 @@ import { appUrl, sendMail, tenantAdminUrl, tenantPublicUrl } from "@/lib/mail";
 import { applyPlatformSettingsToTenant } from "@/lib/platform-settings";
 import { markUnpublishedChanges } from "@/lib/publishing";
 import { createDefaultStationTemplates, tenantDefaults } from "@/lib/tenant-defaults";
-import type { AuditEntry, FeedbackMessage, PrivacyRequest, Station, Tenant } from "@/lib/types";
+import type { AuditEntry, CheckinRecord, FeedbackMessage, PrivacyRequest, PushSubscriptionRecord, Station, Tenant } from "@/lib/types";
 
 const dataDirectory = process.env.PLATZGUIDE_DATA_DIR ?? path.join(process.cwd(), ".data");
 const dataFile = path.join(dataDirectory, "tenants.json");
@@ -89,6 +89,8 @@ function normalizeTenant(tenant: Tenant): Tenant {
     tours: tenant.tours ?? [],
     rewards: tenant.rewards ?? [],
     pushMessages: tenant.pushMessages ?? [],
+    pushSubscriptions: tenant.pushSubscriptions ?? [],
+    checkins: tenant.checkins ?? [],
     occupancyStatuses: tenant.occupancyStatuses ?? [],
     guestGuide: tenant.guestGuide ?? [],
     feedback: tenant.feedback ?? [],
@@ -154,7 +156,7 @@ async function canReachDatabase(databaseUrl: string, timeoutMs: number) {
 
 export async function saveTenantConfiguration(tenantId: string, tenant: Tenant, actorEmail: string) {
   if (tenant.id !== tenantId) throw new Error("Cross-tenant configuration write rejected");
-  const shouldMarkDraft = !["stripe-webhook", "publish-system"].includes(actorEmail);
+  const shouldMarkDraft = !["stripe-webhook", "publish-system", "visitor", "visitor-push", "visitor-checkin"].includes(actorEmail);
   const normalized = normalizeTenant(shouldMarkDraft ? markUnpublishedChanges(tenant) : tenant);
   if (process.env.DATABASE_URL) {
     const sql = postgres(process.env.DATABASE_URL, { connect_timeout: 3, idle_timeout: 5, max: 1 });
@@ -291,6 +293,8 @@ export async function createTenantInstance(input: {
     tours: [],
     rewards: [],
     pushMessages: [],
+    pushSubscriptions: [],
+    checkins: [],
     occupancyStatuses: [],
     guestGuide: [],
     feedback: [],
@@ -547,6 +551,7 @@ export async function saveFeedback(tenantId: string, message: Omit<FeedbackMessa
     const tenants = await readPostgresTenants();
     const tenant = tenants.find((candidate) => candidate.id === tenantId);
     if (!tenant) throw new Error("Tenant not found");
+    await notifyTenantAdminsAboutFeedback(tenant, feedback).catch((error) => console.warn("Feedback-Mail konnte nicht gesendet werden.", error));
     return saveTenantConfiguration(tenantId, { ...tenant, feedback: [feedback, ...tenant.feedback] }, "visitor");
   }
 
@@ -555,7 +560,89 @@ export async function saveFeedback(tenantId: string, message: Omit<FeedbackMessa
   if (!tenant) throw new Error("Tenant not found");
   tenant.feedback = [feedback, ...tenant.feedback].slice(0, 500);
   await writeLocalTenants(tenants);
+  await notifyTenantAdminsAboutFeedback(tenant, feedback).catch((error) => console.warn("Feedback-Mail konnte nicht gesendet werden.", error));
   return feedback;
+}
+
+export async function savePushSubscription(tenantId: string, input: {
+  subscription: PushSubscriptionRecord["subscription"];
+  userAgent?: string;
+}) {
+  const tenants = await listTenants();
+  const tenant = tenants.find((candidate) => candidate.id === tenantId);
+  if (!tenant) throw new Error("Tenant not found");
+  const now = new Date().toISOString();
+  const existing = tenant.pushSubscriptions.find((item) => item.endpoint === input.subscription.endpoint);
+  const subscription: PushSubscriptionRecord = existing
+    ? { ...existing, subscription: input.subscription, userAgent: input.userAgent, lastSeenAt: now }
+    : {
+      id: crypto.randomUUID(),
+      tenantId,
+      endpoint: input.subscription.endpoint,
+      subscription: input.subscription,
+      userAgent: input.userAgent,
+      createdAt: now,
+      lastSeenAt: now
+    };
+  const nextSubscriptions = existing
+    ? tenant.pushSubscriptions.map((item) => item.endpoint === subscription.endpoint ? subscription : item)
+    : [subscription, ...tenant.pushSubscriptions].slice(0, 5000);
+  await saveTenantConfiguration(tenantId, { ...tenant, pushSubscriptions: nextSubscriptions }, "visitor-push");
+  return subscription;
+}
+
+export async function recordCheckin(tenantId: string, stationId: string, deviceId: string) {
+  const tenants = await listTenants();
+  const tenant = tenants.find((candidate) => candidate.id === tenantId);
+  if (!tenant) throw new Error("Tenant not found");
+  if (!tenant.stations.some((station) => station.id === stationId && !station.isTemplate)) throw new Error("Station not found");
+  const existing = tenant.checkins.find((item) => item.stationId === stationId && item.deviceId === deviceId);
+  if (existing) return { checkin: existing, created: false, total: tenant.checkins.filter((item) => item.deviceId === deviceId).length };
+  const checkin: CheckinRecord = {
+    id: crypto.randomUUID(),
+    tenantId,
+    stationId,
+    deviceId,
+    createdAt: new Date().toISOString()
+  };
+  const checkins = [checkin, ...tenant.checkins].slice(0, 20000);
+  await saveTenantConfiguration(tenantId, { ...tenant, checkins }, "visitor-checkin");
+  return { checkin, created: true, total: checkins.filter((item) => item.deviceId === deviceId).length };
+}
+
+export async function markPushMessageSent(tenantId: string, messageId: string, sentCount: number, actorEmail: string) {
+  const tenants = await listTenants();
+  const tenant = tenants.find((candidate) => candidate.id === tenantId);
+  if (!tenant) throw new Error("Tenant not found");
+  return saveTenantConfiguration(tenantId, {
+    ...tenant,
+    pushMessages: tenant.pushMessages.map((message) => message.id === messageId
+      ? { ...message, sentAt: new Date().toISOString(), sentCount }
+      : message),
+    auditLog: [audit(tenantId, actorEmail, "push-send", "push-message", messageId), ...tenant.auditLog].slice(0, 100)
+  }, actorEmail);
+}
+
+async function notifyTenantAdminsAboutFeedback(tenant: Tenant, feedback: FeedbackMessage) {
+  const recipients = tenant.users
+    .filter((user) => ["tenant-owner", "tenant-editor"].includes(user.role))
+    .map((user) => user.email);
+  if (recipients.length === 0) return;
+  await sendMail({
+    to: recipients.join(","),
+    subject: `Neue Meldung · ${tenant.name}`,
+    eyebrow: "Feedback",
+    title: "Eine neue Besuchermeldung ist eingegangen.",
+    intro: feedback.message,
+    text: `Neue Meldung für ${tenant.name}:\n\n${feedback.message}\n\nKontakt: ${feedback.contact || "nicht angegeben"}\nAdminbereich: ${tenantAdminUrl(tenant.slug)}`,
+    actionLabel: "Feedback öffnen",
+    actionUrl: tenantAdminUrl(tenant.slug),
+    rows: [
+      { label: "Campingplatz", value: tenant.name },
+      { label: "Kontakt", value: feedback.contact || "nicht angegeben" },
+      { label: "Anhänge", value: `${feedback.attachments?.length ?? 0}` }
+    ]
+  });
 }
 
 export async function findTenantUser(email: string) {

@@ -29,6 +29,7 @@
   "homepage": "https://github.com/Schello805/Explorer#readme",
   "dependencies": {
     "@types/nodemailer": "^8.0.1",
+    "@types/web-push": "^3.6.4",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "jose": "^6.2.3",
@@ -42,6 +43,7 @@
     "read-excel-file": "^9.2.0",
     "server-only": "^0.0.1",
     "tailwind-merge": "^3.6.0",
+    "web-push": "^3.6.7",
     "zod": "^4.4.3"
   },
   "devDependencies": {

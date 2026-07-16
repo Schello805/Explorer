@@ -19,7 +19,7 @@ const publicSnapshotSchema = z.object({
 const tenantSchema = z.object({
   id: uuid,
   slug: z.string().min(2).max(80).regex(/^[a-z0-9-]+$/),
-  hosts: z.array(z.string().min(1).max(255)),
+  hosts: z.array(z.string().trim().toLowerCase().min(1).max(255).regex(/^(?!https?:\/\/)([a-z0-9-]+\.)+[a-z]{2,}$/)).max(10),
   archivedAt: z.string().optional(),
   publishing: z.object({
     hasUnpublishedChanges: z.boolean(),
@@ -103,6 +103,8 @@ const tenantSchema = z.object({
   tours: z.array(z.unknown()),
   rewards: z.array(z.unknown()),
   pushMessages: z.array(z.unknown()).optional(),
+  pushSubscriptions: z.array(z.unknown()).optional(),
+  checkins: z.array(z.unknown()).optional(),
   occupancyStatuses: z.array(z.unknown()).optional(),
   guestGuide: z.array(z.unknown()),
   feedback: z.array(z.unknown()),
@@ -133,6 +135,11 @@ export async function POST(request: Request) {
   const targetTenant = authorization.tenants.find((tenant) => tenant.id === parsed.data.id);
   if (!targetTenant || !canManageTenant(authorization.session, targetTenant.id)) {
     return NextResponse.json({ error: "Mandantenzugriff verweigert" }, { status: 403 });
+  }
+  const hostCollision = parsed.data.hosts.find((host) => authorization.tenants.some((tenant) => tenant.id !== targetTenant.id && tenant.hosts.includes(host)));
+  if (hostCollision) return NextResponse.json({ error: `Domain ist bereits vergeben: ${hostCollision}` }, { status: 409 });
+  if (parsed.data.hosts.length > 0 && !parsed.data.billing.customDomainEnabled && !isPlatformAdminSession(authorization.session)) {
+    return NextResponse.json({ error: "Eigene Domains sind nur im Pro-Paket möglich." }, { status: 403 });
   }
   const platformAdmin = isPlatformAdminSession(authorization.session);
   const safeTenant = platformAdmin

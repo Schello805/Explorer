@@ -173,6 +173,8 @@ repair_runtime_env() {
   append_env_if_missing "STRIPE_PRO_YEARLY_PRICE_ID" "" && changed=true
   append_env_if_missing "STRIPE_SETUP_SERVICE_PRICE_ID" "" && changed=true
   append_env_if_missing "STRIPE_TAX_MODE" "small_business_de" && changed=true
+  append_env_if_missing "NEXT_PUBLIC_VAPID_PUBLIC_KEY" "" && changed=true
+  append_env_if_missing "VAPID_PRIVATE_KEY" "" && changed=true
   append_env_if_missing "UPLOAD_MAX_MB" "30" && changed=true
   append_env_if_missing "MONITORING_SECRET" "$(openssl rand -base64 48 | tr -d '\n')" && changed=true
   append_env_if_missing "MAINTENANCE_SECRET" "$(openssl rand -base64 48 | tr -d '\n')" && changed=true
@@ -185,6 +187,9 @@ repair_runtime_env() {
   fi
   if [[ "$(env_value STRIPE_ENABLED)" == "true" && -z "$(env_value STRIPE_SECRET_KEY)" ]]; then
     warn "Stripe ist aktiviert, aber STRIPE_SECRET_KEY fehlt. Checkout/Webhooks werden bis dahin fehlschlagen."
+  fi
+  if [[ -z "$(env_value NEXT_PUBLIC_VAPID_PUBLIC_KEY)" || -z "$(env_value VAPID_PRIVATE_KEY)" ]]; then
+    warn "Web-Push ist noch nicht vollständig konfiguriert: VAPID-Schlüssel fehlen."
   fi
   if [[ "$(env_value NEXT_PUBLIC_BASE_URL)" == http://localhost* || "$(env_value NEXT_PUBLIC_BASE_URL)" == http://127.0.0.1* ]]; then
     warn "NEXT_PUBLIC_BASE_URL zeigt auf localhost. Für Produktion bitte auf https://platzguide.de setzen."

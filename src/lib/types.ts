@@ -60,6 +60,30 @@ export type PushMessage = {
   audience: "all" | "guests";
   active: boolean;
   createdAt: string;
+  sentAt?: string;
+  sentCount?: number;
+};
+
+export type PushSubscriptionRecord = {
+  id: string;
+  tenantId: string;
+  endpoint: string;
+  subscription: {
+    endpoint: string;
+    expirationTime?: number | null;
+    keys: { p256dh: string; auth: string };
+  };
+  userAgent?: string;
+  createdAt: string;
+  lastSeenAt: string;
+};
+
+export type CheckinRecord = {
+  id: string;
+  tenantId: string;
+  stationId: string;
+  deviceId: string;
+  createdAt: string;
 };
 
 export type OccupancyStatus = {
@@ -86,8 +110,17 @@ export type FeedbackMessage = {
   stationId?: string;
   message: string;
   contact?: string;
+  attachments?: FeedbackAttachment[];
   status: "new" | "reviewed" | "resolved";
   createdAt: string;
+};
+
+export type FeedbackAttachment = {
+  id: string;
+  name: string;
+  url: string;
+  type: "image" | "document";
+  sizeBytes: number;
 };
 
 export type AuditEntry = {
@@ -227,6 +260,8 @@ export type Tenant = {
   tours: Tour[];
   rewards: Reward[];
   pushMessages: PushMessage[];
+  pushSubscriptions: PushSubscriptionRecord[];
+  checkins: CheckinRecord[];
   occupancyStatuses: OccupancyStatus[];
   guestGuide: GuestGuideItem[];
   feedback: FeedbackMessage[];
