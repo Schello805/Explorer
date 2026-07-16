@@ -66,6 +66,29 @@ test("mobile admin and visitor views stay within viewport", async ({ page, isMob
   await expectNoHorizontalOverflow(page);
 });
 
+test("camp area map can be dragged and applied", async ({ page, isMobile }) => {
+  test.skip(isMobile, "desktop drag interaction is covered here; mobile layout is covered separately");
+  await loginAsPlatformAdmin(page);
+  await page.goto("/admin/tenant");
+  await page.getByRole("button", { name: /Kontakt & Link/i }).click();
+  await page.getByRole("button", { name: /Kartengrundlagen/i }).click();
+
+  const map = page.locator(".maplibregl-map").first();
+  await expect(map).toBeVisible();
+  const before = await page.getByText(/Mittelpunkt:/).locator("..").textContent();
+  const box = await map.boundingBox();
+  expect(box).not.toBeNull();
+  if (!box) return;
+
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 180, box.y + box.height / 2 + 90, { steps: 12 });
+  await page.mouse.up();
+  await page.getByRole("button", { name: /Ausschnitt übernehmen/i }).click();
+  await expect(page.getByText("Aktueller Kartenausschnitt wurde als Campingplatzfläche gesetzt.")).toBeVisible();
+  await expect.poll(async () => page.getByText(/Mittelpunkt:/).locator("..").textContent()).not.toBe(before);
+});
+
 test("platform admin can open system logs, audit and cleanup tools", async ({ page, isMobile }) => {
   test.skip(isMobile, "system tools are covered on desktop");
   await loginAsPlatformAdmin(page);

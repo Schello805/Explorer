@@ -141,10 +141,12 @@ export function CampAreaPicker({ mapConfig, onChange }: {
     map.doubleClickZoom.enable();
     map.touchZoomRotate.enable();
     map.keyboard.enable();
+    const cleanupManualInteraction = enableManualMapInteraction(container, map);
     mapRef.current = map;
     return () => {
       window.clearTimeout(fallbackTimer);
       resizeObserver.disconnect();
+      cleanupManualInteraction();
       markersRef.current.forEach((marker) => marker.remove());
       markersRef.current = [];
       map.remove();
@@ -193,7 +195,7 @@ export function CampAreaPicker({ mapConfig, onChange }: {
       </div>
     </div>
     <div className="relative h-[420px] min-h-[55vh] overflow-hidden rounded-2xl border border-black/10 bg-[#dce8d0]">
-      <div ref={containerRef} className="absolute inset-0" />
+      <div ref={containerRef} className="absolute inset-0" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
       <div className="pointer-events-none absolute left-3 top-3 max-w-[calc(100%-1.5rem)] rounded-xl bg-white/95 px-3 py-2 text-xs font-bold leading-5 shadow"><MapPinned size={14} className="mr-1 inline" /> OSM-Basiskarte · grünes Rechteck = öffentlicher Platzbereich</div>
     </div>
     <div className="grid gap-3 rounded-xl bg-[#f7f7f4] p-3 text-xs leading-5 text-black/60 sm:grid-cols-3">
@@ -290,4 +292,53 @@ function validBounds(value: unknown): value is Bounds {
 
 function fitBounds(map: import("maplibre-gl").Map, bounds: Bounds) {
   map.fitBounds(bounds, { padding: 60, maxZoom: 18, duration: 0 });
+}
+
+function enableManualMapInteraction(container: HTMLDivElement, map: import("maplibre-gl").Map) {
+  let dragging = false;
+  let lastPoint: [number, number] | null = null;
+  function isMapCanvasTarget(event: Event) {
+    const target = event.target;
+    return target instanceof HTMLCanvasElement && target.classList.contains("maplibregl-canvas");
+  }
+  function onPointerDown(event: PointerEvent) {
+    if (!isMapCanvasTarget(event)) return;
+    dragging = true;
+    lastPoint = [event.clientX, event.clientY];
+    container.setPointerCapture?.(event.pointerId);
+    event.preventDefault();
+  }
+  function onPointerMove(event: PointerEvent) {
+    if (!dragging || !lastPoint) return;
+    const deltaX = event.clientX - lastPoint[0];
+    const deltaY = event.clientY - lastPoint[1];
+    lastPoint = [event.clientX, event.clientY];
+    map.panBy([-deltaX, -deltaY], { duration: 0 });
+    event.preventDefault();
+  }
+  function onPointerUp(event: PointerEvent) {
+    if (!dragging) return;
+    dragging = false;
+    lastPoint = null;
+    container.releasePointerCapture?.(event.pointerId);
+    event.preventDefault();
+  }
+  function onWheel(event: WheelEvent) {
+    if (!isMapCanvasTarget(event)) return;
+    const nextZoom = Math.max(3, Math.min(20, map.getZoom() + (event.deltaY > 0 ? -0.35 : 0.35)));
+    map.zoomTo(nextZoom, { duration: 0 });
+    event.preventDefault();
+  }
+  container.addEventListener("pointerdown", onPointerDown, { passive: false });
+  container.addEventListener("pointermove", onPointerMove, { passive: false });
+  container.addEventListener("pointerup", onPointerUp, { passive: false });
+  container.addEventListener("pointercancel", onPointerUp, { passive: false });
+  container.addEventListener("wheel", onWheel, { passive: false });
+  return () => {
+    container.removeEventListener("pointerdown", onPointerDown);
+    container.removeEventListener("pointermove", onPointerMove);
+    container.removeEventListener("pointerup", onPointerUp);
+    container.removeEventListener("pointercancel", onPointerUp);
+    container.removeEventListener("wheel", onWheel);
+  };
 }

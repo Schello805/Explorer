@@ -213,7 +213,7 @@ export function CampMap({
   if (failed) return <FallbackMap tenant={tenant} stations={stations} onSelect={onSelect} />;
 
   return <div className="map-texture relative mt-4 h-[52vh] min-h-[360px] overflow-hidden rounded-[1.5rem] border-4 border-white bg-[#dce8d0] shadow-soft sm:min-h-[440px]">
-    <div ref={containerRef} className="absolute inset-0" aria-label={`Interaktive Karte von ${tenant.name}`} />
+    <div ref={containerRef} className="absolute inset-0" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} aria-label={`Interaktive Karte von ${tenant.name}`} />
     {ready && !tilesVisible && validStations.map((station) => <button
       key={`overlay-${station.id}`}
       onClick={() => onSelect(station)}

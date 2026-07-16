@@ -131,7 +131,7 @@ export function StationLocationPicker({ mapConfig, longitude, latitude, onChange
       <button type="button" onClick={useCurrentLocation} disabled={locating} className="rounded-xl border border-black/10 px-3 py-2 text-xs font-bold disabled:opacity-50"><LocateFixed size={15} className="mr-1.5 inline" />{locating ? "GPS wird ermittelt …" : "Aktuellen Standort nutzen"}</button>
     </div>
     <div className="relative mt-3 h-72 overflow-hidden rounded-2xl border border-black/10 bg-[#dce8d0]">
-      <div ref={containerRef} className="absolute inset-0" />
+      <div ref={containerRef} className="absolute inset-0" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
       <div className="pointer-events-none absolute left-3 top-3 max-w-[calc(100%-1.5rem)] rounded-lg bg-white/90 px-3 py-2 text-xs font-bold leading-5 shadow"><Crosshair size={14} className="mr-1 inline" /> Marker anklicken/ziehen · Karte zoomen · speichern</div>
     </div>
     <div className="mt-3 grid gap-3 sm:grid-cols-2">
