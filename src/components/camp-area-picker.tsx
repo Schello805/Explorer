@@ -6,7 +6,6 @@ import maplibregl from "maplibre-gl";
 import type { StyleSpecification } from "maplibre-gl";
 import type { Tenant } from "@/lib/types";
 
-const openFreeMapStyle = "https://tiles.openfreemap.org/styles/liberty";
 const rasterMapStyle: StyleSpecification = {
   version: 8,
   sources: {
@@ -49,7 +48,7 @@ export function CampAreaPicker({ mapConfig, onChange }: {
     const nextZoom = map ? Math.round(map.getZoom() * 10) / 10 : latestMapConfigRef.current.zoom;
     onChangeRef.current({
       ...latestMapConfigRef.current,
-      styleUrl: openFreeMapStyle,
+      styleUrl: "",
       configured: true,
       center,
       zoom: nextZoom,
@@ -90,12 +89,17 @@ export function CampAreaPicker({ mapConfig, onChange }: {
       center: initialCenterRef.current,
       zoom: Math.max(initialZoomRef.current, 15),
       attributionControl: false,
+      interactive: true,
       dragPan: true,
       scrollZoom: true,
       doubleClickZoom: true,
       touchZoomRotate: true,
       keyboard: true
     });
+    container.style.pointerEvents = "auto";
+    container.style.touchAction = "none";
+    map.getCanvas().style.pointerEvents = "auto";
+    map.getCanvas().style.touchAction = "none";
     function applyRasterFallback() {
       if (fallbackApplied) return;
       fallbackApplied = true;
@@ -126,6 +130,8 @@ export function CampAreaPicker({ mapConfig, onChange }: {
       loaded = true;
       window.clearTimeout(fallbackTimer);
       map.resize();
+      map.getCanvas().style.pointerEvents = "auto";
+      map.getCanvas().style.touchAction = "none";
       syncAreaLayer(map, initialBoundsRef.current);
       renderMarkers(map, initialBoundsRef.current);
       fitBounds(map, initialBoundsRef.current);
@@ -188,7 +194,7 @@ export function CampAreaPicker({ mapConfig, onChange }: {
     </div>
     <div className="relative h-[420px] min-h-[55vh] overflow-hidden rounded-2xl border border-black/10 bg-[#dce8d0]">
       <div ref={containerRef} className="absolute inset-0" />
-      <div className="pointer-events-none absolute left-3 top-3 max-w-[calc(100%-1.5rem)] rounded-xl bg-white/95 px-3 py-2 text-xs font-bold leading-5 shadow"><MapPinned size={14} className="mr-1 inline" /> OpenFreeMap-Basiskarte · grünes Rechteck = öffentlicher Platzbereich</div>
+      <div className="pointer-events-none absolute left-3 top-3 max-w-[calc(100%-1.5rem)] rounded-xl bg-white/95 px-3 py-2 text-xs font-bold leading-5 shadow"><MapPinned size={14} className="mr-1 inline" /> OSM-Basiskarte · grünes Rechteck = öffentlicher Platzbereich</div>
     </div>
     <div className="grid gap-3 rounded-xl bg-[#f7f7f4] p-3 text-xs leading-5 text-black/60 sm:grid-cols-3">
       <p><strong>Mittelpunkt:</strong><br />{boundsCenter(bounds).map((value) => value.toFixed(6)).join(", ")}</p>
@@ -200,8 +206,8 @@ export function CampAreaPicker({ mapConfig, onChange }: {
 }
 
 function getMapStyle(styleUrl: string) {
-  if (!styleUrl) return rasterMapStyle;
-  return styleUrl;
+  void styleUrl;
+  return rasterMapStyle;
 }
 
 function updateAreaSource(map: import("maplibre-gl").Map, bounds: Bounds) {
