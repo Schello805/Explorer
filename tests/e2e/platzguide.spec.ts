@@ -14,8 +14,9 @@ test("marketing page explains pricing and publishing", async ({ page }) => {
 
 test("anonymous visitors cannot open an unpublished tenant", async ({ page }) => {
   await page.goto("/c/testplatz");
-  await expect(page.getByRole("heading", { name: "Gerade nicht erreichbar" })).toBeVisible();
-  await expect(page.getByText("Diese Platzguide-Seite ist gerade nicht erreichbar")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dieser Platzguide macht kurz Pause." })).toBeVisible();
+  await expect(page.getByText("Die Besucher-App dieses Campingplatzes ist gerade nicht öffentlich erreichbar")).toBeVisible();
+  await expect(page.getByText("journalctl")).toHaveCount(0);
 });
 
 test("platform admin can preview and publish a tenant manually", async ({ page, context, isMobile }) => {
