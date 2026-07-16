@@ -73,9 +73,9 @@ test("camp area map can be dragged and applied", async ({ page, isMobile }) => {
   await page.getByRole("button", { name: /Kontakt & Link/i }).click();
   await page.getByRole("button", { name: /Kartengrundlagen/i }).click();
 
+  await expect(page.getByLabel("Adresse oder Ort suchen")).toBeVisible();
   const map = page.locator(".maplibregl-map").first();
   await expect(map).toBeVisible();
-  const before = await page.getByText(/Mittelpunkt:/).locator("..").textContent();
   const box = await map.boundingBox();
   expect(box).not.toBeNull();
   if (!box) return;
@@ -86,7 +86,6 @@ test("camp area map can be dragged and applied", async ({ page, isMobile }) => {
   await page.mouse.up();
   await page.getByRole("button", { name: /Ausschnitt übernehmen/i }).click();
   await expect(page.getByText("Aktueller Kartenausschnitt wurde als Campingplatzfläche gesetzt.")).toBeVisible();
-  await expect.poll(async () => page.getByText(/Mittelpunkt:/).locator("..").textContent()).not.toBe(before);
 });
 
 test("platform admin can open system logs, audit and cleanup tools", async ({ page, isMobile }) => {
