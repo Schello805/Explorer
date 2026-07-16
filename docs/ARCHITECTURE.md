@@ -7,7 +7,7 @@
 3. **Defense in Depth:** Service-Filter plus PostgreSQL Row-Level Security.
 4. **Konfiguration statt Sondercode:** Farben, Module und Rechtstexte liegen am Mandanten.
 5. **Serverseitige Geheimnisse:** Auth- und Datenbankgeheimnisse gelangen nie ins Frontend.
-6. **Anbieterneutrale Karten:** MapLibre trennt Rendering, Kartendaten, Luftbilder und Platzpläne.
+6. **Anbieterneutrale Karten:** MapLibre trennt Rendering, Kartendaten und eigene Platzpläne.
 
 ## Datenmodell
 
@@ -44,7 +44,7 @@ ein externer OIDC-Anbieter mit MFA vorgesehen.
 Öffentliche Daten dürfen nur mit Tenant-ID im Cache-Key gespeichert werden.
 Der Service Worker cached App-Shell und bereits besuchte GET-Ressourcen. Nach
 einem Release wird durch eine neue Cache-Version kontrolliert aktualisiert.
-Fremde Karten- und Luftbild-Tiles werden bewusst nicht offline gespiegelt.
+Fremde Karten-Tiles werden bewusst nicht offline gespiegelt.
 
 ## Datenhaltung
 

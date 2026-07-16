@@ -58,7 +58,7 @@ Der öffentliche Platzguide-Link bleibt für anonyme Besucher gesperrt, bis im A
 ## Aufgaben Betreiber / Mandanten-Admin
 
 - Eigene App-Daten pflegen: Name, Logo, Farben, Kontakt und Rechtstexte
-- Kartenmittelpunkt, Luftbild oder Platzplan konfigurieren
+- Kartenfläche und optional eigenen Platzplan konfigurieren
 - Kategorien, Stationen, Bilder, Öffnungszeiten und Status pflegen
 - Gästemappe, Veranstaltungen, Rundgänge und Feedback verwalten, soweit die
   Module für den Mandanten freigeschaltet sind

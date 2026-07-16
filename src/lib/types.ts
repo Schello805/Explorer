@@ -204,8 +204,6 @@ export type Tenant = {
     styleUrl: string;
     configured?: boolean;
     bounds?: [[number, number], [number, number]];
-    aerialTiles?: string[];
-    aerialAttribution?: string;
     sitePlan?: {
       imageUrl: string;
       coordinates: [[number, number], [number, number], [number, number], [number, number]];

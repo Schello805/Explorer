@@ -442,8 +442,6 @@ function TenantSettings({ tenant, saving, platformAdmin, onLifecycle, onSave }: 
     <SettingsCard title="Kartengrundlagen" complete={Boolean(draft.map.configured && Number.isFinite(draft.map.center[0]) && Number.isFinite(draft.map.center[1]))} description="Das Kernfeature: freie OpenFreeMap-Basiskarte, grafisch markierte Campingplatzfläche und optional eigener Lageplan.">
       <div className="rounded-xl bg-emerald-50 p-4 text-sm leading-6 text-emerald-900"><strong>Standard:</strong> Platzguide nutzt OpenFreeMap/OSM als freie Basiskarte. Der Betreiber markiert seinen Campingplatz als Rechteck; daraus werden Mittelpunkt, Zoom und Besucherkarte sauber abgeleitet.</div>
       <CampAreaPicker mapConfig={draft.map} onChange={(map) => setDraft({ ...draft, map })} />
-      <Field label="Luftbild-Tile/WMS-URL (optional)" value={draft.map.aerialTiles?.[0] ?? ""} onChange={(tile) => setDraft({ ...draft, map: { ...draft.map, configured: true, aerialTiles: tile ? [tile] : undefined } })} />
-      <Field label="Luftbild-Quellenangabe" value={draft.map.aerialAttribution ?? ""} onChange={(aerialAttribution) => setDraft({ ...draft, map: { ...draft.map, aerialAttribution } })} />
       <Field label="Platzplan-Bild-URL" value={draft.map.sitePlan?.imageUrl ?? ""} onChange={(imageUrl) => setDraft({ ...draft, map: { ...draft.map, configured: Boolean(imageUrl) || draft.map.configured, sitePlan: imageUrl ? draft.map.sitePlan ?? { imageUrl, coordinates: [[draft.map.center[0] - 0.001, draft.map.center[1] + 0.001], [draft.map.center[0] + 0.001, draft.map.center[1] + 0.001], [draft.map.center[0] + 0.001, draft.map.center[1] - 0.001], [draft.map.center[0] - 0.001, draft.map.center[1] - 0.001]], attribution: "Eigener Lageplan" } : undefined } })} />
       <label className="block text-sm font-bold"><LabelText label="Platzplan hochladen" tooltip="Lade einen eigenen Lageplan als PNG, JPG, WebP oder PDF hoch." /><input title="Lade einen eigenen Lageplan als PNG, JPG, WebP oder PDF hoch." type="file" accept="image/png,image/jpeg,image/webp,application/pdf" onChange={(event) => event.target.files?.[0] && uploadSitePlan(event.target.files[0])} className="mt-2 block w-full rounded-xl border border-dashed border-black/20 bg-[#fafaf8] p-4 text-sm font-normal" /></label>
       {draft.map.sitePlan && <div className="rounded-xl border border-black/10 p-4">
@@ -454,7 +452,7 @@ function TenantSettings({ tenant, saving, platformAdmin, onLifecycle, onSave }: 
           <Field label={`P${index + 1} Breitengrad`} value={String(point[1])} onChange={(value) => updateSitePlanCorner(index, 1, value)} />
         </div>)}</div>
       </div>}
-      <p className="text-xs leading-5 text-black/45">Für exakte Wege abseits öffentlicher Straßen: eigenes Luftbild/Lageplan hinterlegen und über vier Eckpunkte georeferenzieren.</p>
+      <p className="text-xs leading-5 text-black/45">Für exakte Wege abseits öffentlicher Straßen: eigenen Lageplan hinterlegen und über vier Eckpunkte georeferenzieren.</p>
       <Save saving={saving} onClick={save} />
     </SettingsCard>
     {platformAdmin && <SettingsCard title="Mandantenstatus" complete description="Archivieren sperrt die Besucher-App. Reaktivieren stellt den Mandanten wieder zur Bearbeitung bereit.">
@@ -917,8 +915,6 @@ function tooltipForLabel(label: string) {
     "Mittelpunkt Längengrad": "Ost-West-Koordinate des Kartenmittelpunkts, z. B. 10.123456.",
     "Mittelpunkt Breitengrad": "Nord-Süd-Koordinate des Kartenmittelpunkts, z. B. 49.123456.",
     "Start-Zoom": "Startvergrößerung der Karte. Höhere Werte zeigen mehr Details.",
-    "Luftbild-Tile/WMS-URL (optional)": "Optionale URL für lizenzierte Luftbild-Kacheln oder WMS-Daten.",
-    "Luftbild-Quellenangabe": "Pflichtangabe zur verwendeten Luftbildquelle oder Lizenz.",
     "Platzplan-Bild-URL": "URL zu einem eigenen Lageplan, der über vier Eckpunkte kalibriert werden kann.",
     "Claim": "Kurzer Untertitel oder Slogan für den Campingplatz.",
     "Logo-Kürzel": "Kurzes Zeichen oder Kürzel, falls kein eigenes Logo hinterlegt ist.",

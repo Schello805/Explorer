@@ -13,7 +13,7 @@ bleiben je Mandant getrennt.
 
 - Mobile-first Besucher-App mit interaktiver Platzkarte und Stationsliste
 - Freie MapLibre-Karte mit Zoom, GPS und präzisen Stationsmarkern
-- Optionale regionale Luftbilder und eigener georeferenzierter Platzplan
+- Eigener georeferenzierter Platzplan als Ergänzung zur freien Karte
 - Suche, Kategorien, Stationsdetails, Favoriten und externe Navigation
 - Individuelles Branding und Rechtstexte je Mandant unter `/c/{link-kuerzel}`
 - PWA-Manifest, Service Worker und Offline-Fallback
@@ -22,7 +22,7 @@ bleiben je Mandant getrennt.
 - Persistente Stationsänderungen mit PostgreSQL-Adapter
 - CSV-/XLSX-Import mit Vorschau und Zeilenvalidierung
 - Persistente Verwaltung von Kategorien, Medien, Rechtstexten, Branding,
-  Kartenquellen, E-Mail, Tracking und Funktionsmodulen
+  Kartengrundlagen, E-Mail, Tracking und Funktionsmodulen
 - Optionale Module: Veranstaltungen, Rundgänge, Platzguide-Pass, Feedback,
   Check-ins, Statusanzeigen und digitale Gästemappe
 - Web-Push-Abos und serverseitige Check-ins mandantengebunden
@@ -55,7 +55,7 @@ Details und Optionen stehen in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 ## Dokumentation
 
 - Architektur: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-- Karten und Luftbilder: [`docs/MAPS.md`](docs/MAPS.md)
+- Karten und Platzpläne: [`docs/MAPS.md`](docs/MAPS.md)
 - Deployment: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 - Workflows: [`docs/WORKFLOWS.md`](docs/WORKFLOWS.md)
 - Geplanter Ausbau: [`ROADMAP.md`](ROADMAP.md)

@@ -1,10 +1,10 @@
-# Karten, Luftbilder und Platzpläne
+# Karten und Platzpläne
 
 ## Gewählte Lösung
 
 Platzguide verwendet **MapLibre GL JS** als freie Karten-Engine. Sie ist
-anbieterunabhängig und kann Vektorkarten, Rasterkarten, WMS-Luftbilder und
-eigene georeferenzierte Platzpläne gemeinsam darstellen.
+anbieterunabhängig und kann freie Rasterkarten sowie eigene georeferenzierte
+Platzpläne gemeinsam darstellen.
 
 Die Standardkonfiguration verwendet bewusst nur eine Basiskarte:
 **OpenFreeMap** mit dem offiziellen MapLibre-Stil
@@ -33,23 +33,6 @@ Darstellungsbedingungen. Sie sind nicht frei weiterverteilbar und würden die
 Plattform unnötig an einen Anbieter binden. MapLibre trennt Kartenanzeige und
 Datenquelle vollständig.
 
-## Luftbilder
-
-Es gibt keine dauerhaft kostenlose, weltweit einheitliche Satellitenquelle,
-die ohne Einschränkungen für jede App übernommen werden kann. Für Deutschland
-stellen Landesvermessungsämter digitale Orthophotos häufig als WMS unter
-offenen Lizenzen bereit. Lizenz, Quellenangabe, Aktualität und technische URL
-müssen je Bundesland geprüft werden.
-
-Die Mandantenkonfiguration unterstützt deshalb:
-
-- `aerialTiles`: Raster-Tile- oder WMS-URL mit Platzhaltern
-- `aerialAttribution`: verpflichtende Quellenangabe des Anbieters
-- einen optionalen eigenen Lageplan als georeferenziertes Bild
-
-Ein Luftbild-Layer darf erst aktiviert werden, wenn dessen Lizenz und
-Attribution für den konkreten Campingplatz dokumentiert sind.
-
 ## Eigener Platzplan
 
 Für interne Wege, Sanitärgebäude, Stellplätze und Waldpfade ist ein eigener
@@ -67,7 +50,7 @@ Im Admin-Stationseditor gibt es drei Wege:
 3. direkt an der Station den Smartphone-GPS-Standort übernehmen.
 
 GPS ist im Freien typischerweise genauer als in Gebäuden oder unter dichtem
-Baumbestand. Der Marker sollte anschließend anhand von Wegen, Luftbild oder
+Baumbestand. Der Marker sollte anschließend anhand von Wegen oder dem eigenen
 Platzplan geprüft werden.
 
 ## Betrieb und Datenschutz

@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, Layers3, LocateFixed, Map as MapIcon, Satellite } from "lucide-react";
+import { AlertCircle, Layers3, LocateFixed, Map as MapIcon } from "lucide-react";
 import maplibregl from "maplibre-gl";
 import type { StyleSpecification } from "maplibre-gl";
 import type { Station, Tenant } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-type Layer = "map" | "aerial" | "sitePlan";
+type Layer = "map" | "sitePlan";
 const rasterMapStyle: StyleSpecification = {
   version: 8,
   sources: {
@@ -88,15 +88,6 @@ export function CampMap({
         window.clearTimeout(fallbackTimer);
         setFailed(false);
         map.resize();
-        if (tenant.map.aerialTiles?.length) {
-          map.addSource("aerial", {
-            type: "raster",
-            tiles: tenant.map.aerialTiles,
-            tileSize: 256,
-            attribution: tenant.map.aerialAttribution
-          });
-          map.addLayer({ id: "aerial", source: "aerial", type: "raster", layout: { visibility: "none" } });
-        }
         const sitePlan = tenant.map.sitePlan;
         if (hasValidSitePlan(sitePlan)) {
           map.addSource("site-plan", {
@@ -170,7 +161,6 @@ export function CampMap({
   function switchLayer(next: Layer) {
     const map = mapRef.current;
     if (!map) return;
-    if (map.getLayer("aerial")) map.setLayoutProperty("aerial", "visibility", next === "aerial" ? "visible" : "none");
     if (map.getLayer("site-plan")) map.setLayoutProperty("site-plan", "visibility", next === "sitePlan" ? "visible" : "none");
     setLayer(next);
   }
@@ -206,7 +196,6 @@ export function CampMap({
 
   const choices = [
     { id: "map" as const, label: "Karte", icon: MapIcon, available: true },
-    { id: "aerial" as const, label: "Luftbild", icon: Satellite, available: Boolean(tenant.map.aerialTiles?.length) },
     { id: "sitePlan" as const, label: "Platzplan", icon: Layers3, available: hasValidSitePlan(tenant.map.sitePlan) }
   ].filter((choice) => choice.available);
 
