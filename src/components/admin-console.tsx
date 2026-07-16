@@ -622,7 +622,7 @@ function Billing({ tenant, saving, platformAdmin, onSave }: { tenant: Tenant; sa
             <li>Öffentlich nach aktivem Abo und Veröffentlichung</li>
           </ul>
           {platformAdmin
-            ? <button onClick={() => choosePlan(id as Tenant["billing"]["plan"])} className="mt-4 rounded-xl border border-black/10 px-4 py-3 text-sm font-bold">Als Paket setzen</button>
+            ? <button aria-label={`${plan.label} ${plan.storageLimitMb >= 1024 ? "1 GB" : `${plan.storageLimitMb} MB`} als Paket setzen`} onClick={() => choosePlan(id as Tenant["billing"]["plan"])} className="mt-4 rounded-xl border border-black/10 px-4 py-3 text-sm font-bold">Als Paket setzen</button>
             : <div className="mt-4 grid gap-2 sm:grid-cols-2">
               <button onClick={() => startCheckout(id as Tenant["billing"]["plan"], "monthly")} disabled={Boolean(billingState.loading)} className="rounded-xl bg-[#173c32] px-4 py-3 text-sm font-bold text-white disabled:opacity-50">{billingState.loading === `${id}-monthly` ? "Öffnet …" : "Monatlich buchen"}</button>
               <button onClick={() => startCheckout(id as Tenant["billing"]["plan"], "yearly")} disabled={Boolean(billingState.loading)} className="rounded-xl border border-black/10 px-4 py-3 text-sm font-bold disabled:opacity-50">{billingState.loading === `${id}-yearly` ? "Öffnet …" : "Jährlich buchen"}</button>

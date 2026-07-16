@@ -9,11 +9,14 @@ export default async function globalSetup() {
   await mkdir(dataDirectory, { recursive: true });
   await writeFile(path.join(dataDirectory, "tenants.json"), JSON.stringify([
     testTenant("11111111-1111-4111-8111-111111111111", "testplatz", "Camping Testplatz"),
-    testTenant("44444444-4444-4444-8444-444444444444", "publishplatz", "Camping Publishplatz")
+    testTenant("44444444-4444-4444-8444-444444444444", "publishplatz", "Camping Publishplatz", true)
   ], null, 2));
 }
 
-function testTenant(tenantId: string, slug: string, name: string): Tenant {
+function testTenant(tenantId: string, slug: string, name: string, publishReady = false): Tenant {
+  const stations = createDefaultStationTemplates(tenantId);
+  if (publishReady) stations[0] = { ...stations[0], isTemplate: false, status: "open" };
+
   return {
     ...structuredClone(tenantDefaults),
     id: tenantId,
@@ -34,7 +37,7 @@ function testTenant(tenantId: string, slug: string, name: string): Tenant {
       publicEnabled: false,
       status: "trial"
     },
-    stations: createDefaultStationTemplates(tenantId),
+    stations,
     users: [{
       id: "22222222-2222-4222-8222-222222222222",
       tenantId,

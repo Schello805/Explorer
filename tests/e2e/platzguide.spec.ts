@@ -14,8 +14,8 @@ test("marketing page explains pricing and publishing", async ({ page }) => {
 
 test("anonymous visitors cannot open an unpublished tenant", async ({ page }) => {
   await page.goto("/c/testplatz");
-  await expect(page.getByRole("heading", { name: "Noch nicht veröffentlicht" })).toBeVisible();
-  await expect(page.getByText("Besucher sehen ihn erst nach Freigabe")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Gerade nicht erreichbar" })).toBeVisible();
+  await expect(page.getByText("Diese Platzguide-Seite ist gerade nicht erreichbar")).toBeVisible();
 });
 
 test("platform admin can preview and publish a tenant manually", async ({ page, context, isMobile }) => {
@@ -38,11 +38,13 @@ test("platform admin can preview and publish a tenant manually", async ({ page, 
     page.waitForResponse((response) => response.url().includes("/api/admin/tenant") && response.ok()),
     page.getByRole("button", { name: "Änderungen speichern" }).click()
   ]);
+  await page.getByRole("button", { name: "Veröffentlichen" }).click();
+  await expect(page.getByText("Änderungen veröffentlicht.")).toBeVisible();
 
   await context.clearCookies();
   await page.goto("/c/publishplatz");
   await expect(page.getByRole("main").getByText("Camping Publishplatz")).toBeVisible();
-  await expect(page.getByText("Noch nicht veröffentlicht")).toHaveCount(0);
+  await expect(page.getByText("Gerade nicht erreichbar")).toHaveCount(0);
 });
 
 test("mobile admin and visitor views stay within viewport", async ({ page, isMobile }) => {
