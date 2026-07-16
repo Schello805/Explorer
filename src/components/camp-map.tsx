@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Layers3, LocateFixed, Map as MapIcon } from "lucide-react";
 import maplibregl from "maplibre-gl";
 import type { StyleSpecification } from "maplibre-gl";
+import { boundsCenter, coordinateToMapPosition, defaultBounds, validBounds, type Bounds } from "@/lib/map-bounds";
 import { createStationPinElement } from "@/lib/map-marker";
 import type { Station, Tenant } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -44,7 +45,9 @@ export function CampMap({
   const [locationMessage, setLocationMessage] = useState("");
   const [locating, setLocating] = useState(false);
   const validStations = useMemo(() => stations.filter(hasCoordinates), [stations]);
-  const center = useMemo<[number, number]>(() => hasLngLat(tenant.map.center) ? tenant.map.center : stationCenter(validStations) ?? [10.5605, 49.1643], [tenant.map.center, validStations]);
+  const mapBounds = useMemo(() => validBounds(tenant.map.bounds) ? tenant.map.bounds : null, [tenant.map.bounds]);
+  const center = useMemo<[number, number]>(() => mapBounds ? boundsCenter(mapBounds) : hasLngLat(tenant.map.center) ? tenant.map.center : stationCenter(validStations) ?? [10.5605, 49.1643], [mapBounds, tenant.map.center, validStations]);
+  const visibleStations = useMemo(() => mapBounds ? validStations.filter((station) => stationWithinBounds(station, mapBounds)) : validStations, [mapBounds, validStations]);
   const zoom = Number.isFinite(tenant.map.zoom) ? tenant.map.zoom : 16;
 
   useEffect(() => {
@@ -63,6 +66,7 @@ export function CampMap({
         style: getMapStyle(tenant.map.styleUrl),
         center,
         zoom,
+        maxBounds: mapBounds ?? undefined,
         attributionControl: false
       });
       map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "bottom-right");
@@ -103,8 +107,8 @@ export function CampMap({
             paint: { "raster-opacity": 0.92 }
           });
         }
-        if (hasValidBounds(tenant.map.bounds)) {
-          map.addSource("camp-area", { type: "geojson", data: boundsFeature(tenant.map.bounds) });
+        if (mapBounds) {
+          map.addSource("camp-area", { type: "geojson", data: boundsFeature(mapBounds) });
           map.addLayer({
             id: "camp-area-fill",
             source: "camp-area",
@@ -119,7 +123,9 @@ export function CampMap({
           });
         }
 
-        markersRef.current = validStations.map((station) => {
+        if (mapBounds) map.fitBounds(mapBounds, { padding: 0, maxZoom: 18, duration: 0 });
+
+        markersRef.current = visibleStations.map((station) => {
           const category = tenant.categories.find((item) => item.id === station.categoryId);
           const element = createStationPinElement({ label: station.name, color: category?.color ?? "#195f4c", onClick: () => onSelect(station) });
           return new maplibregl.Marker({ element, anchor: "bottom" })
@@ -149,7 +155,7 @@ export function CampMap({
       mapRef.current = null;
       userMarkerRef.current = null;
     };
-  }, [tenant, validStations, onSelect, center, zoom]);
+  }, [tenant, visibleStations, onSelect, center, zoom, mapBounds]);
 
   useEffect(() => {
     if (!selected || !mapRef.current || !hasCoordinates(selected)) return;
@@ -201,11 +207,11 @@ export function CampMap({
 
   return <div className="map-texture relative mt-4 h-[52vh] min-h-[360px] overflow-hidden rounded-[1.5rem] border-4 border-white bg-[#dce8d0] shadow-soft sm:min-h-[440px]">
     <div ref={containerRef} className="absolute inset-0" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} aria-label={`Interaktive Karte von ${tenant.name}`} />
-    {ready && !tilesVisible && validStations.map((station) => <button
+    {ready && !tilesVisible && visibleStations.map((station) => <button
       key={`overlay-${station.id}`}
       onClick={() => onSelect(station)}
       className="pointer-events-auto absolute z-10 grid h-10 w-10 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-4 border-white bg-[#195f4c] text-white shadow-lg transition hover:scale-110"
-      style={projectStation(station, center)}
+      style={projectStation(station, mapBounds)}
       aria-label={station.name}
     >
       <MapIcon size={17} />
@@ -220,14 +226,16 @@ export function CampMap({
 }
 
 function FallbackMap({ tenant, stations, onSelect }: { tenant: Tenant; stations: Station[]; onSelect: (station: Station) => void }) {
+  const fallbackBounds = validBounds(tenant.map.bounds) ? tenant.map.bounds : defaultBounds(tenant.map.center);
+  const fallbackStations = stations.filter((station) => hasCoordinates(station) && stationWithinBounds(station, fallbackBounds));
   return <div className="map-texture relative mt-4 h-[52vh] min-h-[360px] overflow-hidden rounded-[1.5rem] border-4 border-white bg-[#dce8d0] shadow-soft sm:min-h-[440px]" aria-label={`Fallback-Platzplan von ${tenant.name}`}>
     <div className="absolute left-3 top-3 z-10 rounded-xl bg-white/90 px-3 py-2 text-xs font-bold text-[#18332b] shadow">Offline-Plan</div>
-    <StaticTilePreview center={hasLngLat(tenant.map.center) ? tenant.map.center : stationCenter(stations.filter(hasCoordinates)) ?? [10.5605, 49.1643]} zoom={16} />
-    {stations.map((station) => <button
+    <StaticTilePreview center={boundsCenter(fallbackBounds)} zoom={16} />
+    {fallbackStations.map((station) => <button
       key={station.id}
       onClick={() => onSelect(station)}
       className="absolute z-10 grid h-11 w-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-4 border-white bg-[#195f4c] text-white shadow-lg"
-      style={{ left: `${station.position.x}%`, top: `${station.position.y}%` }}
+      style={projectStation(station, fallbackBounds)}
       aria-label={station.name}
     >
       <MapIcon size={18} />
@@ -272,11 +280,7 @@ function hasValidSitePlan(sitePlan: Tenant["map"]["sitePlan"]): sitePlan is NonN
   return Boolean(sitePlan?.imageUrl && sitePlan.coordinates.every(hasLngLat));
 }
 
-function hasValidBounds(bounds: Tenant["map"]["bounds"]): bounds is NonNullable<Tenant["map"]["bounds"]> {
-  return Boolean(bounds && bounds.every(hasLngLat));
-}
-
-function boundsFeature(bounds: NonNullable<Tenant["map"]["bounds"]>) {
+function boundsFeature(bounds: Bounds) {
   const [[west, south], [east, north]] = bounds;
   const coordinates = [[west, north], [east, north], [east, south], [west, south], [west, north]];
   return {
@@ -286,13 +290,15 @@ function boundsFeature(bounds: NonNullable<Tenant["map"]["bounds"]>) {
   };
 }
 
-function projectStation(station: Station, center: [number, number]) {
-  const longitudeDelta = station.longitude - center[0];
-  const latitudeDelta = center[1] - station.latitude;
-  return {
-    left: `${Math.min(94, Math.max(6, 50 + longitudeDelta * 12000))}%`,
-    top: `${Math.min(94, Math.max(6, 50 + latitudeDelta * 18000))}%`
-  };
+function projectStation(station: Station, bounds: Bounds | null) {
+  if (!bounds) return { left: `${station.position.x}%`, top: `${station.position.y}%` };
+  const position = coordinateToMapPosition(bounds, [station.longitude, station.latitude]);
+  return { left: `${position.x}%`, top: `${position.y}%` };
+}
+
+function stationWithinBounds(station: Station, bounds: Bounds) {
+  const [[west, south], [east, north]] = bounds;
+  return station.longitude >= west && station.longitude <= east && station.latitude >= south && station.latitude <= north;
 }
 
 function staticTiles(center: [number, number], zoom: number) {
