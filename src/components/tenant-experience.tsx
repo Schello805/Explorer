@@ -16,7 +16,7 @@ export async function TenantExperience({ tenant, basePath }: { tenant: Tenant; b
   );
   const adminPreview = Boolean(session && canManageTenant(session, tenant.id));
   if (!adminPreview && !canShowPublicTenant(tenant)) {
-    return <SystemError title="Gerade nicht erreichbar" message="Diese Platzguide-Seite ist gerade nicht erreichbar. Bitte versuche es später erneut." />;
+    return <SystemError title="Dieser Platzguide macht kurz Pause." message="Die Besucher-App dieses Campingplatzes ist gerade nicht öffentlich erreichbar. Bitte versuche es später noch einmal." />;
   }
   const visibleTenant = adminPreview ? tenant : publicTenantFor(tenant);
   return <>
