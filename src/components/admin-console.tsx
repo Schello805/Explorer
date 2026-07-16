@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Activity, Bell, BookOpen, CalendarDays, Caravan, CheckCircle2, ChevronRight, CreditCard, Download, Droplets, Eye, EyeOff, Footprints, Gift, Globe2, HelpCircle, ImageIcon, LayoutDashboard, LifeBuoy, MapPinned, Menu, MessageSquareWarning, Palette, Plus, Recycle, Search, Server, Settings, ShieldCheck, Sparkles, Trash2, Users, Utensils, X } from "lucide-react";
 import { applyBillingPlan, billingPlans, formatEuro, storageUsedMb } from "@/lib/billing";
+import { createDefaultStationTemplates } from "@/lib/tenant-defaults";
 import type { Category, EventItem, GuestGuideItem, MediaAsset, OccupancyStatus, PushMessage, Reward, Station, Tenant, Tour } from "@/lib/types";
 import { cn, statusLabel } from "@/lib/utils";
 import { boundsCenter, coordinateToMapPosition, defaultBounds, validBounds } from "@/lib/map-bounds";
@@ -80,7 +81,7 @@ export function AdminConsole({ tenant, tenants, adminEmail, isPlatformAdmin = fa
     const position = coordinateToMapPosition(mapBounds, [coordinate.longitude, coordinate.latitude]);
     const longitude = Number(coordinate.longitude.toFixed(6));
     const latitude = Number(coordinate.latitude.toFixed(6));
-    await persistStation({ ...station, isTemplate: false, position, longitude, latitude });
+    await persistStation({ ...station, id: crypto.randomUUID(), isTemplate: false, position, longitude, latitude });
   }
 
   async function saveTenant(nextTenant: Tenant) {
@@ -308,7 +309,7 @@ function Stations({ tenant, stations, onEdit, onRemove, onCreate, onImport, onPl
       <div><h2 className="font-display text-2xl">Stationen</h2><p className="text-sm text-black/45">Orte, Services und Erlebnisse</p></div>
       <div className="flex flex-wrap gap-2"><StationImport tenantId={tenant.id} categories={tenant.categories} onImport={onImport} /><button onClick={onCreate} className="rounded-xl bg-[#173c32] px-4 py-3 text-sm font-bold text-white"><Plus size={17} className="mr-2 inline" /> Neue Station</button></div>
     </div>
-    <StationTemplateDropZone stations={stations} categories={tenant.categories} mapConfig={tenant.map} onEdit={onEdit} onPlaceTemplate={onPlaceTemplate} />
+    <StationTemplateDropZone tenantId={tenant.id} stations={stations} categories={tenant.categories} mapConfig={tenant.map} onEdit={onEdit} onPlaceTemplate={onPlaceTemplate} />
     <div className="p-3"><label className="flex w-full items-center gap-2 rounded-lg bg-[#f2f3ef] px-3 py-2.5"><Search size={17} /><input title="Filtere die Stationsliste nach Name, Kategorie oder Beschreibung." aria-label="Station suchen" placeholder="Station suchen …" className="min-w-0 w-full bg-transparent outline-none" /></label></div>
     <div className="divide-y divide-black/5 lg:hidden">
       {activeStations.map((station) => <article key={station.id} className="p-4">
@@ -320,9 +321,13 @@ function Stations({ tenant, stations, onEdit, onRemove, onCreate, onImport, onPl
   </section>;
 }
 
-function StationTemplateDropZone({ stations, categories, mapConfig, onEdit, onPlaceTemplate }: { stations: Station[]; categories: Category[]; mapConfig: Tenant["map"]; onEdit: (station: Station) => void; onPlaceTemplate: (station: Station, coordinate: { longitude: number; latitude: number }) => Promise<void> }) {
+function StationTemplateDropZone({ tenantId, stations, categories, mapConfig, onEdit, onPlaceTemplate }: { tenantId: string; stations: Station[]; categories: Category[]; mapConfig: Tenant["map"]; onEdit: (station: Station) => void; onPlaceTemplate: (station: Station, coordinate: { longitude: number; latitude: number }) => Promise<void> }) {
   const [placingId, setPlacingId] = useState<string | null>(null);
-  const templates = stations.filter((station) => station.isTemplate);
+  const templates = useMemo(() => {
+    const templateMap = new Map(createDefaultStationTemplates(tenantId).map((station) => [stationTemplateKey(station), station]));
+    stations.filter((station) => station.isTemplate).forEach((station) => templateMap.set(stationTemplateKey(station), station));
+    return Array.from(templateMap.values());
+  }, [stations, tenantId]);
   const mapBounds = validBounds(mapConfig.bounds) ? mapConfig.bounds : defaultBounds(mapConfig.center);
   const defaultCoordinate = boundsCenter(mapBounds);
 
@@ -346,7 +351,7 @@ function StationTemplateDropZone({ stations, categories, mapConfig, onEdit, onPl
       <h3 className="mt-2 font-display text-2xl">Standardstationen platzieren</h3>
       <p className="mt-2 text-sm leading-6 text-black/55">Ziehe eine Vorlage auf die Karte. Auf dem Smartphone tippe auf „Platzieren“ und setze die exakte GPS-Position danach im Editor.</p>
       <div className="mt-4 space-y-2">
-        {templates.length === 0 && <p className="rounded-xl bg-white p-3 text-sm text-black/55">Alle Vorlagen sind aktiviert. Neue Orte kannst du jederzeit über „Neue Station“ anlegen.</p>}
+        {templates.length === 0 && <p className="rounded-xl bg-white p-3 text-sm text-black/55">Noch keine Vorlagen vorhanden. Neue Orte kannst du jederzeit über „Neue Station“ anlegen.</p>}
         {templates.map((station, index) => <div key={station.id} draggable onDragStart={(event) => event.dataTransfer.setData("text/plain", station.id)} className="cursor-grab rounded-xl border border-black/10 bg-white p-3 active:cursor-grabbing">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0"><p className="truncate font-bold">{station.name}</p><p className="mt-1 text-xs text-black/45">{station.shortDescription || "Vorlage aktivieren und bearbeiten"}</p></div>
@@ -366,6 +371,10 @@ function StationTemplateDropZone({ stations, categories, mapConfig, onEdit, onPl
 function StationBadge({ station }: { station: Station }) {
   if (station.isTemplate) return <span className="shrink-0 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800">Vorlage</span>;
   return <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">{statusLabel[station.status]}</span>;
+}
+
+function stationTemplateKey(station: Station) {
+  return `${station.categoryId}:${station.name.trim().toLowerCase()}`;
 }
 
 const billingStatusLabel: Record<Tenant["billing"]["status"], string> = {
