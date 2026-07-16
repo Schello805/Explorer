@@ -422,7 +422,13 @@ function TenantSettings({ tenant, saving, platformAdmin, onLifecycle, onSave }: 
     <SettingsCard title="Campingplatz & Link" complete={Boolean(draft.name.trim() && draft.slug.trim() && draft.contact.email.trim() && draft.contact.emergency.trim())} description="Standardmäßig läuft jeder Campingplatz unter platzguide.de/c/link-kuerzel. Pro-Mandanten können zusätzlich eigene Domains verwenden.">
       <Field label="Name" value={draft.name} onChange={(name) => setDraft({ ...draft, name })} />
       <Field label="Link-Kürzel" value={draft.slug} onChange={(slug) => setDraft({ ...draft, slug })} />
-      <Field label="Optionale eigene Domains" value={hostText} onChange={(hosts) => setDraft({ ...draft, hosts: hosts.split(",").map((host) => host.trim()).filter(Boolean) })} />
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-amber-700">BETA</span>
+          <p className="text-xs leading-5 text-black/50">Eigene Domains zeigen per DNS auf Platzguide. Keine URL mit <code>/c/...</code> eintragen.</p>
+        </div>
+        <Field label="Optionale eigene Domains" value={hostText} onChange={(hosts) => setDraft({ ...draft, hosts: hosts.split(",").map((host) => host.trim()).filter(Boolean) })} />
+      </div>
       <div className="rounded-xl bg-[#f7f7f4] p-4 text-sm leading-6 text-black/65">
         <p className="font-bold text-[#1b302a]">Öffentlicher Link</p>
         <p>Standard-Link: <code>/c/{draft.slug}</code>. Dafür ist kein Wildcard-DNS und kein Wildcard-Zertifikat nötig.</p>
@@ -903,7 +909,7 @@ function tooltipForLabel(label: string) {
   const exact: Record<string, string> = {
     "Name": "Der sichtbare Name, der in Listen, Überschriften oder Karten erscheint.",
     "Link-Kürzel": "Kurzer eindeutiger Linkteil ohne Leerzeichen, z. B. sonnental für /c/sonnental.",
-    "Optionale eigene Domains": "Eigene Domains kommasepariert eintragen, z. B. camping.example.de. Leer lassen, wenn nur der Platzguide-Link genutzt wird.",
+    "Optionale eigene Domains": "BETA: Eigene Domains kommasepariert eintragen, z. B. guide.camping-example.de. DNS per CNAME auf platzguide.de oder per A-Record auf den Server setzen. Keine URL mit /c/... eintragen.",
     "Kontakt-Telefon": "Telefonnummer für Gäste und Kontaktbereiche.",
     "Kontakt-E-Mail": "Öffentliche Kontaktadresse des Campingplatzes.",
     "Notfallkontakt": "Telefonnummer oder kurzer Hinweis für dringende Fälle.",

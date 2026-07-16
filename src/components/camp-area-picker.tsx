@@ -81,38 +81,64 @@ export function CampAreaPicker({ mapConfig, onChange }: {
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+    const container = containerRef.current;
+    let fallbackApplied = false;
+    let loaded = false;
     const map = new maplibregl.Map({
-      container: containerRef.current,
+      container,
       style: getMapStyle(initialStyleUrlRef.current),
       center: initialCenterRef.current,
       zoom: Math.max(initialZoomRef.current, 15),
-      attributionControl: false
+      attributionControl: false,
+      dragPan: true,
+      scrollZoom: true,
+      doubleClickZoom: true,
+      touchZoomRotate: true,
+      keyboard: true
     });
+    function applyRasterFallback() {
+      if (fallbackApplied) return;
+      fallbackApplied = true;
+      map.setStyle(rasterMapStyle);
+      setMessage("Kartenstil konnte nicht geladen werden. Stabile OSM-Rasterkarte wurde aktiviert.");
+    }
+    const fallbackTimer = window.setTimeout(() => {
+      if (!loaded) applyRasterFallback();
+    }, 4000);
+    const resizeObserver = new ResizeObserver(() => map.resize());
+    resizeObserver.observe(container);
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     map.addControl(new maplibregl.AttributionControl({
       compact: true,
       customAttribution: "© OpenStreetMap-Mitwirkende · OpenFreeMap"
     }), "bottom-left");
+    map.on("error", (event) => {
+      console.warn("Kartenstil konnte nicht vollständig geladen werden.", event.error);
+      applyRasterFallback();
+    });
+    map.on("styledata", () => {
+      window.requestAnimationFrame(() => {
+        map.resize();
+        syncAreaLayer(map, latestMapConfigRef.current.bounds && validBounds(latestMapConfigRef.current.bounds) ? latestMapConfigRef.current.bounds : initialBoundsRef.current);
+      });
+    });
     map.on("load", () => {
+      loaded = true;
+      window.clearTimeout(fallbackTimer);
       map.resize();
-      map.addSource("camp-area", { type: "geojson", data: boundsFeature(initialBoundsRef.current) });
-      map.addLayer({
-        id: "camp-area-fill",
-        type: "fill",
-        source: "camp-area",
-        paint: { "fill-color": "#195f4c", "fill-opacity": 0.16 }
-      });
-      map.addLayer({
-        id: "camp-area-outline",
-        type: "line",
-        source: "camp-area",
-        paint: { "line-color": "#195f4c", "line-width": 3, "line-dasharray": [2, 1] }
-      });
+      syncAreaLayer(map, initialBoundsRef.current);
       renderMarkers(map, initialBoundsRef.current);
       fitBounds(map, initialBoundsRef.current);
     });
+    map.dragPan.enable();
+    map.scrollZoom.enable();
+    map.doubleClickZoom.enable();
+    map.touchZoomRotate.enable();
+    map.keyboard.enable();
     mapRef.current = map;
     return () => {
+      window.clearTimeout(fallbackTimer);
+      resizeObserver.disconnect();
       markersRef.current.forEach((marker) => marker.remove());
       markersRef.current = [];
       map.remove();
@@ -179,8 +205,33 @@ function getMapStyle(styleUrl: string) {
 }
 
 function updateAreaSource(map: import("maplibre-gl").Map, bounds: Bounds) {
+  syncAreaLayer(map, bounds);
+}
+
+function syncAreaLayer(map: import("maplibre-gl").Map, bounds: Bounds) {
+  if (!map.isStyleLoaded()) return;
   const source = map.getSource("camp-area") as import("maplibre-gl").GeoJSONSource | undefined;
-  source?.setData(boundsFeature(bounds));
+  if (source) {
+    source.setData(boundsFeature(bounds));
+    return;
+  }
+  if (!map.getSource("camp-area")) map.addSource("camp-area", { type: "geojson", data: boundsFeature(bounds) });
+  if (!map.getLayer("camp-area-fill")) {
+    map.addLayer({
+      id: "camp-area-fill",
+      type: "fill",
+      source: "camp-area",
+      paint: { "fill-color": "#195f4c", "fill-opacity": 0.16 }
+    });
+  }
+  if (!map.getLayer("camp-area-outline")) {
+    map.addLayer({
+      id: "camp-area-outline",
+      type: "line",
+      source: "camp-area",
+      paint: { "line-color": "#195f4c", "line-width": 3, "line-dasharray": [2, 1] }
+    });
+  }
 }
 
 function boundsFeature(bounds: Bounds) {
