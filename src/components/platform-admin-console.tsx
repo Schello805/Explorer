@@ -230,7 +230,7 @@ function PlatformAccountCard({ adminEmail }: { adminEmail: string }) {
     setState({ loading: false, message: "Profil gespeichert. Deine Session wurde aktualisiert.", error: "" });
   }
 
-  return <AdminCard id="profil" title="Profil & Zugang" icon={<ShieldCheck />}>
+  return <AdminCard id="profil" title="Profil & Zugang" complete={Boolean(email.trim())} icon={<ShieldCheck />}>
     <p className="text-sm leading-6 text-black/55">Diese Zugangsdaten gelten nur für den zentralen Superadmin. Änderungen werden in `.env.local` gespeichert und die aktuelle Session wird sofort erneuert.</p>
     <form onSubmit={saveAccount} className="space-y-3">
       <MailInput label="Login-E-Mail" type="email" value={email} onChange={setEmail} required />
@@ -311,7 +311,9 @@ function LegalSettingsCard() {
     setState({ loading: false, message: response.ok ? "Zentrale Rechtstexte gespeichert." : "", error: response.ok ? "" : "Rechtstexte konnten nicht gespeichert werden." });
   }
 
-  return <AdminCard id="recht" title="Zentrale Rechtstexte" icon={<FileText />}>
+  const complete = [legal.imprint, legal.privacy, legal.cookies, legal.terms].every((value) => value.trim().length > 20);
+
+  return <AdminCard id="recht" title="Zentrale Rechtstexte" complete={complete} icon={<FileText />}>
     <p className="text-sm leading-6 text-black/55">Diese Texte gelten für die Hauptdomain und alle Campingplatz-Links. Mandantenadmins pflegen keine eigenen Rechtstexte.</p>
     <form onSubmit={save} className="space-y-3">
       <LegalTextarea label="Impressum" value={legal.imprint} onChange={(imprint) => setLegal({ ...legal, imprint })} />
@@ -359,8 +361,9 @@ function PlatformDefaultsCard() {
   }
 
   if (!settings) return <AdminCard id="vorgaben" title="Modul- & Integrations-Vorgaben" icon={<Database />}><p className="text-sm text-black/55">{state.loading ? "Lade Vorgaben …" : state.error}</p></AdminCard>;
+  const complete = modules.length > 0 && settings.defaultIntegrations.storage.maxUploadMb > 0 && settings.defaultIntegrations.backup.schedule.trim().length > 0;
 
-  return <AdminCard id="vorgaben" title="Modul- & Integrations-Vorgaben" icon={<Database />}>
+  return <AdminCard id="vorgaben" title="Modul- & Integrations-Vorgaben" complete={complete} icon={<Database />}>
     <p className="text-sm leading-6 text-black/55">Diese Vorgaben gelten für neu angelegte Campingplätze. Bestehende Mandanten bleiben bewusst unverändert und können von dir einzeln in der Mandantenverwaltung angepasst werden.</p>
     <form onSubmit={save} className="space-y-5">
       <div className="grid gap-3 lg:grid-cols-2">
@@ -497,7 +500,9 @@ function CaptchaSettingsCard() {
     else setConfig({ ...config, hcaptchaSecretKey: value });
   }
 
-  return <AdminCard id="captcha" title="Captcha & Registrierung" icon={<ShieldCheck />}>
+  const complete = config.provider === "disabled" || Boolean(config.siteKey.trim() && (hasSecret || secretValue.trim()));
+
+  return <AdminCard id="captcha" title="Captcha & Registrierung" complete={complete} icon={<ShieldCheck />}>
     <p className="text-sm leading-6 text-black/55">Diese Werte gelten global für die Konto- und Campingplatz-Erstellung auf der Startseite. Für Google nutzt du reCAPTCHA v2 Checkbox mit Domain `platzguide.de`.</p>
     <form onSubmit={saveCaptcha} className="space-y-3">
       <label className="text-sm font-bold">Captcha-Anbieter
@@ -647,7 +652,9 @@ function MailSettingsCard({ onConfiguredChange }: { onConfiguredChange: (configu
     setState({ loading: false, testing: false, message: response.ok ? "Testmail wurde an deinen Superadmin-Zugang gesendet." : "", error: response.ok ? "" : "Testmail fehlgeschlagen. Bitte SMTP-Daten prüfen." });
   }
 
-  return <AdminCard id="smtp" title="SMTP & E-Mail" icon={<Mail />}>
+  const complete = Boolean(config.smtpHost.trim() && config.smtpPort > 0 && config.smtpUser.trim() && (config.hasSmtpPassword || config.smtpPassword.trim()) && config.mailFrom.trim() && config.mailFromName.trim());
+
+  return <AdminCard id="smtp" title="SMTP & E-Mail" complete={complete} icon={<Mail />}>
     <p className="text-sm leading-6 text-black/55">Diese Einstellungen gelten zentral für die ganze Plattform. Absender, Name und SMTP-Zugang werden hier gespeichert; Mandanten können diese Werte nicht ändern.</p>
     <p className="rounded-xl bg-[#f7f7f4] p-3 text-xs leading-5 text-black/55">Systemmails gehen an Mandantenadmins oder an dich als Superadmin. Gäste erhalten keine E-Mails.</p>
     <form onSubmit={save} className="space-y-3">
@@ -713,7 +720,9 @@ function PushSettingsCard() {
     if (response.ok) setConfig((current) => ({ ...current, privateKey: "", hasPrivateKey: current.hasPrivateKey || Boolean(current.privateKey), configured: Boolean(current.publicKey && (current.hasPrivateKey || current.privateKey)) }));
   }
 
-  return <AdminCard id="push" title="Web-Push" icon={<Bell />}>
+  const complete = Boolean(config.publicKey.trim() && (config.hasPrivateKey || config.privateKey.trim()));
+
+  return <AdminCard id="push" title="Web-Push" complete={complete} icon={<Bell />}>
     <p className="text-sm leading-6 text-black/55">Web-Push nutzt VAPID-Schlüssel. Besucher müssen Push in der PWA aktiv erlauben; danach können Mandantenadmins aktive Mitteilungen zusätzlich als Geräte-Push senden.</p>
     <p className="rounded-xl bg-[#f7f7f4] p-3 text-xs leading-5 text-black/55">Schlüssel erzeugst du z. B. einmalig mit <code>npx web-push generate-vapid-keys</code>. Der öffentliche Schlüssel darf im Frontend stehen, der private Schlüssel bleibt geheim.</p>
     <form onSubmit={save} className="space-y-3">
@@ -763,7 +772,7 @@ function BroadcastMailCard() {
     setState({ loading: false, message: response.ok ? `${testOnly ? "Testmail" : "Rundmail"} versendet an ${payload?.recipients ?? 0} Empfänger.` : "", error: response.ok ? "" : payload?.error ?? "Rundmail konnte nicht versendet werden." });
     if (response.ok && testOnly) setTestSent(true);
   }
-  return <AdminCard id="rundmail" title="Rundmail" icon={<Mail />}>
+  return <AdminCard id="rundmail" title="Rundmail" complete={Boolean(subject.trim() && body.trim() && groups.length > 0 && testSent)} icon={<Mail />}>
     <p className="text-sm leading-6 text-black/55">Sende Produktinfos oder wichtige Hinweise an Mandantenadmins. Vor echtem Versand muss zuerst eine Testmail an deinen Superadmin-Zugang gesendet werden.</p>
     <div className="grid gap-2 sm:grid-cols-3">
       {options.map(([id, label]) => <label key={id} className="flex items-center gap-2 rounded-xl border border-black/10 p-3 text-sm font-bold"><input type="checkbox" checked={groups.includes(id)} onChange={(event) => setGroups((current) => event.target.checked ? [...current, id] : current.filter((item) => item !== id))} className="h-4 w-4 accent-[#286551]" />{label}</label>)}
@@ -873,7 +882,9 @@ function StripeSettingsCard() {
     { label: "Kleinunternehmer-Hinweis in Stripe-Rechnungstext gepflegt", done: config.taxMode === "small_business_de" }
   ];
 
-  return <AdminCard id="stripe" title="Stripe Billing" icon={<CreditCard />}>
+  const complete = config.enabled && setupSteps.every((step) => step.done);
+
+  return <AdminCard id="stripe" title="Stripe Billing" complete={complete} icon={<CreditCard />}>
     <p className="text-sm leading-6 text-black/55">Stripe verwaltet Abos, Rechnungen, Kündigungen und Zahlungsdaten. Platzguide speichert nur Schlüssel, Price-IDs, Webhook-Status und später Stripe-Referenzen am Mandanten.</p>
     <div className="rounded-xl bg-[#f7f7f4] p-4 text-sm leading-6 text-black/60">
       <p className="font-bold text-[#173c32]">Beim Stripe-Setup auswählen:</p>
@@ -938,8 +949,19 @@ function Metric({ icon, label, value, note }: { icon: React.ReactNode; label: st
   return <article className="rounded-2xl bg-white p-5 shadow-sm"><div className="flex justify-between text-[#286551]"><p className="text-xs font-bold uppercase tracking-widest text-[#1b302a]/40">{label}</p>{icon}</div><p className="mt-4 font-display text-4xl">{value}</p><p className="mt-1 text-xs text-[#1b302a]/45">{note}</p></article>;
 }
 
-function AdminCard({ id, title, icon, children }: { id?: string; title: string; icon: React.ReactNode; children: React.ReactNode }) {
-  return <section id={id} className="scroll-mt-6 rounded-[1.5rem] bg-white p-5 shadow-sm"><div className="flex items-center justify-between gap-3"><h2 className="font-display text-2xl">{title}</h2><span className="text-[#286551]">{icon}</span></div><div className="mt-4 space-y-3">{children}</div></section>;
+function AdminCard({ id, title, complete = false, icon, children }: { id?: string; title: string; complete?: boolean; icon: React.ReactNode; children: React.ReactNode }) {
+  return <section id={id} className="scroll-mt-6 rounded-[1.5rem] bg-white p-5 shadow-sm">
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <h2 className="break-words font-display text-2xl">{title}</h2>
+          {complete && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700"><CheckCircle2 size={14} /> vollständig</span>}
+        </div>
+      </div>
+      <span className="shrink-0 text-[#286551]">{complete ? <CheckCircle2 /> : icon}</span>
+    </div>
+    <div className="mt-4 space-y-3">{children}</div>
+  </section>;
 }
 
 function Command({ label, command }: { label: string; command: string }) {
