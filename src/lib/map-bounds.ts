@@ -34,6 +34,16 @@ export function boundsCenter(bounds: Bounds): [number, number] {
   return [(bounds[0][0] + bounds[1][0]) / 2, (bounds[0][1] + bounds[1][1]) / 2];
 }
 
+export function coordinateToMapPosition(bounds: Bounds, coordinate: [number, number]) {
+  const [[west, south], [east, north]] = bounds;
+  const longitudeSpan = east - west || 1;
+  const latitudeSpan = north - south || 1;
+  return {
+    x: Math.round(Math.min(96, Math.max(4, ((coordinate[0] - west) / longitudeSpan) * 100))),
+    y: Math.round(Math.min(92, Math.max(8, ((north - coordinate[1]) / latitudeSpan) * 100)))
+  };
+}
+
 export function validBounds(value: unknown): value is Bounds {
   return Array.isArray(value) && value.length === 2 && value.every((point) => Array.isArray(point) && point.length === 2 && point.every(Number.isFinite));
 }

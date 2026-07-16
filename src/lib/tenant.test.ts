@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { canManageTenant, canViewTenant } from "@/lib/auth";
 import { applyBillingPlan } from "@/lib/billing";
-import { resizeBoundsFromCorner } from "@/lib/map-bounds";
+import { coordinateToMapPosition, resizeBoundsFromCorner } from "@/lib/map-bounds";
 import { rateLimit } from "@/lib/rate-limit";
 import { isPlatformHost, onlyTenantRecords, resolveTenant } from "@/lib/tenant-resolver";
 import { createDefaultStationTemplates, tenantDefaults } from "@/lib/tenant-defaults";
@@ -118,5 +118,11 @@ describe("tenant isolation", () => {
     expect(resizeBoundsFromCorner(bounds, 1, [10.8, 50.2])).toEqual([[10, 49], [10.8, 50.2]]);
     expect(resizeBoundsFromCorner(bounds, 2, [10.8, 48.8])).toEqual([[10, 48.8], [10.8, 50]]);
     expect(resizeBoundsFromCorner(bounds, 3, [10.2, 48.8])).toEqual([[10.2, 48.8], [11, 50]]);
+  });
+
+  it("projects real map coordinates into legacy station positions", () => {
+    expect(coordinateToMapPosition([[10, 49], [11, 50]], [10.5, 49.5])).toEqual({ x: 50, y: 50 });
+    expect(coordinateToMapPosition([[10, 49], [11, 50]], [10, 50])).toEqual({ x: 4, y: 8 });
+    expect(coordinateToMapPosition([[10, 49], [11, 50]], [11, 49])).toEqual({ x: 96, y: 92 });
   });
 });

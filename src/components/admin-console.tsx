@@ -7,9 +7,11 @@ import { Activity, Bell, BookOpen, CalendarDays, Caravan, CheckCircle2, ChevronR
 import { applyBillingPlan, billingPlans, formatEuro, storageUsedMb } from "@/lib/billing";
 import type { Category, EventItem, GuestGuideItem, MediaAsset, OccupancyStatus, PushMessage, Reward, Station, Tenant, Tour } from "@/lib/types";
 import { cn, statusLabel } from "@/lib/utils";
+import { boundsCenter, coordinateToMapPosition, defaultBounds, validBounds } from "@/lib/map-bounds";
 import { StationLocationPicker } from "@/components/station-location-picker";
 import { StationImport } from "@/components/station-import";
 import { CampAreaPicker } from "@/components/camp-area-picker";
+import { StationTemplateMap } from "@/components/station-template-map";
 
 const platformLogo = "/icons/platzguide-logo.png";
 
@@ -73,10 +75,11 @@ export function AdminConsole({ tenant, tenants, adminEmail, isPlatformAdmin = fa
     flashNotice(saved.isTemplate ? "Vorlage gespeichert." : "Station gespeichert.");
   }
 
-  async function placeTemplateStation(station: Station, position: { x: number; y: number }) {
-    const [centerLongitude, centerLatitude] = currentTenant.map.center;
-    const longitude = Number((centerLongitude + (position.x - 50) / 5000).toFixed(6));
-    const latitude = Number((centerLatitude - (position.y - 50) / 5000).toFixed(6));
+  async function placeTemplateStation(station: Station, coordinate: { longitude: number; latitude: number }) {
+    const mapBounds = validBounds(currentTenant.map.bounds) ? currentTenant.map.bounds : defaultBounds(currentTenant.map.center);
+    const position = coordinateToMapPosition(mapBounds, [coordinate.longitude, coordinate.latitude]);
+    const longitude = Number(coordinate.longitude.toFixed(6));
+    const latitude = Number(coordinate.latitude.toFixed(6));
     await persistStation({ ...station, isTemplate: false, position, longitude, latitude });
   }
 
@@ -298,7 +301,7 @@ function SetupAssistant({ tenant, stations, onNavigate }: { tenant: Tenant; stat
 
 function Metric({ label, value, note, icon }: { label: string; value: string; note: string; icon: React.ReactNode }) { return <div className="rounded-2xl bg-white p-5 shadow-sm"><div className="flex justify-between text-[#286551]"><p className="text-xs font-bold uppercase tracking-widest text-[#1b302a]/40">{label}</p>{icon}</div><p className="mt-4 font-display text-4xl">{value}</p><p className="mt-1 text-xs text-[#1b302a]/45">{note}</p></div>; }
 
-function Stations({ tenant, stations, onEdit, onRemove, onCreate, onImport, onPlaceTemplate }: { tenant: Tenant; stations: Station[]; onEdit: (station: Station) => void; onRemove: (id: string) => void; onCreate: () => void; onImport: (stations: Station[]) => Promise<void>; onPlaceTemplate: (station: Station, position: { x: number; y: number }) => Promise<void> }) {
+function Stations({ tenant, stations, onEdit, onRemove, onCreate, onImport, onPlaceTemplate }: { tenant: Tenant; stations: Station[]; onEdit: (station: Station) => void; onRemove: (id: string) => void; onCreate: () => void; onImport: (stations: Station[]) => Promise<void>; onPlaceTemplate: (station: Station, coordinate: { longitude: number; latitude: number }) => Promise<void> }) {
   const activeStations = stations.filter((station) => !station.isTemplate);
   return <section className="animate-enter overflow-hidden rounded-xl bg-white shadow-sm">
     <div className="flex flex-col gap-3 border-b border-black/5 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -317,29 +320,24 @@ function Stations({ tenant, stations, onEdit, onRemove, onCreate, onImport, onPl
   </section>;
 }
 
-function StationTemplateDropZone({ stations, categories, mapConfig, onEdit, onPlaceTemplate }: { stations: Station[]; categories: Category[]; mapConfig: Tenant["map"]; onEdit: (station: Station) => void; onPlaceTemplate: (station: Station, position: { x: number; y: number }) => Promise<void> }) {
-  const dropRef = useRef<HTMLDivElement>(null);
+function StationTemplateDropZone({ stations, categories, mapConfig, onEdit, onPlaceTemplate }: { stations: Station[]; categories: Category[]; mapConfig: Tenant["map"]; onEdit: (station: Station) => void; onPlaceTemplate: (station: Station, coordinate: { longitude: number; latitude: number }) => Promise<void> }) {
   const [placingId, setPlacingId] = useState<string | null>(null);
   const templates = stations.filter((station) => station.isTemplate);
-  const placedStations = stations.filter((station) => !station.isTemplate);
+  const mapBounds = validBounds(mapConfig.bounds) ? mapConfig.bounds : defaultBounds(mapConfig.center);
+  const defaultCoordinate = boundsCenter(mapBounds);
 
-  async function place(station: Station, position: { x: number; y: number }) {
+  async function place(station: Station, coordinate: { longitude: number; latitude: number }) {
     setPlacingId(station.id);
     try {
-      await onPlaceTemplate(station, position);
+      await onPlaceTemplate(station, coordinate);
     } finally {
       setPlacingId(null);
     }
   }
 
-  function dropStation(event: React.DragEvent<HTMLDivElement>) {
-    event.preventDefault();
-    const station = templates.find((item) => item.id === event.dataTransfer.getData("text/plain"));
-    const bounds = dropRef.current?.getBoundingClientRect();
-    if (!station || !bounds) return;
-    const x = Math.min(96, Math.max(4, ((event.clientX - bounds.left) / bounds.width) * 100));
-    const y = Math.min(92, Math.max(8, ((event.clientY - bounds.top) / bounds.height) * 100));
-    void place(station, { x: Math.round(x), y: Math.round(y) });
+  function placeDroppedTemplate(stationId: string, coordinate: { longitude: number; latitude: number }) {
+    const station = templates.find((item) => item.id === stationId);
+    if (station) void place(station, coordinate);
   }
 
   return <div className="grid gap-4 border-b border-black/5 p-4 xl:grid-cols-[320px_1fr]">
@@ -355,23 +353,13 @@ function StationTemplateDropZone({ stations, categories, mapConfig, onEdit, onPl
             <StationBadge station={station} />
           </div>
           <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold">
-            <button onClick={() => place(station, { x: 28 + (index % 3) * 18, y: 34 + (index % 2) * 24 })} disabled={placingId === station.id} className="rounded-lg bg-[#173c32] px-3 py-2 text-white disabled:opacity-60">{placingId === station.id ? "Platziert …" : "Platzieren"}</button>
+            <button onClick={() => place(station, { longitude: defaultCoordinate[0] + (index % 3) * 0.0002, latitude: defaultCoordinate[1] - (index % 2) * 0.0002 })} disabled={placingId === station.id} className="rounded-lg bg-[#173c32] px-3 py-2 text-white disabled:opacity-60">{placingId === station.id ? "Platziert …" : "Platzieren"}</button>
             <button onClick={() => onEdit(station)} className="rounded-lg border border-black/10 px-3 py-2 text-[#286551]">Vorlage bearbeiten</button>
           </div>
         </div>)}
       </div>
     </div>
-    <div ref={dropRef} onDrop={dropStation} onDragOver={(event) => event.preventDefault()} className="relative min-h-[360px] overflow-hidden rounded-2xl border-4 border-white bg-[#dce9cf] shadow-inner map-texture">
-      {mapConfig.sitePlan?.imageUrl && <Image src={mapConfig.sitePlan.imageUrl} alt="Platzplan" fill className="object-cover opacity-80" />}
-      <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1.5 text-xs font-bold text-[#173c32] shadow-sm">Karte / Platzplan</div>
-      <div className="pointer-events-none absolute inset-x-4 bottom-4 rounded-xl bg-white/90 p-3 text-xs leading-5 text-black/60 shadow-sm">Tipp: Station anklicken zum Bearbeiten. Im Editor kannst du den Marker per Karte, GPS oder Koordinaten exakt setzen.</div>
-      {placedStations.map((station) => {
-        const category = categories.find((item) => item.id === station.categoryId);
-        return <button key={station.id} onClick={() => onEdit(station)} style={{ left: `${station.position.x}%`, top: `${station.position.y}%`, backgroundColor: category?.color ?? "#173c32" }} className="absolute max-w-[42%] -translate-x-1/2 -translate-y-1/2 rounded-full px-3 py-2 text-xs font-bold text-white shadow-lg ring-4 ring-white/90">
-          <span className="block truncate">{station.name}</span>
-        </button>;
-      })}
-    </div>
+    <StationTemplateMap stations={stations} categories={categories} mapConfig={mapConfig} onEdit={onEdit} onDropTemplate={placeDroppedTemplate} />
   </div>;
 }
 
