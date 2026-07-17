@@ -80,7 +80,12 @@ button, a { -webkit-tap-highlight-color: transparent; }
   box-shadow: 0 14px 40px rgba(20, 50, 40, .2);
   padding: 10px 14px;
 }
+.platzguide-station-marker {
+  width: 46px;
+  height: 56px;
+}
 .platzguide-station-pin {
+  display: block;
   position: relative;
   width: 46px;
   height: 56px;
@@ -108,6 +113,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 }
 .platzguide-station-pin:hover .platzguide-station-pin__svg,
 .platzguide-station-pin:focus-visible .platzguide-station-pin__svg,
+.platzguide-station-marker--dragging .platzguide-station-pin__svg,
 .platzguide-station-pin--dragging .platzguide-station-pin__svg {
   transform: translateY(-3px) scale(1.04);
 }

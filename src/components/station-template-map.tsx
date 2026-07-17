@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import type { StyleSpecification } from "maplibre-gl";
-import { boundsCenter, boundsCorners, defaultBounds, validBounds } from "@/lib/map-bounds";
-import { createStationPinElement } from "@/lib/map-marker";
+import { boundsCenter, boundsCorners, clampCoordinateToBounds, defaultBounds, validBounds } from "@/lib/map-bounds";
+import { createStationPinElement, updateStationPinElement } from "@/lib/map-marker";
 import type { Category, Station, Tenant } from "@/lib/types";
 
 const rasterMapStyle: StyleSpecification = {
@@ -43,9 +43,14 @@ export function StationTemplateMap({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import("maplibre-gl").Map | null>(null);
-  const markersRef = useRef<Map<string, import("maplibre-gl").Marker>>(new Map());
+  const markersRef = useRef<Map<string, StationMarkerEntry>>(new Map());
+  const onEditRef = useRef(onEdit);
+  const onMoveStationRef = useRef(onMoveStation);
   const bounds = useMemo(() => validBounds(mapConfig.bounds) ? mapConfig.bounds : defaultBounds(mapConfig.center), [mapConfig.bounds, mapConfig.center]);
   const center = useMemo(() => boundsCenter(bounds), [bounds]);
+
+  useEffect(() => { onEditRef.current = onEdit; }, [onEdit]);
+  useEffect(() => { onMoveStationRef.current = onMoveStation; }, [onMoveStation]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -77,7 +82,7 @@ export function StationTemplateMap({
     });
     mapRef.current = map;
     return () => {
-      markerMap.forEach((marker) => marker.remove());
+      markerMap.forEach(({ marker }) => marker.remove());
       markerMap.clear();
       map.remove();
       mapRef.current = null;
@@ -113,45 +118,70 @@ export function StationTemplateMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !activeTemplateDrag) return;
-    const handlePointerUp = (event: PointerEvent) => {
-      const rect = map.getCanvasContainer().getBoundingClientRect();
-      const isInsideMap = event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
-      if (!isInsideMap) return;
-      const point = map.unproject([event.clientX - rect.left, event.clientY - rect.top]);
-      onDropTemplate(activeTemplateDrag.stationId, {
-        longitude: Number(point.lng.toFixed(6)),
-        latitude: Number(point.lat.toFixed(6))
-      });
-    };
-    window.addEventListener("pointerup", handlePointerUp);
-    return () => window.removeEventListener("pointerup", handlePointerUp);
-  }, [activeTemplateDrag, onDropTemplate]);
-
-  useEffect(() => {
-    const map = mapRef.current;
     if (!map) return;
     const visibleStations = stations.filter((station) => !station.isTemplate && hasCoordinates(station));
     const visibleIds = new Set(visibleStations.map((station) => station.id));
-    markersRef.current.forEach((marker, stationId) => {
+    markersRef.current.forEach(({ marker }, stationId) => {
       if (!visibleIds.has(stationId)) {
         marker.remove();
         markersRef.current.delete(stationId);
       }
     });
     for (const station of visibleStations) {
-      const existingMarker = markersRef.current.get(station.id);
-      if (existingMarker) {
-        existingMarker.setLngLat([station.longitude, station.latitude]);
+      const category = categories.find((item) => item.id === station.categoryId);
+      const existingEntry = markersRef.current.get(station.id);
+      if (existingEntry) {
+        existingEntry.station = station;
+        existingEntry.marker.setLngLat([station.longitude, station.latitude]);
+        updateStationPinElement(existingEntry.element, {
+          stationId: station.id,
+          label: station.name,
+          color: category?.color ?? "#173c32",
+          longitude: station.longitude,
+          latitude: station.latitude,
+          onClick: () => onEditRef.current(existingEntry.station)
+        });
         continue;
       }
-      const category = categories.find((item) => item.id === station.categoryId);
-      const element = createStationPinElement({ label: station.name, color: category?.color ?? "#173c32", onClick: () => onEdit(station) });
-      const marker = new maplibregl.Marker({ element, anchor: "bottom" }).setLngLat([station.longitude, station.latitude]).addTo(map);
-      enableMarkerPointerDrag(map, marker, element, station, onMoveStation);
-      markersRef.current.set(station.id, marker);
+      const entry = {} as StationMarkerEntry;
+      const element = createStationPinElement({
+        label: station.name,
+        color: category?.color ?? "#173c32",
+        onClick: () => onEditRef.current(entry.station)
+      });
+      updateStationPinElement(element, {
+        stationId: station.id,
+        label: station.name,
+        color: category?.color ?? "#173c32",
+        longitude: station.longitude,
+        latitude: station.latitude,
+        onClick: () => onEditRef.current(entry.station)
+      });
+      const marker = new maplibregl.Marker({ element, anchor: "bottom", draggable: true })
+        .setLngLat([station.longitude, station.latitude])
+        .addTo(map);
+      entry.marker = marker;
+      entry.element = element;
+      entry.station = station;
+      marker.on("dragstart", () => {
+        element.dataset.dragged = "true";
+        element.classList.add("platzguide-station-marker--dragging");
+      });
+      marker.on("dragend", () => {
+        element.classList.remove("platzguide-station-marker--dragging");
+        const point = clampCoordinateToBounds(bounds, marker.getLngLat().toArray());
+        marker.setLngLat(point);
+        onMoveStationRef.current(entry.station, {
+          longitude: Number(point[0].toFixed(6)),
+          latitude: Number(point[1].toFixed(6))
+        });
+        window.setTimeout(() => {
+          element.dataset.dragged = "false";
+        }, 0);
+      });
+      markersRef.current.set(station.id, entry);
     }
-  }, [categories, onEdit, onMoveStation, stations]);
+  }, [bounds, categories, stations]);
 
   function handleDrop(event: React.DragEvent<HTMLDivElement>) {
     event.preventDefault();
@@ -159,14 +189,25 @@ export function StationTemplateMap({
     const rect = map?.getCanvasContainer().getBoundingClientRect();
     const stationId = event.dataTransfer.getData("text/plain");
     if (!map || !rect || !stationId) return;
-    const point = map.unproject([event.clientX - rect.left, event.clientY - rect.top]);
+    const point = clampCoordinateToBounds(bounds, map.unproject([event.clientX - rect.left, event.clientY - rect.top]).toArray());
     onDropTemplate(stationId, {
-      longitude: Number(point.lng.toFixed(6)),
-      latitude: Number(point.lat.toFixed(6))
+      longitude: Number(point[0].toFixed(6)),
+      latitude: Number(point[1].toFixed(6))
     });
   }
 
-  return <div onDrop={handleDrop} onDragOver={(event) => event.preventDefault()} className="relative min-h-[360px] overflow-hidden rounded-2xl border-4 border-white bg-[#dce9cf] shadow-inner">
+  function handleTemplatePointerUp(event: React.PointerEvent<HTMLDivElement>) {
+    const map = mapRef.current;
+    if (!map || !activeTemplateDrag) return;
+    const rect = map.getCanvasContainer().getBoundingClientRect();
+    const point = clampCoordinateToBounds(bounds, map.unproject([event.clientX - rect.left, event.clientY - rect.top]).toArray());
+    onDropTemplate(activeTemplateDrag.stationId, {
+      longitude: Number(point[0].toFixed(6)),
+      latitude: Number(point[1].toFixed(6))
+    });
+  }
+
+  return <div onPointerUp={handleTemplatePointerUp} onDrop={handleDrop} onDragOver={(event) => event.preventDefault()} className="relative min-h-[360px] overflow-hidden rounded-2xl border-4 border-white bg-[#dce9cf] shadow-inner">
     <div ref={containerRef} className="absolute inset-0" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
     <div className="pointer-events-none absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1.5 text-xs font-bold text-[#173c32] shadow-sm">Fixierter Platz-Ausschnitt</div>
     {positioningStationName && <div className="pointer-events-none absolute left-4 right-4 top-16 rounded-xl bg-[#173c32] p-3 text-sm font-bold text-white shadow-lg">Positioniermodus aktiv: Klicke auf die neue Stelle für „{positioningStationName}“.</div>}
@@ -223,77 +264,8 @@ function hasCoordinates(station: Station) {
   return Number.isFinite(station.longitude) && Number.isFinite(station.latitude) && station.longitude !== 0 && station.latitude !== 0;
 }
 
-function enableMarkerPointerDrag(
-  map: import("maplibre-gl").Map,
-  marker: import("maplibre-gl").Marker,
-  element: HTMLElement,
-  station: Station,
-  onMoveStation: (station: Station, coordinate: { longitude: number; latitude: number }) => void
-) {
-  element.addEventListener("pointerdown", (event) => {
-    if (event.button !== 0) return;
-    event.preventDefault();
-    event.stopPropagation();
-    startMarkerDrag(map, marker, element, station, onMoveStation, event.clientX, event.clientY, "pointer");
-  }, { capture: true });
-  element.addEventListener("mousedown", (event) => {
-    if (event.button !== 0 || element.classList.contains("platzguide-station-pin--dragging")) return;
-    event.preventDefault();
-    event.stopPropagation();
-    startMarkerDrag(map, marker, element, station, onMoveStation, event.clientX, event.clientY, "mouse");
-  }, { capture: true });
-}
-
-function startMarkerDrag(
-  map: import("maplibre-gl").Map,
-  marker: import("maplibre-gl").Marker,
-  element: HTMLElement,
-  station: Station,
-  onMoveStation: (station: Station, coordinate: { longitude: number; latitude: number }) => void,
-  startX: number,
-  startY: number,
-  eventType: "pointer" | "mouse"
-) {
-  const start = { x: startX, y: startY };
-  const rect = map.getCanvasContainer().getBoundingClientRect();
-  const anchor = map.project(marker.getLngLat());
-  const grabOffset = { x: start.x - rect.left - anchor.x, y: start.y - rect.top - anchor.y };
-  let moved = false;
-  map.dragPan.disable();
-  element.dataset.dragged = "false";
-  element.classList.add("platzguide-station-pin--dragging");
-
-  const move = (moveEvent: PointerEvent | MouseEvent) => {
-    const distance = Math.hypot(moveEvent.clientX - start.x, moveEvent.clientY - start.y);
-    if (distance > 3) {
-      moved = true;
-      element.dataset.dragged = "true";
-    }
-    if (!moved) return;
-    const rect = map.getCanvasContainer().getBoundingClientRect();
-    const point = map.unproject([
-      moveEvent.clientX - rect.left - grabOffset.x,
-      moveEvent.clientY - rect.top - grabOffset.y
-    ]);
-    marker.setLngLat(point);
-  };
-
-  const up = () => {
-    window.removeEventListener(eventType === "pointer" ? "pointermove" : "mousemove", move);
-    window.removeEventListener(eventType === "pointer" ? "pointerup" : "mouseup", up);
-    map.dragPan.disable();
-    element.classList.remove("platzguide-station-pin--dragging");
-    if (!moved) return;
-    const point = marker.getLngLat();
-    onMoveStation(station, {
-      longitude: Number(point.lng.toFixed(6)),
-      latitude: Number(point.lat.toFixed(6))
-    });
-    window.setTimeout(() => {
-      element.dataset.dragged = "false";
-    }, 0);
-  };
-
-  window.addEventListener(eventType === "pointer" ? "pointermove" : "mousemove", move);
-  window.addEventListener(eventType === "pointer" ? "pointerup" : "mouseup", up, { once: true });
-}
+type StationMarkerEntry = {
+  marker: import("maplibre-gl").Marker;
+  element: HTMLElement;
+  station: Station;
+};

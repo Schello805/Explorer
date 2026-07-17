@@ -41,8 +41,9 @@ function testTenant(tenantId: string, slug: string, name: string, publishReady =
     users: [{
       id: "22222222-2222-4222-8222-222222222222",
       tenantId,
-      email: "betreiber@example.org",
+      email: `${slug}@example.org`,
       role: "tenant-owner",
+      passwordHash: "$2b$10$oeJJYUyJWdzlhC8VwTW7BumvWisycj5UJpP99P/J90jpsDvVs6G1a",
       emailVerifiedAt: new Date().toISOString(),
       createdAt: new Date().toISOString()
     }],

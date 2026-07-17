@@ -4,8 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Layers3, LocateFixed, Map as MapIcon } from "lucide-react";
 import maplibregl from "maplibre-gl";
 import type { StyleSpecification } from "maplibre-gl";
-import { boundsCenter, coordinateToMapPosition, defaultBounds, validBounds, type Bounds } from "@/lib/map-bounds";
-import { createStationPinElement } from "@/lib/map-marker";
+import { boundsCenter, validBounds, type Bounds } from "@/lib/map-bounds";
+import { createStationPinElement, updateStationPinElement } from "@/lib/map-marker";
 import type { Station, Tenant } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -36,8 +36,9 @@ export function CampMap({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import("maplibre-gl").Map | null>(null);
-  const markersRef = useRef<Map<string, import("maplibre-gl").Marker>>(new Map());
+  const markersRef = useRef<Map<string, VisitorMarkerEntry>>(new Map());
   const userMarkerRef = useRef<import("maplibre-gl").Marker | null>(null);
+  const onSelectRef = useRef(onSelect);
   const [layer, setLayer] = useState<Layer>("map");
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -48,6 +49,8 @@ export function CampMap({
   const center = useMemo<[number, number]>(() => mapBounds ? boundsCenter(mapBounds) : hasLngLat(tenant.map.center) ? tenant.map.center : stationCenter(validStations) ?? [10.5605, 49.1643], [mapBounds, tenant.map.center, validStations]);
   const visibleStations = useMemo(() => mapBounds ? validStations.filter((station) => stationWithinBounds(station, mapBounds)) : validStations, [mapBounds, validStations]);
   const zoom = Number.isFinite(tenant.map.zoom) ? tenant.map.zoom : 16;
+
+  useEffect(() => { onSelectRef.current = onSelect; }, [onSelect]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -68,6 +71,10 @@ export function CampMap({
         zoom,
         maxBounds: mapBounds ?? undefined,
         attributionControl: false
+      });
+      map.on("styleimagemissing", ({ id }) => {
+        if (map.hasImage(id)) return;
+        map.addImage(id, { width: 1, height: 1, data: new Uint8Array([0, 0, 0, 0]) });
       });
       map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "bottom-right");
       map.addControl(new maplibregl.AttributionControl({
@@ -139,7 +146,7 @@ export function CampMap({
       cancelled = true;
       window.clearTimeout(fallbackTimer);
       window.clearTimeout(tileTimer);
-      markerMap.forEach((marker) => marker.remove());
+      markerMap.forEach(({ marker }) => marker.remove());
       markerMap.clear();
       userMarkerRef.current?.remove();
       mapRef.current?.remove();
@@ -152,26 +159,51 @@ export function CampMap({
     const map = mapRef.current;
     if (!map || !ready) return;
     const visibleIds = new Set(visibleStations.map((station) => station.id));
-    markersRef.current.forEach((marker, stationId) => {
+    markersRef.current.forEach(({ marker }, stationId) => {
       if (!visibleIds.has(stationId)) {
         marker.remove();
         markersRef.current.delete(stationId);
       }
     });
     for (const station of visibleStations) {
-      const existingMarker = markersRef.current.get(station.id);
-      if (existingMarker) {
-        existingMarker.setLngLat([station.longitude, station.latitude]);
+      const category = tenant.categories.find((item) => item.id === station.categoryId);
+      const existingEntry = markersRef.current.get(station.id);
+      if (existingEntry) {
+        existingEntry.station = station;
+        existingEntry.marker.setLngLat([station.longitude, station.latitude]);
+        updateStationPinElement(existingEntry.element, {
+          stationId: station.id,
+          label: station.name,
+          color: category?.color ?? "#195f4c",
+          longitude: station.longitude,
+          latitude: station.latitude,
+          onClick: () => onSelectRef.current(existingEntry.station)
+        });
         continue;
       }
-      const category = tenant.categories.find((item) => item.id === station.categoryId);
-      const element = createStationPinElement({ label: station.name, color: category?.color ?? "#195f4c", onClick: () => onSelect(station) });
+      const entry = {} as VisitorMarkerEntry;
+      const element = createStationPinElement({
+        label: station.name,
+        color: category?.color ?? "#195f4c",
+        onClick: () => onSelectRef.current(entry.station)
+      });
+      updateStationPinElement(element, {
+        stationId: station.id,
+        label: station.name,
+        color: category?.color ?? "#195f4c",
+        longitude: station.longitude,
+        latitude: station.latitude,
+        onClick: () => onSelectRef.current(entry.station)
+      });
       const marker = new maplibregl.Marker({ element, anchor: "bottom" })
         .setLngLat([station.longitude, station.latitude])
         .addTo(map);
-      markersRef.current.set(station.id, marker);
+      entry.marker = marker;
+      entry.element = element;
+      entry.station = station;
+      markersRef.current.set(station.id, entry);
     }
-  }, [ready, tenant.categories, visibleStations, onSelect]);
+  }, [ready, tenant.categories, visibleStations]);
 
   useEffect(() => {
     if (!selected || !mapRef.current || !hasCoordinates(selected)) return;
@@ -219,7 +251,7 @@ export function CampMap({
     { id: "sitePlan" as const, label: "Platzplan", icon: Layers3, available: hasValidSitePlan(tenant.map.sitePlan) }
   ].filter((choice) => choice.available);
 
-  if (failed) return <FallbackMap tenant={tenant} stations={stations} onSelect={onSelect} />;
+  if (failed) return <UnavailableMap tenant={tenant} />;
 
   return <div className="map-texture relative mt-4 h-[52vh] min-h-[360px] overflow-hidden rounded-[1.5rem] border-4 border-white bg-[#dce8d0] shadow-soft sm:min-h-[440px]">
     <div ref={containerRef} className="absolute inset-0" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} aria-label={`Interaktive Karte von ${tenant.name}`} />
@@ -232,32 +264,13 @@ export function CampMap({
   </div>;
 }
 
-function FallbackMap({ tenant, stations, onSelect }: { tenant: Tenant; stations: Station[]; onSelect: (station: Station) => void }) {
-  const fallbackBounds = validBounds(tenant.map.bounds) ? tenant.map.bounds : defaultBounds(tenant.map.center);
-  const fallbackStations = stations.filter((station) => hasCoordinates(station) && stationWithinBounds(station, fallbackBounds));
-  return <div className="map-texture relative mt-4 h-[52vh] min-h-[360px] overflow-hidden rounded-[1.5rem] border-4 border-white bg-[#dce8d0] shadow-soft sm:min-h-[440px]" aria-label={`Fallback-Platzplan von ${tenant.name}`}>
-    <div className="absolute left-3 top-3 z-10 rounded-xl bg-white/90 px-3 py-2 text-xs font-bold text-[#18332b] shadow">Offline-Plan</div>
-    <StaticTilePreview center={boundsCenter(fallbackBounds)} zoom={16} />
-    {fallbackStations.map((station) => <button
-      key={station.id}
-      onClick={() => onSelect(station)}
-      className="absolute z-10 grid h-11 w-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-4 border-white bg-[#195f4c] text-white shadow-lg"
-      style={projectStation(station, fallbackBounds)}
-      aria-label={station.name}
-    >
-      <MapIcon size={18} />
-    </button>)}
-  </div>;
-}
-
-function StaticTilePreview({ center, zoom }: { center: [number, number]; zoom: number }) {
-  const tiles = useMemo(() => staticTiles(center, zoom), [center, zoom]);
-  return <div className="absolute inset-0 opacity-90">
-    {tiles.map((tile) => <div
-      key={`${tile.x}-${tile.y}`}
-      className="absolute h-1/3 w-1/3 bg-cover bg-center"
-      style={{ left: `${tile.left}%`, top: `${tile.top}%`, backgroundImage: `url(https://tile.openstreetmap.org/${zoom}/${tile.x}/${tile.y}.png)` }}
-    />)}
+function UnavailableMap({ tenant }: { tenant: Tenant }) {
+  return <div className="map-texture relative mt-4 grid h-[52vh] min-h-[360px] place-items-center overflow-hidden rounded-[1.5rem] border-4 border-white bg-[#dce8d0] p-6 text-center shadow-soft sm:min-h-[440px]" aria-label={`Karte von ${tenant.name} ist derzeit nicht verfügbar`}>
+    <div className="max-w-md rounded-3xl bg-white/95 p-6 shadow-soft">
+      <MapIcon className="mx-auto text-[#195f4c]" size={34} />
+      <h3 className="mt-3 font-display text-2xl">Karte gerade nicht verfügbar</h3>
+      <p className="mt-2 text-sm leading-6 text-[#18332b]/65">Die Stationen bleiben über die Listenansicht vollständig erreichbar. Bitte versuche die Karte später erneut.</p>
+    </div>
   </div>;
 }
 
@@ -297,30 +310,13 @@ function boundsFeature(bounds: Bounds) {
   };
 }
 
-function projectStation(station: Station, bounds: Bounds | null) {
-  const position = coordinateToMapPosition(bounds ?? defaultBounds([station.longitude, station.latitude]), [station.longitude, station.latitude]);
-  return { left: `${position.x}%`, top: `${position.y}%` };
-}
-
 function stationWithinBounds(station: Station, bounds: Bounds) {
   const [[west, south], [east, north]] = bounds;
   return station.longitude >= west && station.longitude <= east && station.latitude >= south && station.latitude <= north;
 }
 
-function staticTiles(center: [number, number], zoom: number) {
-  const main = lonLatToTile(center[0], center[1], zoom);
-  return [-1, 0, 1].flatMap((dy) => [-1, 0, 1].map((dx) => ({
-    x: main.x + dx,
-    y: main.y + dy,
-    left: (dx + 1) * 33.333,
-    top: (dy + 1) * 33.333
-  })));
-}
-
-function lonLatToTile(longitude: number, latitude: number, zoom: number) {
-  const scale = 2 ** zoom;
-  const x = Math.floor((longitude + 180) / 360 * scale);
-  const radians = latitude * Math.PI / 180;
-  const y = Math.floor((1 - Math.log(Math.tan(radians) + 1 / Math.cos(radians)) / Math.PI) / 2 * scale);
-  return { x, y };
-}
+type VisitorMarkerEntry = {
+  marker: import("maplibre-gl").Marker;
+  element: HTMLElement;
+  station: Station;
+};

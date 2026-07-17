@@ -76,11 +76,12 @@ export function StationLocationPicker({ mapConfig, longitude, latitude, onChange
         });
       });
       const markerElement = createStationPinElement({ label: "Stationsposition", color: "#c44f34", onClick: () => undefined });
-      markerElement.classList.add("platzguide-station-pin--dragging");
       const marker = new maplibregl.Marker({ element: markerElement, anchor: "bottom", draggable: true })
         .setLngLat(initialPositionRef.current)
         .addTo(map);
+      marker.on("dragstart", () => markerElement.classList.add("platzguide-station-marker--dragging"));
       marker.on("dragend", () => {
+        markerElement.classList.remove("platzguide-station-marker--dragging");
         const point = marker.getLngLat();
         onChangeRef.current({ longitude: point.lng, latitude: point.lat });
         setPositionMessage("Marker verschoben und Position übernommen.");

@@ -44,6 +44,14 @@ export function coordinateToMapPosition(bounds: Bounds, coordinate: [number, num
   };
 }
 
+export function clampCoordinateToBounds(bounds: Bounds, coordinate: [number, number]): [number, number] {
+  const [[west, south], [east, north]] = bounds;
+  return [
+    Math.min(east, Math.max(west, coordinate[0])),
+    Math.min(north, Math.max(south, coordinate[1]))
+  ];
+}
+
 export function validBounds(value: unknown): value is Bounds {
   return Array.isArray(value) && value.length === 2 && value.every((point) => Array.isArray(point) && point.length === 2 && point.every(Number.isFinite));
 }

@@ -66,6 +66,12 @@ test("mobile admin and visitor views stay within viewport", async ({ page, isMob
   await page.goto("/c/testplatz");
   await expect(page.getByRole("main").getByText("Camping Testplatz")).toBeVisible();
   await expectNoHorizontalOverflow(page);
+
+  await page.goto("/c/publishplatz");
+  const mobileVisitorMarker = page.getByLabel("Rezeption öffnen");
+  await expect(mobileVisitorMarker).toBeVisible();
+  await expectMarkerRootOwnedByMap(mobileVisitorMarker);
+  await expectNoHorizontalOverflow(page);
 });
 
 test("camp area map can be dragged and applied", async ({ page, isMobile }) => {
@@ -96,9 +102,11 @@ test("placed station marker does not move when another station is added", async 
   await page.goto("/admin/tenant");
   await page.getByRole("button", { name: "Stationen", exact: true }).click();
 
-  await placeTemplateFromQuickstart(page, "Rezeption");
+  const templateDropPoint = await dragTemplateFromQuickstart(page, "Rezeption", 0.42, 0.54);
   const firstMarker = page.getByLabel("Rezeption öffnen");
   await expect(firstMarker).toBeVisible();
+  await expectMarkerAnchorAt(firstMarker, templateDropPoint, 3);
+  await expectMarkerRootOwnedByMap(firstMarker);
   const firstPosition = await markerCenter(firstMarker);
   await setStationPositionFromOverview(page, "Rezeption", 0.58, 0.42);
   const firstPositionAfterMove = await markerCenter(firstMarker);
@@ -113,6 +121,62 @@ test("placed station marker does not move when another station is added", async 
 
   expect(Math.abs(firstPositionAfterSecondStation.x - firstPositionAfterDrag.x)).toBeLessThanOrEqual(1);
   expect(Math.abs(firstPositionAfterSecondStation.y - firstPositionAfterDrag.y)).toBeLessThanOrEqual(1);
+});
+
+test("platform admin, tenant admin and visitor use identical station coordinates", async ({ page, context, isMobile }) => {
+  test.skip(isMobile, "coordinate identity is covered on desktop; mobile marker visibility is covered separately");
+  await loginAsPlatformAdmin(page);
+  await page.goto("/admin/tenant");
+  await page.getByLabel("Mandant wählen").selectOption({ label: "Camping Publishplatz" });
+  await page.getByRole("button", { name: "Stationen", exact: true }).click();
+  const platformCoordinates = await markerCoordinates(page.getByLabel("Rezeption öffnen"));
+  await expectMarkerRootOwnedByMap(page.getByLabel("Rezeption öffnen"));
+
+  await context.clearCookies();
+  await loginAsTenantAdmin(page, "publishplatz@example.org");
+  await page.goto("/admin/tenant");
+  await page.getByRole("button", { name: "Stationen", exact: true }).click();
+  const tenantCoordinates = await markerCoordinates(page.getByLabel("Rezeption öffnen"));
+  expect(tenantCoordinates).toEqual(platformCoordinates);
+
+  await page.goto("/c/publishplatz");
+  const visitorMarker = page.getByLabel("Rezeption öffnen");
+  await expect(visitorMarker).toBeVisible();
+  await expectMarkerRootOwnedByMap(visitorMarker);
+  expect(await markerCoordinates(visitorMarker)).toEqual(platformCoordinates);
+});
+
+test("station templates can be placed precisely with touch input", async ({ page, isMobile }) => {
+  test.skip(!isMobile, "touch placement is covered on mobile projects");
+  await loginAsPlatformAdmin(page);
+  await page.goto("/admin/tenant");
+  await page.getByLabel("Menü öffnen").click();
+  await page.getByRole("button", { name: "Stationen", exact: true }).click();
+
+  const card = page.getByTestId(new RegExp("^station-template-")).filter({ hasText: "Spielplatz" }).first();
+  const map = page.locator(".maplibregl-map").first();
+  await map.scrollIntoViewIfNeeded();
+  const cardBox = await card.boundingBox();
+  const mapBox = await map.boundingBox();
+  expect(cardBox).not.toBeNull();
+  expect(mapBox).not.toBeNull();
+  if (!cardBox || !mapBox) return;
+
+  const start = { x: cardBox.x + 36, y: cardBox.y + 28 };
+  const target = { x: mapBox.x + mapBox.width * 0.62, y: mapBox.y + mapBox.height * 0.56 };
+  await card.dispatchEvent("pointerdown", touchPointer("pointerdown", start));
+  await expect(page.getByTestId("station-drag-preview")).toBeVisible();
+  await page.evaluate(({ x, y }) => {
+    window.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, pointerId: 41, pointerType: "touch", isPrimary: true, clientX: x, clientY: y }));
+  }, target);
+  const saveResponsePromise = page.waitForResponse((response) => response.url().includes("/api/admin/stations") && response.ok());
+  await map.dispatchEvent("pointerup", touchPointer("pointerup", target));
+  const savedStation = await (await saveResponsePromise).json() as { id: string };
+  const markerRoot = page.locator(`[data-station-id="${savedStation.id}"]`);
+  const markerButton = markerRoot.getByRole("button");
+  await expect(markerButton).toBeVisible();
+  await expectMarkerAnchorAt(markerButton, target, 3);
+  await expectMarkerRootOwnedByMap(markerButton);
 });
 
 test("platform admin can open system logs, audit and cleanup tools", async ({ page, isMobile }) => {
@@ -139,6 +203,17 @@ async function loginAsPlatformAdmin(page: import("@playwright/test").Page) {
   await page.waitForLoadState("domcontentloaded");
 }
 
+async function loginAsTenantAdmin(page: import("@playwright/test").Page, email: string) {
+  await page.goto("/admin/login");
+  await page.locator('input[name="email"]').fill(email);
+  await page.locator('input[name="password"]').fill("playwright-admin");
+  await Promise.all([
+    page.waitForURL(/\/admin\/tenant$/),
+    page.getByRole("button", { name: /Sicher anmelden/i }).click()
+  ]);
+  await page.waitForLoadState("domcontentloaded");
+}
+
 async function placeTemplateFromQuickstart(page: import("@playwright/test").Page, stationName: string) {
   const card = page.getByTestId(new RegExp(`^station-template-`)).filter({ hasText: stationName }).first();
   await expect(card).toBeVisible();
@@ -147,6 +222,30 @@ async function placeTemplateFromQuickstart(page: import("@playwright/test").Page
     card.getByRole("button", { name: "Platzieren" }).click()
   ]);
   await expect(page.getByText("Station gespeichert.")).toBeVisible();
+}
+
+async function dragTemplateFromQuickstart(page: import("@playwright/test").Page, stationName: string, xRatio: number, yRatio: number) {
+  const card = page.getByTestId(new RegExp(`^station-template-`)).filter({ hasText: stationName }).first();
+  const map = page.locator(".maplibregl-map").first();
+  await expect(card).toBeVisible();
+  await expect(map).toBeVisible();
+  await map.scrollIntoViewIfNeeded();
+  const cardBox = await card.boundingBox();
+  const mapBox = await map.boundingBox();
+  expect(cardBox).not.toBeNull();
+  expect(mapBox).not.toBeNull();
+  if (!cardBox || !mapBox) return { x: 0, y: 0 };
+  const start = { x: cardBox.x + Math.min(cardBox.width - 18, 42), y: cardBox.y + 28 };
+  const target = { x: mapBox.x + mapBox.width * xRatio, y: mapBox.y + mapBox.height * yRatio };
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await expect(page.getByTestId("station-drag-preview")).toBeVisible();
+  const saveResponse = page.waitForResponse((response) => response.url().includes("/api/admin/stations") && response.ok());
+  await page.mouse.move(target.x, target.y, { steps: 16 });
+  await page.mouse.up();
+  await saveResponse;
+  await expect(page.getByText("Station gespeichert.")).toBeVisible();
+  return target;
 }
 
 async function setStationPositionFromOverview(page: import("@playwright/test").Page, stationName: string, xRatio: number, yRatio: number) {
@@ -184,7 +283,45 @@ async function markerCenter(locator: import("@playwright/test").Locator) {
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
+async function markerCoordinates(locator: import("@playwright/test").Locator) {
+  const root = locator.locator("xpath=..");
+  return {
+    longitude: await root.getAttribute("data-longitude"),
+    latitude: await root.getAttribute("data-latitude")
+  };
+}
+
+async function expectMarkerRootOwnedByMap(locator: import("@playwright/test").Locator) {
+  const root = locator.locator("xpath=..");
+  await expect(root).toHaveClass(/maplibregl-marker/);
+  expect(await root.evaluate((element) => getComputedStyle(element).position)).toBe("absolute");
+}
+
+async function expectMarkerAnchorAt(locator: import("@playwright/test").Locator, target: { x: number; y: number }, tolerance: number) {
+  const root = locator.locator("xpath=..");
+  const box = await root.boundingBox();
+  expect(box).not.toBeNull();
+  if (!box) return;
+  const anchor = { x: box.x + box.width / 2, y: box.y + box.height };
+  expect(Math.hypot(anchor.x - target.x, anchor.y - target.y)).toBeLessThanOrEqual(tolerance);
+}
+
 async function expectNoHorizontalOverflow(page: import("@playwright/test").Page) {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(2);
+}
+
+function touchPointer(type: "pointerdown" | "pointerup", point: { x: number; y: number }) {
+  return {
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+    pointerId: 41,
+    pointerType: "touch",
+    isPrimary: true,
+    button: 0,
+    buttons: type === "pointerdown" ? 1 : 0,
+    clientX: point.x,
+    clientY: point.y
+  };
 }

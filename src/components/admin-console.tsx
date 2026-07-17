@@ -419,7 +419,7 @@ function StationTemplateDropZone({ tenantId, stations, categories, mapConfig, po
 }
 
 function FloatingStationPin({ drag }: { drag: { name: string; color: string; x: number; y: number } }) {
-  return <div className="pointer-events-none fixed z-[9999]" style={{ left: drag.x - 23, top: drag.y - 53, ["--pin-color" as string]: drag.color }} aria-hidden="true">
+  return <div data-testid="station-drag-preview" className="pointer-events-none fixed z-[9999]" style={{ left: drag.x - 23, top: drag.y - 56, ["--pin-color" as string]: drag.color }} aria-hidden="true">
     <svg className="platzguide-station-pin__svg" viewBox="0 0 46 56">
       <path className="platzguide-station-pin__body" d="M23 53C19.2 42.5 7 36.9 7 21.8C7 11.4 14.2 4 23 4C31.8 4 39 11.4 39 21.8C39 36.9 26.8 42.5 23 53Z" />
       <circle className="platzguide-station-pin__center" cx="23" cy="21.5" r="11.5" />
