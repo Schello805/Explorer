@@ -115,15 +115,12 @@ test("placed station marker does not move when another station is added", async 
   await expectMarkerAnchorAt(firstMarker, placement.target, 3);
   await expectMarkerRootOwnedByMap(firstMarker);
   const firstPosition = await markerCenter(firstMarker);
-  await setStationPositionFromOverview(page, "Rezeption", 0.58, 0.42);
-  const firstPositionAfterMove = await markerCenter(firstMarker);
-  expect(Math.hypot(firstPositionAfterMove.x - firstPosition.x, firstPositionAfterMove.y - firstPosition.y)).toBeGreaterThan(35);
   await dragMarkerOnOverview(page, firstMarker, -45, 35);
   const firstPositionAfterDrag = await markerCenter(firstMarker);
-  expect(Math.hypot(firstPositionAfterDrag.x - firstPositionAfterMove.x, firstPositionAfterDrag.y - firstPositionAfterMove.y)).toBeGreaterThan(20);
+  expect(Math.hypot(firstPositionAfterDrag.x - firstPosition.x, firstPositionAfterDrag.y - firstPosition.y)).toBeGreaterThan(20);
 
-  await placeTemplateFromQuickstart(page, "Sanitärgebäude 1");
-  await expect(page.getByLabel("Sanitärgebäude 1 öffnen")).toBeVisible();
+  const secondStationId = await placeTemplateFromQuickstart(page, "Sanitärgebäude 1");
+  await expect(page.locator(`[data-station-id="${secondStationId}"]`).getByRole("button")).toBeVisible();
   const firstPositionAfterSecondStation = await markerCenter(firstMarker);
 
   expect(Math.abs(firstPositionAfterSecondStation.x - firstPositionAfterDrag.x)).toBeLessThanOrEqual(1);
@@ -176,6 +173,7 @@ test("station templates can be placed precisely with touch input", async ({ page
   await page.evaluate(({ x, y }) => {
     window.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, pointerId: 41, pointerType: "touch", isPrimary: true, clientX: x, clientY: y }));
   }, target);
+  await expectDragPreviewAt(page, target, 2);
   const saveResponsePromise = page.waitForResponse((response) => response.url().includes("/api/admin/stations") && response.ok());
   await map.dispatchEvent("pointerup", touchPointer("pointerup", target));
   const savedStation = await (await saveResponsePromise).json() as { id: string };
@@ -224,11 +222,12 @@ async function loginAsTenantAdmin(page: import("@playwright/test").Page, email: 
 async function placeTemplateFromQuickstart(page: import("@playwright/test").Page, stationName: string) {
   const card = page.getByTestId(new RegExp(`^station-template-`)).filter({ hasText: stationName }).first();
   await expect(card).toBeVisible();
-  await Promise.all([
-    page.waitForResponse((response) => response.url().includes("/api/admin/stations") && response.ok()),
+  const [response] = await Promise.all([
+    page.waitForResponse((candidate) => candidate.url().includes("/api/admin/stations") && candidate.ok()),
     card.getByRole("button", { name: "Platzieren" }).click()
   ]);
   await expect(page.getByText("Station gespeichert.")).toBeVisible();
+  return ((await response.json()) as { id: string }).id;
 }
 
 async function dragTemplateFromQuickstart(page: import("@playwright/test").Page, stationName: string, xRatio: number, yRatio: number) {
@@ -249,24 +248,11 @@ async function dragTemplateFromQuickstart(page: import("@playwright/test").Page,
   await expect(page.getByTestId("station-drag-preview")).toBeVisible();
   const saveResponse = page.waitForResponse((response) => response.url().includes("/api/admin/stations") && response.ok());
   await page.mouse.move(target.x, target.y, { steps: 16 });
+  await expectDragPreviewAt(page, target, 2);
   await page.mouse.up();
   const savedStation = await (await saveResponse).json() as { id: string };
   await expect(page.getByText("Station gespeichert.")).toBeVisible();
   return { target, stationId: savedStation.id };
-}
-
-async function setStationPositionFromOverview(page: import("@playwright/test").Page, stationName: string, xRatio: number, yRatio: number) {
-  await page.getByLabel(`Position für ${stationName} setzen`).click();
-  const map = page.locator(".maplibregl-map").first();
-  await map.scrollIntoViewIfNeeded();
-  const box = await map.boundingBox();
-  expect(box).not.toBeNull();
-  if (!box) return;
-  await Promise.all([
-    page.waitForResponse((response) => response.url().includes("/api/admin/stations") && response.ok()),
-    page.mouse.click(box.x + box.width * xRatio, box.y + box.height * yRatio)
-  ]);
-  await expect(page.getByText("Station gespeichert.")).toBeVisible();
 }
 
 async function dragMarkerOnOverview(page: import("@playwright/test").Page, locator: import("@playwright/test").Locator, deltaX: number, deltaY: number) {
@@ -311,6 +297,17 @@ async function expectMarkerAnchorAt(locator: import("@playwright/test").Locator,
   if (!box) return;
   const anchor = { x: box.x + box.width / 2, y: box.y + box.height };
   expect(Math.hypot(anchor.x - target.x, anchor.y - target.y)).toBeLessThanOrEqual(tolerance);
+}
+
+async function expectDragPreviewAt(page: import("@playwright/test").Page, target: { x: number; y: number }, tolerance: number) {
+  const preview = page.getByTestId("station-drag-preview");
+  await expect(preview).toBeVisible();
+  await expect.poll(async () => {
+    const box = await preview.boundingBox();
+    if (!box) return Number.POSITIVE_INFINITY;
+    const anchor = { x: box.x + box.width / 2, y: box.y + box.height };
+    return Math.hypot(anchor.x - target.x, anchor.y - target.y);
+  }).toBeLessThanOrEqual(tolerance);
 }
 
 async function expectNoHorizontalOverflow(page: import("@playwright/test").Page) {

@@ -27,6 +27,7 @@ export default defineConfig({
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    { name: "desktop-safari", grep: /placed station marker does not move/, use: { ...devices["Desktop Safari"] } },
     { name: "mobile-safari", use: { ...devices["iPhone 14"] } },
     { name: "mobile-chrome", use: { ...devices["Pixel 7"] } }
   ]

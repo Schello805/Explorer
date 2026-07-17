@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { Activity, Bell, BookOpen, CalendarDays, Caravan, CheckCircle2, ChevronRight, CreditCard, Download, Droplets, Eye, EyeOff, Footprints, Gift, Globe2, HelpCircle, ImageIcon, LayoutDashboard, LifeBuoy, MapPinned, Menu, MessageSquareWarning, Palette, Plus, Recycle, Search, Server, Settings, ShieldCheck, Sparkles, Trash2, Users, Utensils, X } from "lucide-react";
 import { applyBillingPlan, billingPlans, formatEuro, storageUsedMb } from "@/lib/billing";
 import { createDefaultStationTemplates } from "@/lib/tenant-defaults";
@@ -419,7 +420,7 @@ function StationTemplateDropZone({ tenantId, stations, categories, mapConfig, po
 }
 
 function FloatingStationPin({ drag }: { drag: { name: string; color: string; x: number; y: number } }) {
-  return <div data-testid="station-drag-preview" className="pointer-events-none fixed z-[9999]" style={{ left: drag.x - 23, top: drag.y - 56, ["--pin-color" as string]: drag.color }} aria-hidden="true">
+  return createPortal(<div data-testid="station-drag-preview" className="pointer-events-none fixed z-[9999]" style={{ left: drag.x - 23, top: drag.y - 56, ["--pin-color" as string]: drag.color }} aria-hidden="true">
     <svg className="platzguide-station-pin__svg" viewBox="0 0 46 56">
       <path className="platzguide-station-pin__body" d="M23 53C19.2 42.5 7 36.9 7 21.8C7 11.4 14.2 4 23 4C31.8 4 39 11.4 39 21.8C39 36.9 26.8 42.5 23 53Z" />
       <circle className="platzguide-station-pin__center" cx="23" cy="21.5" r="11.5" />
@@ -429,7 +430,7 @@ function FloatingStationPin({ drag }: { drag: { name: string; color: string; x: 
       </svg>
     </svg>
     <span className="sr-only">{drag.name}</span>
-  </div>;
+  </div>, document.body);
 }
 
 function StationBadge({ station }: { station: Station }) {
