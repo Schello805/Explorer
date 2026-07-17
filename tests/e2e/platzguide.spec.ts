@@ -10,6 +10,12 @@ test("marketing page explains pricing and publishing", async ({ page }) => {
   await expect(page.getByText("19,99")).toBeVisible();
   await expect(page.getByText("Veröffentlichung inklusive")).toBeVisible();
   await expect(page.getByRole("link", { name: "AGB" })).toBeVisible();
+  const demoMap = page.getByTestId("landing-demo-map");
+  await expect(demoMap).toBeVisible();
+  const demoMarker = demoMap.getByLabel("Rezeption öffnen");
+  await expect(demoMarker).toBeVisible();
+  await expectMarkerRootOwnedByMap(demoMarker);
+  await expectNoHorizontalOverflow(page);
 });
 
 test("anonymous visitors cannot open an unpublished tenant", async ({ page }) => {

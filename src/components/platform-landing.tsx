@@ -1,16 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { FormEvent, ReactNode } from "react";
+import type { CSSProperties, FormEvent, ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Camera, CheckCircle2, CreditCard, Heart, HelpCircle, LifeBuoy, List, Map, MapPinned, Search, ShieldAlert } from "lucide-react";
+import { ArrowRight, Camera, CheckCircle2, CreditCard, HelpCircle, LifeBuoy } from "lucide-react";
 import { billingPlans, formatEuro, setupServicePriceCents, yearlyDiscountPercent } from "@/lib/billing";
+import { CampMap } from "@/components/camp-map";
+import type { Station, Tenant } from "@/lib/types";
 
 type CaptchaProvider = "turnstile" | "hcaptcha" | "recaptcha" | "disabled";
 const platformLogo = "/icons/platzguide-logo.png";
 
-export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey }: { allowSignup: boolean; captchaProvider: CaptchaProvider; captchaSiteKey: string }) {
+export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey, demoTenant }: { allowSignup: boolean; captchaProvider: CaptchaProvider; captchaSiteKey: string; demoTenant?: Tenant }) {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
@@ -145,9 +147,9 @@ export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey }
         <div>
           <p className="text-xs font-bold uppercase tracking-[.18em] text-[#195f4c]/65">Demo</p>
           <h2 className="mt-2 font-display text-[clamp(2rem,8vw,3.6rem)] leading-[1.02]">So sehen Gäste deinen Platzguide.</h2>
-          <p className="mt-3 text-sm leading-6 text-[#18332b]/60">Eine beispielhafte Besucheransicht mit Suche, Kategorien, Karte, Stationen und wichtigen Hinweisen. Später kann hier ein echter Demo-Mandant eingebunden werden.</p>
+          <p className="mt-3 text-sm leading-6 text-[#18332b]/60">Probiere die echte Besucherkarte aus. Marker, Kartenausschnitt und Stationspositionen stammen direkt aus dem veröffentlichten DEMO-Platzguide.</p>
         </div>
-        <DemoVisitorPreview />
+        <DemoVisitorPreview tenant={demoTenant} />
       </div>
     </section>
 
@@ -179,26 +181,36 @@ function MiniFeature({ icon, title, text }: { icon: ReactNode; title: string; te
   return <div className="rounded-2xl bg-white p-4 text-[#18332b] shadow-sm"><div className="text-[#195f4c]">{icon}</div><p className="mt-3 font-bold">{title}</p><p className="mt-1 text-sm text-[#18332b]/55">{text}</p></div>;
 }
 
-function DemoVisitorPreview() {
-  const stations = [
-    ["Rezeption", "Ankommen, Fragen, Brötchenservice.", "08:00–20:00"],
-    ["Sanitär Nord", "Duschen, Familienbad und WC.", "Durchgehend geöffnet"],
-    ["Spielplatz", "Klettern, Sand und Schatten.", "Bis 21:00"],
-    ["Entsorgung", "Abfall, Chemie-WC und Wasser.", "24h zugänglich"]
-  ];
-  return <div className="overflow-hidden rounded-[1.7rem] border border-[#18332b]/10 bg-[#f5f2e9] shadow-sm">
-    <div className="bg-[#195f4c] p-4 text-white">
-      <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><Image src={platformLogo} alt="" width={36} height={36} className="h-9 w-9 rounded-xl bg-white p-1 object-contain" /><div><p className="text-[10px] font-bold uppercase tracking-[.18em] text-white/55">Platzguide</p><p className="font-display text-xl">Camping Sonnental</p></div></div><ShieldAlert size={20} /></div>
-      <label className="mt-4 flex items-center gap-2 rounded-xl bg-white px-3 py-3 text-[#18332b]"><Search size={17} className="text-[#18332b]/45" /><span className="text-sm text-[#18332b]/45">Spielplatz, Dusche, Restaurant …</span></label>
-    </div>
-    <div className="p-4">
-      <div className="scrollbar-none flex gap-2 overflow-x-auto pb-2">{["Alle Orte", "Sanitär", "Familie", "Service"].map((item, index) => <span key={item} className={index === 0 ? "shrink-0 rounded-full bg-[#195f4c] px-4 py-2 text-sm font-bold text-white" : "shrink-0 rounded-full bg-white px-4 py-2 text-sm font-bold"}>{item}</span>)}</div>
-      <div className="mt-3 flex items-center justify-between"><p className="text-sm font-bold">4 Orte gefunden</p><div className="rounded-xl bg-white p-1 text-sm font-bold"><span className="inline-flex rounded-lg bg-[#195f4c] px-3 py-2 text-white"><Map size={15} className="mr-1" /> Karte</span><span className="inline-flex px-3 py-2"><List size={15} className="mr-1" /> Liste</span></div></div>
-      <div className="map-texture mt-4 grid min-h-56 place-items-center rounded-[1.4rem] border-4 border-white">
-        <span className="rounded-full bg-white/95 px-4 py-3 text-sm font-bold shadow-sm"><MapPinned size={17} className="mr-1 inline text-[#195f4c]" /> Demo-Platzplan</span>
+function DemoVisitorPreview({ tenant }: { tenant?: Tenant }) {
+  const [selected, setSelected] = useState<Station | null>(null);
+  if (!tenant) {
+    return <div className="grid min-h-80 place-items-center rounded-[1.7rem] border border-[#18332b]/10 bg-[#f5f2e9] p-6 text-center shadow-sm">
+      <div className="max-w-sm">
+        <Image src={platformLogo} alt="" width={52} height={52} className="mx-auto h-13 w-13 rounded-2xl bg-white p-2 object-contain shadow-sm" />
+        <h3 className="mt-4 font-display text-3xl">Die Live-Demo wird vorbereitet.</h3>
+        <p className="mt-2 text-sm leading-6 text-[#18332b]/60">Sobald der veröffentlichte Mandant „DEMO“ eingerichtet ist, erscheint seine interaktive Karte automatisch hier.</p>
       </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">{stations.map(([title, text, time]) => <article key={title} className="rounded-2xl bg-white p-4"><div className="flex justify-between gap-3"><h3 className="font-display text-xl">{title}</h3><Heart size={18} /></div><p className="mt-1 text-sm text-[#18332b]/55">{text}</p><p className="mt-3 text-xs font-bold text-[#195f4c]">• Geöffnet · {time}</p></article>)}</div>
+    </div>;
+  }
+  const stations = tenant.stations.filter((station) => !station.isTemplate);
+  const theme = {
+    "--primary": tenant.theme.primary,
+    "--secondary": tenant.theme.secondary,
+    "--surface": tenant.theme.surface
+  } as CSSProperties;
+  return <div data-testid="landing-demo-map" className="min-w-0 overflow-hidden rounded-[1.7rem] border border-[#18332b]/10 bg-[#f5f2e9] p-3 shadow-sm sm:p-4" style={theme}>
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex min-w-0 items-center gap-3">
+        <Image src={platformLogo} alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-xl bg-white p-1.5 object-contain shadow-sm" />
+        <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#195f4c]/55">Echte Besucherkarte</p><p className="truncate font-display text-xl">{tenant.name}</p></div>
+      </div>
+      <Link href={`/c/${tenant.slug}`} className="inline-flex items-center gap-2 rounded-xl bg-[#195f4c] px-4 py-2.5 text-sm font-bold text-white">Demo öffnen <ArrowRight size={16} /></Link>
     </div>
+    <CampMap tenant={tenant} stations={stations} selected={selected} onSelect={setSelected} />
+    {selected && <div className="mt-3 flex items-start justify-between gap-3 rounded-2xl bg-white p-4">
+      <div className="min-w-0"><p className="text-xs font-bold uppercase tracking-widest text-[#195f4c]">Ausgewählte Station</p><h3 className="mt-1 font-display text-2xl">{selected.name}</h3><p className="mt-1 text-sm leading-5 text-[#18332b]/60">{selected.shortDescription}</p></div>
+      <button type="button" onClick={() => setSelected(null)} className="shrink-0 rounded-lg border border-[#18332b]/10 px-3 py-2 text-xs font-bold">Schließen</button>
+    </div>}
   </div>;
 }
 
