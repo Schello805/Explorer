@@ -94,42 +94,42 @@ export function PlatzguideApp({ tenant, basePath = "" }: { tenant: Tenant; baseP
 
   return (
     <main>
-      <header className="relative overflow-hidden bg-[var(--primary)] py-4 text-white">
-        <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full border-[42px] border-white/5" />
+      <header className="relative overflow-hidden bg-[var(--primary)] py-3 text-white sm:py-4">
+        <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full border-[36px] border-white/5 sm:h-64 sm:w-64 sm:border-[42px]" />
         <div className="relative mx-auto w-[90%]">
           <div className="flex items-center justify-between">
-            <a href="https://platzguide.de" className="flex min-w-0 items-center gap-3">
-              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white/95 p-1.5 shadow-sm">
+            <a href="https://platzguide.de" className="flex min-w-0 items-center gap-2.5">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-white/95 p-1.5 shadow-sm sm:h-12 sm:w-12 sm:rounded-2xl">
                 <Image src={platformLogo} alt="Platzguide" width={40} height={40} className="h-full w-full object-contain" priority />
               </span>
-              <div className="min-w-0"><p className="text-[11px] font-bold uppercase tracking-[.18em] text-white/60">Platzguide</p><p className="truncate font-display text-xl">{tenant.name}</p></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[.16em] text-white/60 sm:text-[11px]">Platzguide</p><p className="truncate font-display text-lg sm:text-xl">{tenant.name}</p></div>
             </a>
-            <a href={`${basePath}/hinweise`} aria-label="Wichtige Hinweise" className="rounded-full bg-white/10 p-3"><Info size={20} /></a>
+            <a href={`${basePath}/hinweise`} aria-label="Wichtige Hinweise" className="rounded-full bg-white/10 p-2.5 sm:p-3"><Info size={18} /></a>
           </div>
-          <div className="mt-5">
-            <p className="mb-1 flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-[var(--secondary)]"><Compass size={15} /> Vor Ort</p>
-            <h1 className="font-display text-3xl leading-[1.05] sm:text-4xl">Orte auf dem Platz</h1>
+          <div className="mt-3 sm:mt-5">
+            <p className="mb-1 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[.14em] text-[var(--secondary)] sm:text-xs"><Compass size={14} /> Vor Ort</p>
+            <h1 className="font-display text-2xl leading-[1.05] sm:text-4xl">Orte auf dem Platz</h1>
           </div>
-          {searchOpen && <label className="mt-5 flex w-full items-center gap-3 rounded-xl bg-white px-4 py-3 text-[#18332b] shadow-xl">
-            <Search size={20} className="text-[#18332b]/50" />
+          {searchOpen && <label className="mt-3 flex w-full items-center gap-3 rounded-xl bg-white px-4 py-3 text-sm text-[#18332b] shadow-xl sm:mt-5 sm:text-base">
+            <Search size={18} className="text-[#18332b]/50" />
             <span className="sr-only">Stationen suchen</span>
             <input title="Suche nach Stationen, Kategorien oder Begriffen wie Dusche, Restaurant oder Spielplatz." aria-label="Stationen suchen" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Spielplatz, Dusche, Restaurant …" className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-[#18332b]/40" />
           </label>}
         </div>
       </header>
 
-      <section className="mx-auto w-[90%] py-4">
-        <div className="scrollbar-none flex gap-2 overflow-x-auto pb-2">
+      <section className="mx-auto w-[90%] py-3 sm:py-4">
+        <div className="scrollbar-none flex gap-1.5 overflow-x-auto pb-2 sm:gap-2">
           <Filter active={category === "all"} onClick={() => setCategory("all")}>Alle Orte</Filter>
           {tenant.categories.map((item) => <Filter key={item.id} active={category === item.id} onClick={() => setCategory(item.id)}>{item.name}</Filter>)}
         </div>
 
-        <div className="mt-3 flex items-center justify-between">
-          <p className="text-sm font-bold">{stations.length} Orte gefunden</p>
-          <div className="flex rounded-xl bg-white p-1 shadow-sm">
-            <button onClick={() => setSearchOpen((value) => !value)} className={cn("rounded-lg px-3 py-2 text-sm font-bold", searchOpen && "bg-[var(--primary)] text-white")}><Search size={16} className="inline -mt-0.5 mr-1" /> Suche</button>
-            <button onClick={() => mapConfigured && setView("map")} disabled={!mapConfigured} className={cn("rounded-lg px-3 py-2 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-40", view === "map" && "bg-[var(--primary)] text-white")}><Map size={16} className="inline -mt-0.5 mr-1" /> Karte</button>
-            <button onClick={() => setView("list")} className={cn("rounded-lg px-3 py-2 text-sm font-bold", view === "list" && "bg-[var(--primary)] text-white")}><List size={16} className="inline -mt-0.5 mr-1" /> Liste</button>
+        <div className="mt-2 flex items-center justify-between gap-3 sm:mt-3">
+          <p className="text-sm font-bold leading-tight sm:text-base">{stations.length}<span className="block sm:inline"> Orte gefunden</span></p>
+          <div className="flex shrink-0 rounded-xl bg-white p-1 shadow-sm">
+            <button aria-label="Suche öffnen" onClick={() => setSearchOpen((value) => !value)} className={cn("rounded-lg px-2.5 py-2 text-xs font-bold sm:px-3 sm:text-sm", searchOpen && "bg-[var(--primary)] text-white")}><Search size={16} className="inline -mt-0.5 sm:mr-1" /><span className="hidden sm:inline">Suche</span></button>
+            <button aria-label="Karte anzeigen" onClick={() => mapConfigured && setView("map")} disabled={!mapConfigured} className={cn("rounded-lg px-2.5 py-2 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-40 sm:px-3 sm:text-sm", view === "map" && "bg-[var(--primary)] text-white")}><Map size={16} className="inline -mt-0.5 sm:mr-1" /><span className="hidden sm:inline">Karte</span></button>
+            <button aria-label="Liste anzeigen" onClick={() => setView("list")} className={cn("rounded-lg px-2.5 py-2 text-xs font-bold sm:px-3 sm:text-sm", view === "list" && "bg-[var(--primary)] text-white")}><List size={16} className="inline -mt-0.5 sm:mr-1" /><span className="hidden sm:inline">Liste</span></button>
           </div>
         </div>
 
@@ -198,7 +198,7 @@ function formatStableDate(value: string) {
 }
 
 function Filter({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return <button onClick={onClick} className={cn("shrink-0 rounded-full border px-4 py-2.5 text-sm font-bold transition", active ? "border-[var(--primary)] bg-[var(--primary)] text-white" : "border-[#18332b]/10 bg-white hover:border-[var(--primary)]")}>{children}</button>;
+  return <button onClick={onClick} className={cn("shrink-0 rounded-full border px-3 py-2 text-xs font-bold transition sm:px-4 sm:py-2.5 sm:text-sm", active ? "border-[var(--primary)] bg-[var(--primary)] text-white" : "border-[#18332b]/10 bg-white hover:border-[var(--primary)]")}>{children}</button>;
 }
 
 function StationCard({ station, favorite, onFavorite, onSelect }: { station: Station; favorite: boolean; onFavorite: () => void; onSelect: () => void }) {

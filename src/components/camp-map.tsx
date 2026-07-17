@@ -253,11 +253,11 @@ export function CampMap({
 
   if (failed) return <UnavailableMap tenant={tenant} />;
 
-  return <div className="map-texture relative mt-4 h-[52vh] min-h-[360px] overflow-hidden rounded-[1.5rem] border-4 border-white bg-[#dce8d0] shadow-soft sm:min-h-[440px]">
+  return <div className="map-texture relative mt-3 h-[64svh] min-h-[430px] overflow-hidden rounded-[1.35rem] border-[3px] border-white bg-[#dce8d0] shadow-soft sm:mt-4 sm:h-[58vh] sm:min-h-[480px] sm:rounded-[1.5rem] sm:border-4">
     <div ref={containerRef} className="absolute inset-0" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} aria-label={`Interaktive Karte von ${tenant.name}`} />
-    {!ready && <div className="absolute inset-0 grid place-items-center bg-[#dce8d0] text-sm font-bold text-[#18332b]/55">Karte wird geladen …</div>}
-    {choices.length > 1 && <div className="glass absolute left-3 top-3 z-10 flex rounded-xl p-1 shadow-lg">{choices.map((choice) => <button key={choice.id} onClick={() => switchLayer(choice.id)} className={cn("flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold", layer === choice.id && "bg-[var(--primary)] text-white")}><choice.icon size={15} />{choice.label}</button>)}</div>}
-    <div className="absolute bottom-3 left-3 z-10 max-w-[calc(100%-1.5rem)]">
+    {!ready && <div className="absolute inset-0 grid place-items-center bg-[#dce8d0] text-xs font-bold text-[#18332b]/55 sm:text-sm">Karte wird geladen …</div>}
+    {choices.length > 1 && <div className="glass absolute left-2 top-2 z-10 flex rounded-xl p-1 shadow-lg sm:left-3 sm:top-3">{choices.map((choice) => <button key={choice.id} onClick={() => switchLayer(choice.id)} className={cn("flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-bold sm:px-3 sm:py-2 sm:text-xs", layer === choice.id && "bg-[var(--primary)] text-white")}><choice.icon size={14} />{choice.label}</button>)}</div>}
+    <div className="absolute bottom-2 left-2 z-10 max-w-[calc(100%-1rem)] sm:bottom-3 sm:left-3 sm:max-w-[calc(100%-1.5rem)]">
       <button type="button" onClick={locateVisitor} disabled={!ready || locating} className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-[#18332b] shadow-lg disabled:opacity-60"><LocateFixed size={15} className="mr-1.5 inline" />{locating ? "Standort wird gesucht …" : "Mein Standort"}</button>
       {locationMessage && <p className="mt-2 max-w-xs rounded-xl bg-white/95 px-3 py-2 text-xs font-bold leading-5 text-[#18332b] shadow-lg"><AlertCircle size={14} className="mr-1 inline text-[#c9653d]" />{locationMessage}</p>}
     </div>
@@ -265,7 +265,7 @@ export function CampMap({
 }
 
 function UnavailableMap({ tenant }: { tenant: Tenant }) {
-  return <div className="map-texture relative mt-4 grid h-[52vh] min-h-[360px] place-items-center overflow-hidden rounded-[1.5rem] border-4 border-white bg-[#dce8d0] p-6 text-center shadow-soft sm:min-h-[440px]" aria-label={`Karte von ${tenant.name} ist derzeit nicht verfügbar`}>
+  return <div className="map-texture relative mt-3 grid h-[64svh] min-h-[430px] place-items-center overflow-hidden rounded-[1.35rem] border-[3px] border-white bg-[#dce8d0] p-5 text-center shadow-soft sm:mt-4 sm:h-[58vh] sm:min-h-[480px] sm:rounded-[1.5rem] sm:border-4 sm:p-6" aria-label={`Karte von ${tenant.name} ist derzeit nicht verfügbar`}>
     <div className="max-w-md rounded-3xl bg-white/95 p-6 shadow-soft">
       <MapIcon className="mx-auto text-[#195f4c]" size={34} />
       <h3 className="mt-3 font-display text-2xl">Karte gerade nicht verfügbar</h3>
