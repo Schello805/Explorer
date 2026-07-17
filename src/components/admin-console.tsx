@@ -10,7 +10,6 @@ import type { Category, EventItem, GuestGuideItem, MediaAsset, OccupancyStatus, 
 import { cn, statusLabel } from "@/lib/utils";
 import { boundsCenter, coordinateToMapPosition, defaultBounds, validBounds } from "@/lib/map-bounds";
 import { setStationPinDragImage } from "@/lib/map-marker";
-import { StationLocationPicker } from "@/components/station-location-picker";
 import { StationImport } from "@/components/station-import";
 import { CampAreaPicker } from "@/components/camp-area-picker";
 import { StationTemplateMap } from "@/components/station-template-map";
@@ -88,6 +87,14 @@ export function AdminConsole({ tenant, tenants, adminEmail, isPlatformAdmin = fa
     const longitude = Number(coordinate.longitude.toFixed(6));
     const latitude = Number(coordinate.latitude.toFixed(6));
     await persistStation({ ...station, id: crypto.randomUUID(), isTemplate: false, position, longitude, latitude });
+  }
+
+  async function moveStationOnMap(station: Station, coordinate: { longitude: number; latitude: number }) {
+    await persistStation({
+      ...station,
+      longitude: Number(coordinate.longitude.toFixed(6)),
+      latitude: Number(coordinate.latitude.toFixed(6))
+    });
   }
 
   async function saveTenant(nextTenant: Tenant) {
@@ -218,7 +225,7 @@ export function AdminConsole({ tenant, tenants, adminEmail, isPlatformAdmin = fa
       <div className="mx-auto min-w-0 w-[90%] py-5">
         {section === "overview" && <Overview key={currentTenant.id} tenant={currentTenant} stations={stations} stationCount={stations.filter((station) => !station.isTemplate).length} templateCount={stations.filter((station) => station.isTemplate).length} onNavigate={setSection} />}
         {notice && <div role="status" className="fixed bottom-4 left-1/2 z-50 w-[90%] max-w-md -translate-x-1/2 rounded-2xl bg-[#173c32] px-4 py-3 text-sm font-bold text-white shadow-2xl lg:left-[calc(50%+7.5rem)]">{notice}</div>}
-        {section === "stations" && <Stations key={currentTenant.id} tenant={currentTenant} stations={stations} onEdit={setEditing} onRemove={removeStation} onCreate={() => setEditing(blankStation(currentTenant.id))} onImport={importStations} onPlaceTemplate={placeTemplateStation} />}
+        {section === "stations" && <Stations key={currentTenant.id} tenant={currentTenant} stations={stations} onEdit={setEditing} onRemove={removeStation} onCreate={() => setEditing(blankStation(currentTenant.id))} onImport={importStations} onPlaceTemplate={placeTemplateStation} onMoveStation={moveStationOnMap} />}
         {section === "categories" && <Categories key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
         {section === "tenants" && <TenantSettings key={currentTenant.id} tenant={currentTenant} saving={saving} platformAdmin={isPlatformAdmin} onLifecycle={updateTenantLifecycle} onSave={saveTenant} />}
         {section === "branding" && <Branding key={currentTenant.id} tenant={currentTenant} saving={saving} onSave={saveTenant} />}
@@ -238,7 +245,7 @@ export function AdminConsole({ tenant, tenants, adminEmail, isPlatformAdmin = fa
         {section === "media" && <Media tenant={currentTenant} saving={saving} onSave={saveTenant} />}
       </div>
     </main>
-    {editing && <StationEditor station={editing} categories={currentTenant.categories} mapConfig={currentTenant.map} canDelete={stations.some((station) => station.id === editing.id)} onClose={() => setEditing(null)} onSave={persistStation} onDelete={async (stationId) => { const deleted = await removeStation(stationId); if (deleted) setEditing(null); }} />}
+    {editing && <StationEditor station={editing} categories={currentTenant.categories} canDelete={stations.some((station) => station.id === editing.id)} onClose={() => setEditing(null)} onSave={persistStation} onDelete={async (stationId) => { const deleted = await removeStation(stationId); if (deleted) setEditing(null); }} />}
   </div>;
 }
 
@@ -308,26 +315,27 @@ function SetupAssistant({ tenant, stations, onNavigate }: { tenant: Tenant; stat
 
 function Metric({ label, value, note, icon }: { label: string; value: string; note: string; icon: React.ReactNode }) { return <div className="rounded-2xl bg-white p-5 shadow-sm"><div className="flex justify-between text-[#286551]"><p className="text-xs font-bold uppercase tracking-widest text-[#1b302a]/40">{label}</p>{icon}</div><p className="mt-4 font-display text-4xl">{value}</p><p className="mt-1 text-xs text-[#1b302a]/45">{note}</p></div>; }
 
-function Stations({ tenant, stations, onEdit, onRemove, onCreate, onImport, onPlaceTemplate }: { tenant: Tenant; stations: Station[]; onEdit: (station: Station) => void; onRemove: (id: string) => void; onCreate: () => void; onImport: (stations: Station[]) => Promise<void>; onPlaceTemplate: (station: Station, coordinate: { longitude: number; latitude: number }) => Promise<void> }) {
+function Stations({ tenant, stations, onEdit, onRemove, onCreate, onImport, onPlaceTemplate, onMoveStation }: { tenant: Tenant; stations: Station[]; onEdit: (station: Station) => void; onRemove: (id: string) => void; onCreate: () => void; onImport: (stations: Station[]) => Promise<void>; onPlaceTemplate: (station: Station, coordinate: { longitude: number; latitude: number }) => Promise<void>; onMoveStation: (station: Station, coordinate: { longitude: number; latitude: number }) => Promise<void> }) {
+  const [positioningStationId, setPositioningStationId] = useState<string | null>(null);
   const activeStations = stations.filter((station) => !station.isTemplate);
   return <section className="animate-enter overflow-hidden rounded-xl bg-white shadow-sm">
     <div className="flex flex-col gap-3 border-b border-black/5 p-4 sm:flex-row sm:items-center sm:justify-between">
       <div><h2 className="font-display text-2xl">Stationen</h2><p className="text-sm text-black/45">Orte, Services und Erlebnisse</p></div>
       <div className="flex flex-wrap gap-2"><StationImport tenantId={tenant.id} categories={tenant.categories} onImport={onImport} /><button onClick={onCreate} className="rounded-xl bg-[#173c32] px-4 py-3 text-sm font-bold text-white"><Plus size={17} className="mr-2 inline" /> Neue Station</button></div>
     </div>
-    <StationTemplateDropZone tenantId={tenant.id} stations={stations} categories={tenant.categories} mapConfig={tenant.map} onEdit={onEdit} onPlaceTemplate={onPlaceTemplate} />
+    <StationTemplateDropZone tenantId={tenant.id} stations={stations} categories={tenant.categories} mapConfig={tenant.map} positioningStationId={positioningStationId} onPositioningChange={setPositioningStationId} onEdit={onEdit} onPlaceTemplate={onPlaceTemplate} onMoveStation={onMoveStation} />
     <div className="p-3"><label className="flex w-full items-center gap-2 rounded-lg bg-[#f2f3ef] px-3 py-2.5"><Search size={17} /><input title="Filtere die Stationsliste nach Name, Kategorie oder Beschreibung." aria-label="Station suchen" placeholder="Station suchen …" className="min-w-0 w-full bg-transparent outline-none" /></label></div>
     <div className="divide-y divide-black/5 lg:hidden">
       {activeStations.map((station) => <article key={station.id} className="p-4">
         <div className="flex min-w-0 items-start justify-between gap-3"><div className="min-w-0"><h3 className="break-words font-bold">{station.name}</h3><p className="mt-1 text-xs text-black/50">{station.categoryId} · {station.openingHours}</p></div><StationBadge station={station} /></div>
-        <div className="mt-3 flex gap-4 text-sm"><button onClick={() => onEdit(station)} className="font-bold text-[#286551]">Bearbeiten</button><button onClick={() => onRemove(station.id)} className="text-red-600">Löschen</button></div>
+        <div className="mt-3 flex flex-wrap gap-4 text-sm"><button onClick={() => setPositioningStationId(positioningStationId === station.id ? null : station.id)} className="font-bold text-[#286551]">{positioningStationId === station.id ? "Abbrechen" : "Position setzen"}</button><button onClick={() => onEdit(station)} className="font-bold text-[#286551]">Bearbeiten</button><button onClick={() => onRemove(station.id)} className="text-red-600">Löschen</button></div>
       </article>)}
     </div>
-    <div className="hidden overflow-x-auto lg:block"><table className="w-full min-w-[720px] text-left text-sm"><thead className="border-y border-black/5 bg-[#fafaf8] text-xs uppercase tracking-wider text-black/40"><tr><th className="px-4 py-2">Station</th><th>Kategorie</th><th>Status</th><th>Öffnungszeiten</th><th className="px-4 text-right">Aktion</th></tr></thead><tbody>{activeStations.map((station) => <tr key={station.id} className="border-b border-black/5"><td className="px-4 py-3 font-bold">{station.name}</td><td>{station.categoryId}</td><td><StationBadge station={station} /></td><td className="text-black/55">{station.openingHours}</td><td className="px-4 text-right"><button onClick={() => onEdit(station)} className="font-bold text-[#286551]">Bearbeiten</button><button onClick={() => onRemove(station.id)} className="ml-4 text-red-600">Löschen</button></td></tr>)}</tbody></table></div>
+    <div className="hidden overflow-x-auto lg:block"><table className="w-full min-w-[820px] text-left text-sm"><thead className="border-y border-black/5 bg-[#fafaf8] text-xs uppercase tracking-wider text-black/40"><tr><th className="px-4 py-2">Station</th><th>Kategorie</th><th>Status</th><th>Öffnungszeiten</th><th className="px-4 text-right">Aktion</th></tr></thead><tbody>{activeStations.map((station) => <tr key={station.id} className="border-b border-black/5"><td className="px-4 py-3 font-bold">{station.name}</td><td>{station.categoryId}</td><td><StationBadge station={station} /></td><td className="text-black/55">{station.openingHours}</td><td className="px-4 text-right"><button aria-label={`Position für ${station.name} setzen`} onClick={() => setPositioningStationId(positioningStationId === station.id ? null : station.id)} className="font-bold text-[#286551]">{positioningStationId === station.id ? "Abbrechen" : "Position setzen"}</button><button onClick={() => onEdit(station)} className="ml-4 font-bold text-[#286551]">Bearbeiten</button><button onClick={() => onRemove(station.id)} className="ml-4 text-red-600">Löschen</button></td></tr>)}</tbody></table></div>
   </section>;
 }
 
-function StationTemplateDropZone({ tenantId, stations, categories, mapConfig, onEdit, onPlaceTemplate }: { tenantId: string; stations: Station[]; categories: Category[]; mapConfig: Tenant["map"]; onEdit: (station: Station) => void; onPlaceTemplate: (station: Station, coordinate: { longitude: number; latitude: number }) => Promise<void> }) {
+function StationTemplateDropZone({ tenantId, stations, categories, mapConfig, positioningStationId, onPositioningChange, onEdit, onPlaceTemplate, onMoveStation }: { tenantId: string; stations: Station[]; categories: Category[]; mapConfig: Tenant["map"]; positioningStationId: string | null; onPositioningChange: (stationId: string | null) => void; onEdit: (station: Station) => void; onPlaceTemplate: (station: Station, coordinate: { longitude: number; latitude: number }) => Promise<void>; onMoveStation: (station: Station, coordinate: { longitude: number; latitude: number }) => Promise<void> }) {
   const [placingId, setPlacingId] = useState<string | null>(null);
   const templates = useMemo(() => {
     const templateMap = new Map(createDefaultStationTemplates(tenantId).map((station) => [stationTemplateKey(station), station]));
@@ -338,6 +346,7 @@ function StationTemplateDropZone({ tenantId, stations, categories, mapConfig, on
   const defaultCoordinate = boundsCenter(mapBounds);
 
   async function place(station: Station, coordinate: { longitude: number; latitude: number }) {
+    onPositioningChange(null);
     setPlacingId(station.id);
     try {
       await onPlaceTemplate(station, coordinate);
@@ -358,11 +367,20 @@ function StationTemplateDropZone({ tenantId, stations, categories, mapConfig, on
     setStationPinDragImage(event.nativeEvent, { label: station.name, color: category?.color ?? "#173c32" });
   }
 
+  function positionStation(coordinate: { longitude: number; latitude: number }) {
+    const station = stations.find((item) => item.id === positioningStationId);
+    if (!station) return;
+    onPositioningChange(null);
+    void onMoveStation(station, coordinate);
+  }
+
+  const positioningStation = stations.find((station) => station.id === positioningStationId);
+
   return <div className="grid gap-4 border-b border-black/5 p-4 xl:grid-cols-[320px_1fr]">
     <div className="rounded-2xl bg-[#f7f7f4] p-4">
       <p className="text-xs font-bold uppercase tracking-widest text-[#286551]">Schnellstart</p>
       <h3 className="mt-2 font-display text-2xl">Standardstationen platzieren</h3>
-      <p className="mt-2 text-sm leading-6 text-black/55">Ziehe eine Vorlage auf die Karte. Auf dem Smartphone tippe auf „Platzieren“ und setze die exakte GPS-Position danach im Editor.</p>
+      <p className="mt-2 text-sm leading-6 text-black/55">Ziehe eine Vorlage auf die Karte oder nutze „Position setzen“ in der Stationsliste und klicke exakt auf die Karte.</p>
       <div className="mt-4 space-y-2">
         {templates.length === 0 && <p className="rounded-xl bg-white p-3 text-sm text-black/55">Noch keine Vorlagen vorhanden. Neue Orte kannst du jederzeit über „Neue Station“ anlegen.</p>}
         {templates.map((station, index) => <div key={station.id} draggable onDragStart={(event) => startTemplateDrag(event, station)} className="cursor-grab rounded-xl border border-black/10 bg-white p-3 active:cursor-grabbing">
@@ -377,7 +395,7 @@ function StationTemplateDropZone({ tenantId, stations, categories, mapConfig, on
         </div>)}
       </div>
     </div>
-    <StationTemplateMap stations={stations} categories={categories} mapConfig={mapConfig} onEdit={onEdit} onDropTemplate={placeDroppedTemplate} />
+    <StationTemplateMap stations={stations} categories={categories} mapConfig={mapConfig} positioningStationName={positioningStation?.name} onEdit={onEdit} onDropTemplate={placeDroppedTemplate} onPositionStation={positioningStationId ? positionStation : undefined} onMoveStation={(station, coordinate) => { void onMoveStation(station, coordinate); }} />
   </div>;
 }
 
@@ -998,10 +1016,9 @@ function CategoryPicker({ categories, value, onChange }: { categories: Tenant["c
     </div>
   </div>;
 }
-function StationEditor({ station, categories, mapConfig, canDelete, onClose, onSave, onDelete }: {
+function StationEditor({ station, categories, canDelete, onClose, onSave, onDelete }: {
   station: Station;
   categories: Tenant["categories"];
-  mapConfig: Tenant["map"];
   canDelete: boolean;
   onClose: () => void;
   onSave: (station: Station) => void | Promise<void>;
@@ -1020,7 +1037,7 @@ function StationEditor({ station, categories, mapConfig, canDelete, onClose, onS
       <div className="mt-5 grid gap-2 rounded-2xl bg-[#f7f7f4] p-3 text-xs font-bold text-black/55 sm:grid-cols-3">
         <p className="rounded-xl bg-white p-3">1. Kategorie wählen</p>
         <p className="rounded-xl bg-white p-3">2. Texte ergänzen</p>
-        <p className="rounded-xl bg-white p-3">3. Marker exakt setzen</p>
+        <p className="rounded-xl bg-white p-3">3. Marker in Übersicht ziehen</p>
       </div>
       <div className="mt-8 space-y-5">
         <label className="block text-sm font-bold"><LabelText label="Name" tooltip={tooltipForLabel("Name")} /><input required title={tooltipForLabel("Name")} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} className="mt-2 w-full rounded-xl border p-3" /></label>
@@ -1030,7 +1047,14 @@ function StationEditor({ station, categories, mapConfig, canDelete, onClose, onS
         <label className="block text-sm font-bold"><LabelText label="Öffnungszeiten" tooltip="Öffnungszeiten oder kurzer Hinweis, z. B. Heute 08:00–20:00 oder Durchgehend geöffnet." /><input title="Öffnungszeiten oder kurzer Hinweis, z. B. Heute 08:00–20:00 oder Durchgehend geöffnet." value={draft.openingHours} onChange={(event) => setDraft({ ...draft, openingHours: event.target.value })} className="mt-2 w-full rounded-xl border p-3" /></label>
         <div className="block text-sm font-bold"><LabelText label="Status" tooltip={tooltipForLabel("Status")} /><div className="mt-2 grid gap-2 sm:grid-cols-2">{(["open", "limited", "closed", "maintenance"] as Station["status"][]).map((status) => <button type="button" key={status} onClick={() => setDraft({ ...draft, status })} className={cn("rounded-xl border px-4 py-3 text-left text-sm font-bold", draft.status === status ? "border-[#173c32] bg-[#eff3ec] text-[#173c32]" : "border-black/10 bg-[#fafaf8] text-black/60")}>{statusLabel[status]}</button>)}</div></div>
         <label className="flex items-start gap-3 rounded-xl bg-[#f7f7f4] p-4 text-sm font-bold"><input title="Aktiviert diese Station für Besucher. Deaktiviert bleibt sie als Vorlage in der Verwaltung." type="checkbox" checked={!draft.isTemplate} onChange={(event) => setDraft({ ...draft, isTemplate: !event.target.checked })} className="mt-0.5 h-5 w-5 accent-[#286551]" /><span><span className="inline-flex items-center gap-1.5">In Besucher-App anzeigen<HelpBubble text="Aktiviert diese Station für Besucher. Deaktiviert bleibt sie als Vorlage in der Verwaltung." /></span><span className="mt-1 block font-normal leading-5 text-black/50">Standardstationen starten als Vorlage und werden erst nach Aktivierung öffentlich sichtbar.</span></span></label>
-        <StationLocationPicker mapConfig={mapConfig} longitude={draft.longitude} latitude={draft.latitude} onChange={(position) => setDraft((current) => ({ ...current, ...position }))} />
+        <section className="rounded-2xl bg-[#f7f7f4] p-4">
+          <p className="text-sm font-bold">Position</p>
+          <p className="mt-1 text-xs font-normal leading-5 text-black/50">Die sichtbare Position wird direkt in der Stationsübersicht auf der großen Karte gesetzt. Ziehe dort den Marker an die gewünschte Stelle; diese Koordinaten werden automatisch gespeichert.</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="text-xs font-bold text-black/55">Breitengrad<input title="Nord-Süd-Koordinate als Dezimalzahl. Normalerweise direkt über die Übersichtskarte setzen." type="number" step="any" value={draft.latitude} onChange={(event) => setDraft({ ...draft, latitude: Number(event.target.value) })} className="mt-1 w-full rounded-xl border p-3 text-sm text-black" /></label>
+            <label className="text-xs font-bold text-black/55">Längengrad<input title="Ost-West-Koordinate als Dezimalzahl. Normalerweise direkt über die Übersichtskarte setzen." type="number" step="any" value={draft.longitude} onChange={(event) => setDraft({ ...draft, longitude: Number(event.target.value) })} className="mt-1 w-full rounded-xl border p-3 text-sm text-black" /></label>
+          </div>
+        </section>
       </div>
       <div className="mt-8 flex gap-3"><button type="button" onClick={onClose} className="flex-1 rounded-xl border px-4 py-3 font-bold">Abbrechen</button><button className="flex-1 rounded-xl bg-[#173c32] px-4 py-3 font-bold text-white">Speichern</button></div>
     </form>

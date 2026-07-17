@@ -99,17 +99,16 @@ test("placed station marker does not move when another station is added", async 
   const firstMarker = page.getByLabel("Rezeption öffnen");
   await expect(firstMarker).toBeVisible();
   const firstPosition = await markerCenter(firstMarker);
+  await setStationPositionFromOverview(page, "Rezeption", 0.58, 0.42);
+  const firstPositionAfterMove = await markerCenter(firstMarker);
+  expect(Math.hypot(firstPositionAfterMove.x - firstPosition.x, firstPositionAfterMove.y - firstPosition.y)).toBeGreaterThan(35);
 
   await placeTemplateFromQuickstart(page, "Sanitärgebäude 1");
   await expect(page.getByLabel("Sanitärgebäude 1 öffnen")).toBeVisible();
   const firstPositionAfterSecondStation = await markerCenter(firstMarker);
 
-  expect(Math.abs(firstPositionAfterSecondStation.x - firstPosition.x)).toBeLessThanOrEqual(1);
-  expect(Math.abs(firstPositionAfterSecondStation.y - firstPosition.y)).toBeLessThanOrEqual(1);
-
-  await firstMarker.click();
-  await expect(page.getByRole("heading", { name: "Rezeption" })).toBeVisible();
-  await expect(page.getByLabel("Stationsposition öffnen")).toBeVisible();
+  expect(Math.abs(firstPositionAfterSecondStation.x - firstPositionAfterMove.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(firstPositionAfterSecondStation.y - firstPositionAfterMove.y)).toBeLessThanOrEqual(1);
 });
 
 test("platform admin can open system logs, audit and cleanup tools", async ({ page, isMobile }) => {
@@ -142,6 +141,20 @@ async function placeTemplateFromQuickstart(page: import("@playwright/test").Page
   await Promise.all([
     page.waitForResponse((response) => response.url().includes("/api/admin/stations") && response.ok()),
     card.getByRole("button", { name: "Platzieren" }).click()
+  ]);
+  await expect(page.getByText("Station gespeichert.")).toBeVisible();
+}
+
+async function setStationPositionFromOverview(page: import("@playwright/test").Page, stationName: string, xRatio: number, yRatio: number) {
+  await page.getByLabel(`Position für ${stationName} setzen`).click();
+  const map = page.locator(".maplibregl-map").first();
+  await map.scrollIntoViewIfNeeded();
+  const box = await map.boundingBox();
+  expect(box).not.toBeNull();
+  if (!box) return;
+  await Promise.all([
+    page.waitForResponse((response) => response.url().includes("/api/admin/stations") && response.ok()),
+    page.mouse.click(box.x + box.width * xRatio, box.y + box.height * yRatio)
   ]);
   await expect(page.getByText("Station gespeichert.")).toBeVisible();
 }

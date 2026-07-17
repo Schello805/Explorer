@@ -9,6 +9,7 @@ export function createStationPinElement({ label, color, onClick }: {
   element.style.setProperty("--pin-color", color);
   element.setAttribute("aria-label", `${label} öffnen`);
   element.title = label;
+  element.draggable = false;
   element.innerHTML = `
     <svg class="platzguide-station-pin__svg" viewBox="0 0 46 56" aria-hidden="true">
       <path class="platzguide-station-pin__body" d="M23 53C19.2 42.5 7 36.9 7 21.8C7 11.4 14.2 4 23 4C31.8 4 39 11.4 39 21.8C39 36.9 26.8 42.5 23 53Z" />
@@ -19,7 +20,15 @@ export function createStationPinElement({ label, color, onClick }: {
       </svg>
     </svg>
   `;
-  element.addEventListener("click", onClick);
+  element.addEventListener("dragstart", (event) => event.preventDefault());
+  element.addEventListener("click", (event) => {
+    if (element.dataset.dragged === "true") {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    onClick();
+  });
   return element;
 }
 

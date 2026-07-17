@@ -24,14 +24,20 @@ export function StationTemplateMap({
   stations,
   categories,
   mapConfig,
+  positioningStationName,
   onEdit,
-  onDropTemplate
+  onDropTemplate,
+  onPositionStation,
+  onMoveStation
 }: {
   stations: Station[];
   categories: Category[];
   mapConfig: Tenant["map"];
+  positioningStationName?: string;
   onEdit: (station: Station) => void;
   onDropTemplate: (stationId: string, coordinate: { longitude: number; latitude: number }) => void;
+  onPositionStation?: (coordinate: { longitude: number; latitude: number }) => void;
+  onMoveStation: (station: Station, coordinate: { longitude: number; latitude: number }) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import("maplibre-gl").Map | null>(null);
@@ -80,6 +86,24 @@ export function StationTemplateMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
+    map.getCanvas().style.cursor = onPositionStation ? "crosshair" : "";
+    const handleClick = (event: maplibregl.MapMouseEvent) => {
+      if (!onPositionStation) return;
+      onPositionStation({
+        longitude: Number(event.lngLat.lng.toFixed(6)),
+        latitude: Number(event.lngLat.lat.toFixed(6))
+      });
+    };
+    map.on("click", handleClick);
+    return () => {
+      map.off("click", handleClick);
+      map.getCanvas().style.cursor = "";
+    };
+  }, [onPositionStation]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
     const visibleStations = stations.filter((station) => !station.isTemplate && hasCoordinates(station));
     const visibleIds = new Set(visibleStations.map((station) => station.id));
     markersRef.current.forEach((marker, stationId) => {
@@ -96,9 +120,11 @@ export function StationTemplateMap({
       }
       const category = categories.find((item) => item.id === station.categoryId);
       const element = createStationPinElement({ label: station.name, color: category?.color ?? "#173c32", onClick: () => onEdit(station) });
-      markersRef.current.set(station.id, new maplibregl.Marker({ element, anchor: "bottom" }).setLngLat([station.longitude, station.latitude]).addTo(map));
+      const marker = new maplibregl.Marker({ element, anchor: "bottom" }).setLngLat([station.longitude, station.latitude]).addTo(map);
+      enableMarkerPointerDrag(map, marker, element, station, onMoveStation);
+      markersRef.current.set(station.id, marker);
     }
-  }, [categories, onEdit, stations]);
+  }, [categories, onEdit, onMoveStation, stations]);
 
   function handleDrop(event: React.DragEvent<HTMLDivElement>) {
     event.preventDefault();
@@ -116,7 +142,8 @@ export function StationTemplateMap({
   return <div onDrop={handleDrop} onDragOver={(event) => event.preventDefault()} className="relative min-h-[360px] overflow-hidden rounded-2xl border-4 border-white bg-[#dce9cf] shadow-inner">
     <div ref={containerRef} className="absolute inset-0" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
     <div className="pointer-events-none absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1.5 text-xs font-bold text-[#173c32] shadow-sm">Echte Karte / Platzplan</div>
-    <div className="pointer-events-none absolute bottom-4 left-4 right-4 rounded-xl bg-white/90 p-3 text-xs leading-5 text-black/60 shadow-sm">Tipp: Vorlage hierher ziehen. Station anklicken zum Bearbeiten.</div>
+    {positioningStationName && <div className="pointer-events-none absolute left-4 right-4 top-16 rounded-xl bg-[#173c32] p-3 text-sm font-bold text-white shadow-lg">Positioniermodus aktiv: Klicke auf die neue Stelle für „{positioningStationName}“.</div>}
+    <div className="pointer-events-none absolute bottom-4 left-4 right-4 rounded-xl bg-white/90 p-3 text-xs leading-5 text-black/60 shadow-sm">{positioningStationName ? "Karte anklicken zum Speichern. Abbrechen über die Stationsliste." : "Tipp: Vorlage hierher ziehen. Bestehende Marker direkt verschieben oder per „Position setzen“ exakt platzieren."}</div>
   </div>;
 }
 
@@ -149,4 +176,73 @@ function validSitePlanCoordinates(value: unknown): value is [[number, number], [
 
 function hasCoordinates(station: Station) {
   return Number.isFinite(station.longitude) && Number.isFinite(station.latitude) && station.longitude !== 0 && station.latitude !== 0;
+}
+
+function enableMarkerPointerDrag(
+  map: import("maplibre-gl").Map,
+  marker: import("maplibre-gl").Marker,
+  element: HTMLElement,
+  station: Station,
+  onMoveStation: (station: Station, coordinate: { longitude: number; latitude: number }) => void
+) {
+  element.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    startMarkerDrag(map, marker, element, station, onMoveStation, event.clientX, event.clientY, "pointer");
+  }, { capture: true });
+  element.addEventListener("mousedown", (event) => {
+    if (event.button !== 0 || element.classList.contains("platzguide-station-pin--dragging")) return;
+    event.preventDefault();
+    event.stopPropagation();
+    startMarkerDrag(map, marker, element, station, onMoveStation, event.clientX, event.clientY, "mouse");
+  }, { capture: true });
+}
+
+function startMarkerDrag(
+  map: import("maplibre-gl").Map,
+  marker: import("maplibre-gl").Marker,
+  element: HTMLElement,
+  station: Station,
+  onMoveStation: (station: Station, coordinate: { longitude: number; latitude: number }) => void,
+  startX: number,
+  startY: number,
+  eventType: "pointer" | "mouse"
+) {
+  const start = { x: startX, y: startY };
+  let moved = false;
+  map.dragPan.disable();
+  element.dataset.dragged = "false";
+  element.classList.add("platzguide-station-pin--dragging");
+
+  const move = (moveEvent: PointerEvent | MouseEvent) => {
+    const distance = Math.hypot(moveEvent.clientX - start.x, moveEvent.clientY - start.y);
+    if (distance > 3) {
+      moved = true;
+      element.dataset.dragged = "true";
+    }
+    if (!moved) return;
+    const rect = map.getCanvasContainer().getBoundingClientRect();
+    const point = map.unproject([moveEvent.clientX - rect.left, moveEvent.clientY - rect.top]);
+    marker.setLngLat(point);
+  };
+
+  const up = () => {
+    window.removeEventListener(eventType === "pointer" ? "pointermove" : "mousemove", move);
+    window.removeEventListener(eventType === "pointer" ? "pointerup" : "mouseup", up);
+    map.dragPan.enable();
+    element.classList.remove("platzguide-station-pin--dragging");
+    if (!moved) return;
+    const point = marker.getLngLat();
+    onMoveStation(station, {
+      longitude: Number(point.lng.toFixed(6)),
+      latitude: Number(point.lat.toFixed(6))
+    });
+    window.setTimeout(() => {
+      element.dataset.dragged = "false";
+    }, 0);
+  };
+
+  window.addEventListener(eventType === "pointer" ? "pointermove" : "mousemove", move);
+  window.addEventListener(eventType === "pointer" ? "pointerup" : "mouseup", up, { once: true });
 }
