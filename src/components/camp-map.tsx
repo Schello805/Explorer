@@ -207,7 +207,7 @@ export function CampMap({
 
   return <div className="map-texture relative mt-4 h-[52vh] min-h-[360px] overflow-hidden rounded-[1.5rem] border-4 border-white bg-[#dce8d0] shadow-soft sm:min-h-[440px]">
     <div ref={containerRef} className="absolute inset-0" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} aria-label={`Interaktive Karte von ${tenant.name}`} />
-    {ready && !tilesVisible && visibleStations.map((station) => <button
+    {ready && !tilesVisible && mapBounds && visibleStations.map((station) => <button
       key={`overlay-${station.id}`}
       onClick={() => onSelect(station)}
       className="pointer-events-auto absolute z-10 grid h-10 w-10 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-4 border-white bg-[#195f4c] text-white shadow-lg transition hover:scale-110"
@@ -291,8 +291,7 @@ function boundsFeature(bounds: Bounds) {
 }
 
 function projectStation(station: Station, bounds: Bounds | null) {
-  if (!bounds) return { left: `${station.position.x}%`, top: `${station.position.y}%` };
-  const position = coordinateToMapPosition(bounds, [station.longitude, station.latitude]);
+  const position = coordinateToMapPosition(bounds ?? defaultBounds([station.longitude, station.latitude]), [station.longitude, station.latitude]);
   return { left: `${position.x}%`, top: `${position.y}%` };
 }
 
