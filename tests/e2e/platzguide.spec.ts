@@ -102,13 +102,16 @@ test("placed station marker does not move when another station is added", async 
   await setStationPositionFromOverview(page, "Rezeption", 0.58, 0.42);
   const firstPositionAfterMove = await markerCenter(firstMarker);
   expect(Math.hypot(firstPositionAfterMove.x - firstPosition.x, firstPositionAfterMove.y - firstPosition.y)).toBeGreaterThan(35);
+  await dragMarkerOnOverview(page, firstMarker, -45, 35);
+  const firstPositionAfterDrag = await markerCenter(firstMarker);
+  expect(Math.hypot(firstPositionAfterDrag.x - firstPositionAfterMove.x, firstPositionAfterDrag.y - firstPositionAfterMove.y)).toBeGreaterThan(20);
 
   await placeTemplateFromQuickstart(page, "Sanitärgebäude 1");
   await expect(page.getByLabel("Sanitärgebäude 1 öffnen")).toBeVisible();
   const firstPositionAfterSecondStation = await markerCenter(firstMarker);
 
-  expect(Math.abs(firstPositionAfterSecondStation.x - firstPositionAfterMove.x)).toBeLessThanOrEqual(1);
-  expect(Math.abs(firstPositionAfterSecondStation.y - firstPositionAfterMove.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(firstPositionAfterSecondStation.x - firstPositionAfterDrag.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(firstPositionAfterSecondStation.y - firstPositionAfterDrag.y)).toBeLessThanOrEqual(1);
 });
 
 test("platform admin can open system logs, audit and cleanup tools", async ({ page, isMobile }) => {
@@ -156,6 +159,20 @@ async function setStationPositionFromOverview(page: import("@playwright/test").P
     page.waitForResponse((response) => response.url().includes("/api/admin/stations") && response.ok()),
     page.mouse.click(box.x + box.width * xRatio, box.y + box.height * yRatio)
   ]);
+  await expect(page.getByText("Station gespeichert.")).toBeVisible();
+}
+
+async function dragMarkerOnOverview(page: import("@playwright/test").Page, locator: import("@playwright/test").Locator, deltaX: number, deltaY: number) {
+  const box = await locator.boundingBox();
+  expect(box).not.toBeNull();
+  if (!box) return;
+  const start = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  const saveResponse = page.waitForResponse((response) => response.url().includes("/api/admin/stations") && response.ok());
+  await page.mouse.move(start.x + deltaX, start.y + deltaY, { steps: 12 });
+  await page.mouse.up();
+  await saveResponse;
   await expect(page.getByText("Station gespeichert.")).toBeVisible();
 }
 

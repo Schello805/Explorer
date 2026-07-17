@@ -129,7 +129,7 @@ export function StationTemplateMap({
   function handleDrop(event: React.DragEvent<HTMLDivElement>) {
     event.preventDefault();
     const map = mapRef.current;
-    const rect = containerRef.current?.getBoundingClientRect();
+    const rect = map?.getCanvasContainer().getBoundingClientRect();
     const stationId = event.dataTransfer.getData("text/plain");
     if (!map || !rect || !stationId) return;
     const point = map.unproject([event.clientX - rect.left, event.clientY - rect.top]);
@@ -210,8 +210,9 @@ function startMarkerDrag(
   eventType: "pointer" | "mouse"
 ) {
   const start = { x: startX, y: startY };
+  const rect = map.getCanvasContainer().getBoundingClientRect();
   const anchor = map.project(marker.getLngLat());
-  const grabOffset = { x: start.x - anchor.x, y: start.y - anchor.y };
+  const grabOffset = { x: start.x - rect.left - anchor.x, y: start.y - rect.top - anchor.y };
   let moved = false;
   map.dragPan.disable();
   element.dataset.dragged = "false";
