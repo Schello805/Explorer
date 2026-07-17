@@ -1006,10 +1006,10 @@ function CategoryIcon({ icon, color }: { icon: string; color: string }) {
   return <span style={{ backgroundColor: `${color}18`, color }} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"><Icon size={19} /></span>;
 }
 function CategoryPicker({ categories, value, onChange }: { categories: Tenant["categories"]; value: string; onChange: (value: string) => void }) {
-  return <div>
+  return <div className="min-w-0">
     <LabelText label="Kategorie" tooltip="Kategorie bestimmt Farbe, Filter und Icon der Station in der Besucher-App." />
-    <div className="mt-2 grid gap-2 sm:grid-cols-2">
-      {categories.map((category) => <button type="button" key={category.id} onClick={() => onChange(category.id)} className={cn("flex min-w-0 items-center gap-3 rounded-xl border p-3 text-left transition", value === category.id ? "border-[#173c32] bg-[#eff3ec] ring-2 ring-[#173c32]/10" : "border-black/10 bg-[#fafaf8] hover:border-[#173c32]/40")}>
+    <div className="mt-2 grid min-w-0 gap-2 xl:grid-cols-2">
+      {categories.map((category) => <button type="button" key={category.id} onClick={() => onChange(category.id)} className={cn("flex min-w-0 max-w-full items-center gap-3 overflow-hidden rounded-xl border p-3 text-left transition", value === category.id ? "border-[#173c32] bg-[#eff3ec] ring-2 ring-[#173c32]/10" : "border-black/10 bg-[#fafaf8] hover:border-[#173c32]/40")}>
         <CategoryIcon icon={category.icon} color={category.color} />
         <span className="min-w-0"><span className="block truncate font-bold">{category.name}</span><span className="block truncate text-xs font-normal text-black/45">{category.id}</span></span>
       </button>)}
@@ -1026,7 +1026,7 @@ function StationEditor({ station, categories, canDelete, onClose, onSave, onDele
 }) {
   const [draft, setDraft] = useState(station);
   return <div className="fixed inset-0 z-50 flex justify-end overflow-hidden bg-black/35">
-    <form onSubmit={(event) => { event.preventDefault(); onSave(draft); }} className="h-full w-full max-w-xl overflow-x-hidden overflow-y-auto bg-white p-4 shadow-2xl sm:p-6">
+    <form onSubmit={(event) => { event.preventDefault(); onSave(draft); }} className="h-full w-full min-w-0 max-w-[min(42rem,100vw)] overflow-x-hidden overflow-y-auto bg-white p-4 shadow-2xl sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0"><p className="text-xs font-bold uppercase tracking-widest text-[#286551]">Stationseditor</p><h2 className="break-words font-display text-3xl">{station.name || "Neue Station"}</h2></div>
         <div className="flex shrink-0 items-center gap-2">
@@ -1034,18 +1034,18 @@ function StationEditor({ station, categories, canDelete, onClose, onSave, onDele
           <button type="button" aria-label="Editor schließen" onClick={onClose} className="rounded-full bg-black/5 p-2"><X /></button>
         </div>
       </div>
-      <div className="mt-5 grid gap-2 rounded-2xl bg-[#f7f7f4] p-3 text-xs font-bold text-black/55 sm:grid-cols-3">
+      <div className="mt-5 grid min-w-0 gap-2 rounded-2xl bg-[#f7f7f4] p-3 text-xs font-bold text-black/55 xl:grid-cols-3">
         <p className="rounded-xl bg-white p-3">1. Kategorie wählen</p>
         <p className="rounded-xl bg-white p-3">2. Texte ergänzen</p>
         <p className="rounded-xl bg-white p-3">3. In Übersicht platzieren</p>
       </div>
-      <div className="mt-8 space-y-5">
+      <div className="mt-8 min-w-0 space-y-5">
         <label className="block text-sm font-bold"><LabelText label="Name" tooltip={tooltipForLabel("Name")} /><input required title={tooltipForLabel("Name")} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} className="mt-2 w-full rounded-xl border p-3" /></label>
         <CategoryPicker categories={categories} value={draft.categoryId} onChange={(categoryId) => setDraft({ ...draft, categoryId })} />
         <label className="block text-sm font-bold"><LabelText label="Kurzbeschreibung" tooltip="Ein kurzer Satz für Stationskarten und Listen." /><input title="Ein kurzer Satz für Stationskarten und Listen." value={draft.shortDescription} onChange={(event) => setDraft({ ...draft, shortDescription: event.target.value })} className="mt-2 w-full rounded-xl border p-3" /></label>
         <label className="block text-sm font-bold"><LabelText label="Beschreibung" tooltip={tooltipForLabel("Beschreibung")} /><textarea title={tooltipForLabel("Beschreibung")} rows={5} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} className="mt-2 w-full rounded-xl border p-3" /></label>
         <label className="block text-sm font-bold"><LabelText label="Öffnungszeiten" tooltip="Öffnungszeiten oder kurzer Hinweis, z. B. Heute 08:00–20:00 oder Durchgehend geöffnet." /><input title="Öffnungszeiten oder kurzer Hinweis, z. B. Heute 08:00–20:00 oder Durchgehend geöffnet." value={draft.openingHours} onChange={(event) => setDraft({ ...draft, openingHours: event.target.value })} className="mt-2 w-full rounded-xl border p-3" /></label>
-        <div className="block text-sm font-bold"><LabelText label="Status" tooltip={tooltipForLabel("Status")} /><div className="mt-2 grid gap-2 sm:grid-cols-2">{(["open", "limited", "closed", "maintenance"] as Station["status"][]).map((status) => <button type="button" key={status} onClick={() => setDraft({ ...draft, status })} className={cn("rounded-xl border px-4 py-3 text-left text-sm font-bold", draft.status === status ? "border-[#173c32] bg-[#eff3ec] text-[#173c32]" : "border-black/10 bg-[#fafaf8] text-black/60")}>{statusLabel[status]}</button>)}</div></div>
+        <div className="block min-w-0 text-sm font-bold"><LabelText label="Status" tooltip={tooltipForLabel("Status")} /><div className="mt-2 grid min-w-0 gap-2 xl:grid-cols-2">{(["open", "limited", "closed", "maintenance"] as Station["status"][]).map((status) => <button type="button" key={status} onClick={() => setDraft({ ...draft, status })} className={cn("min-w-0 rounded-xl border px-4 py-3 text-left text-sm font-bold", draft.status === status ? "border-[#173c32] bg-[#eff3ec] text-[#173c32]" : "border-black/10 bg-[#fafaf8] text-black/60")}>{statusLabel[status]}</button>)}</div></div>
         <label className="flex items-start gap-3 rounded-xl bg-[#f7f7f4] p-4 text-sm font-bold"><input title="Aktiviert diese Station für Besucher. Deaktiviert bleibt sie als Vorlage in der Verwaltung." type="checkbox" checked={!draft.isTemplate} onChange={(event) => setDraft({ ...draft, isTemplate: !event.target.checked })} className="mt-0.5 h-5 w-5 accent-[#286551]" /><span><span className="inline-flex items-center gap-1.5">In Besucher-App anzeigen<HelpBubble text="Aktiviert diese Station für Besucher. Deaktiviert bleibt sie als Vorlage in der Verwaltung." /></span><span className="mt-1 block font-normal leading-5 text-black/50">Standardstationen starten als Vorlage und werden erst nach Aktivierung öffentlich sichtbar.</span></span></label>
       </div>
       <div className="mt-8 flex gap-3"><button type="button" onClick={onClose} className="flex-1 rounded-xl border px-4 py-3 font-bold">Abbrechen</button><button className="flex-1 rounded-xl bg-[#173c32] px-4 py-3 font-bold text-white">Speichern</button></div>
