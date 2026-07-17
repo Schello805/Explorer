@@ -4,10 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, FormEvent, ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Camera, CheckCircle2, CreditCard, HelpCircle, LifeBuoy } from "lucide-react";
+import { ArrowRight, Camera, CheckCircle2, CreditCard, HelpCircle, LifeBuoy, MapPinned } from "lucide-react";
 import { billingPlans, formatEuro, setupServicePriceCents, yearlyDiscountPercent } from "@/lib/billing";
-import { CampMap } from "@/components/camp-map";
-import type { Station, Tenant } from "@/lib/types";
+import { coordinateToMapPosition, defaultBounds, validBounds } from "@/lib/map-bounds";
+import type { Tenant } from "@/lib/types";
 
 type CaptchaProvider = "turnstile" | "hcaptcha" | "recaptcha" | "disabled";
 const platformLogo = "/icons/platzguide-logo.png";
@@ -147,7 +147,7 @@ export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey, 
         <div>
           <p className="text-xs font-bold uppercase tracking-[.18em] text-[#195f4c]/65">Demo</p>
           <h2 className="mt-2 font-display text-[clamp(2rem,8vw,3.6rem)] leading-[1.02]">So sehen Gäste deinen Platzguide.</h2>
-          <p className="mt-3 text-sm leading-6 text-[#18332b]/60">Probiere die echte Besucherkarte aus. Marker, Kartenausschnitt und Stationspositionen stammen direkt aus dem veröffentlichten DEMO-Platzguide.</p>
+          <p className="mt-3 text-sm leading-6 text-[#18332b]/60">Eine ruhige Vorschau zeigt, wie Gäste Stationen auf dem Platz entdecken. Die vollständige Bedienung öffnet sich im DEMO-Platzguide.</p>
         </div>
         <DemoVisitorPreview tenant={demoTenant} />
       </div>
@@ -182,7 +182,6 @@ function MiniFeature({ icon, title, text }: { icon: ReactNode; title: string; te
 }
 
 function DemoVisitorPreview({ tenant }: { tenant?: Tenant }) {
-  const [selected, setSelected] = useState<Station | null>(null);
   if (!tenant) {
     return <div className="grid min-h-80 place-items-center rounded-[1.7rem] border border-[#18332b]/10 bg-[#f5f2e9] p-6 text-center shadow-sm">
       <div className="max-w-sm">
@@ -193,6 +192,14 @@ function DemoVisitorPreview({ tenant }: { tenant?: Tenant }) {
     </div>;
   }
   const stations = tenant.stations.filter((station) => !station.isTemplate);
+  const bounds = validBounds(tenant.map.bounds) ? tenant.map.bounds : defaultBounds(tenant.map.center);
+  const previewStations = stations
+    .filter((station) => Number.isFinite(station.longitude) && Number.isFinite(station.latitude))
+    .slice(0, 5)
+    .map((station) => ({
+      station,
+      position: coordinateToMapPosition(bounds, [station.longitude, station.latitude])
+    }));
   const theme = {
     "--primary": tenant.theme.primary,
     "--secondary": tenant.theme.secondary,
@@ -202,15 +209,33 @@ function DemoVisitorPreview({ tenant }: { tenant?: Tenant }) {
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex min-w-0 items-center gap-3">
         <Image src={platformLogo} alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-xl bg-white p-1.5 object-contain shadow-sm" />
-        <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#195f4c]/55">Echte Besucherkarte</p><p className="truncate font-display text-xl">{tenant.name}</p></div>
+        <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#195f4c]/55">Vorschau</p><p className="truncate font-display text-xl">{tenant.name}</p></div>
       </div>
       <Link href={`/c/${tenant.slug}`} className="inline-flex items-center gap-2 rounded-xl bg-[#195f4c] px-4 py-2.5 text-sm font-bold text-white">Demo öffnen <ArrowRight size={16} /></Link>
     </div>
-    <CampMap tenant={tenant} stations={stations} selected={selected} onSelect={setSelected} />
-    {selected && <div className="mt-3 flex items-start justify-between gap-3 rounded-2xl bg-white p-4">
-      <div className="min-w-0"><p className="text-xs font-bold uppercase tracking-widest text-[#195f4c]">Ausgewählte Station</p><h3 className="mt-1 font-display text-2xl">{selected.name}</h3><p className="mt-1 text-sm leading-5 text-[#18332b]/60">{selected.shortDescription}</p></div>
-      <button type="button" onClick={() => setSelected(null)} className="shrink-0 rounded-lg border border-[#18332b]/10 px-3 py-2 text-xs font-bold">Schließen</button>
-    </div>}
+    <div aria-label={`Vereinfachte Vorschau von ${tenant.name}`} className="map-texture relative mt-4 h-72 overflow-hidden rounded-[1.35rem] border-[3px] border-white bg-[#dce8d0] shadow-soft sm:h-96">
+      <div className="absolute left-[8%] top-[20%] h-[2px] w-[62%] rotate-[-8deg] rounded-full bg-white/75 shadow-sm" />
+      <div className="absolute left-[18%] top-[58%] h-[2px] w-[54%] rotate-[12deg] rounded-full bg-white/70 shadow-sm" />
+      <div className="absolute inset-[12%] rounded-[1.1rem] border-2 border-dashed border-[#195f4c]/70 bg-[#195f4c]/10" />
+      <div className="absolute left-3 top-3 inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-2 text-xs font-bold text-[#195f4c] shadow-sm"><MapPinned size={15} /> Platzkarte</div>
+      {previewStations.map(({ station, position }, index) => (
+        <span
+          key={station.id}
+          aria-label={`${station.name} Vorschaupunkt`}
+          className="absolute grid h-10 w-10 -translate-x-1/2 -translate-y-full place-items-center rounded-full border-[3px] border-white bg-[#2d83ad] text-xs font-bold text-white shadow-[0_12px_24px_rgba(24,51,43,.24)]"
+          style={{ left: `${position.x}%`, top: `${position.y}%`, backgroundColor: index === 0 ? "#2d83ad" : "var(--primary)" }}
+        >
+          {index + 1}
+        </span>
+      ))}
+      <div className="absolute inset-x-3 bottom-3 rounded-2xl bg-white/92 p-3 shadow-sm">
+        <p className="text-xs font-bold uppercase tracking-[.14em] text-[#195f4c]/60">Prinzip</p>
+        <p className="mt-1 text-sm font-bold text-[#18332b]">Karte öffnen, Punkt antippen, Details sehen.</p>
+      </div>
+    </div>
+    <div className="mt-3 grid gap-2 sm:grid-cols-3">
+      {previewStations.slice(0, 3).map(({ station }, index) => <div key={station.id} className="rounded-xl bg-white p-3 text-sm shadow-sm"><span className="mr-2 inline-grid h-6 w-6 place-items-center rounded-full bg-[#195f4c] text-xs font-bold text-white">{index + 1}</span>{station.name}</div>)}
+    </div>
   </div>;
 }
 

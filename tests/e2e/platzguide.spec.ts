@@ -12,9 +12,9 @@ test("marketing page explains pricing and publishing", async ({ page }) => {
   await expect(page.getByRole("link", { name: "AGB" })).toBeVisible();
   const demoMap = page.getByTestId("landing-demo-map");
   await expect(demoMap).toBeVisible();
-  const demoMarker = demoMap.getByLabel("Rezeption öffnen");
-  await expect(demoMarker).toBeVisible();
-  await expectMarkerRootOwnedByMap(demoMarker);
+  await expect(demoMap.getByText("Karte öffnen, Punkt antippen, Details sehen.")).toBeVisible();
+  await expect(demoMap.getByLabel("Rezeption Vorschaupunkt")).toBeVisible();
+  await expect(demoMap.getByRole("link", { name: /Demo öffnen/i })).toBeVisible();
   expect(await page.content()).not.toContain("demo@example.org");
   await expectNoHorizontalOverflow(page);
   await page.goto("/c/demo");
