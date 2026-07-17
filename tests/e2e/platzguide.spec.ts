@@ -106,12 +106,13 @@ test("placed station marker does not move when another station is added", async 
   test.skip(isMobile, "desktop marker stability is covered here; mobile covers viewport behavior");
   await loginAsPlatformAdmin(page);
   await page.goto("/admin/tenant");
+  await page.getByLabel("Mandant wählen").selectOption({ label: "Camping Testplatz" });
   await page.getByRole("button", { name: "Stationen", exact: true }).click();
 
-  const templateDropPoint = await dragTemplateFromQuickstart(page, "Rezeption", 0.42, 0.54);
-  const firstMarker = page.getByLabel("Rezeption öffnen");
+  const placement = await dragTemplateFromQuickstart(page, "Rezeption", 0.42, 0.54);
+  const firstMarker = page.locator(`[data-station-id="${placement.stationId}"]`).getByRole("button");
   await expect(firstMarker).toBeVisible();
-  await expectMarkerAnchorAt(firstMarker, templateDropPoint, 3);
+  await expectMarkerAnchorAt(firstMarker, placement.target, 3);
   await expectMarkerRootOwnedByMap(firstMarker);
   const firstPosition = await markerCenter(firstMarker);
   await setStationPositionFromOverview(page, "Rezeption", 0.58, 0.42);
@@ -240,7 +241,7 @@ async function dragTemplateFromQuickstart(page: import("@playwright/test").Page,
   const mapBox = await map.boundingBox();
   expect(cardBox).not.toBeNull();
   expect(mapBox).not.toBeNull();
-  if (!cardBox || !mapBox) return { x: 0, y: 0 };
+  if (!cardBox || !mapBox) throw new Error("Vorlage oder Karte hat keine messbare Größe.");
   const start = { x: cardBox.x + Math.min(cardBox.width - 18, 42), y: cardBox.y + 28 };
   const target = { x: mapBox.x + mapBox.width * xRatio, y: mapBox.y + mapBox.height * yRatio };
   await page.mouse.move(start.x, start.y);
@@ -249,9 +250,9 @@ async function dragTemplateFromQuickstart(page: import("@playwright/test").Page,
   const saveResponse = page.waitForResponse((response) => response.url().includes("/api/admin/stations") && response.ok());
   await page.mouse.move(target.x, target.y, { steps: 16 });
   await page.mouse.up();
-  await saveResponse;
+  const savedStation = await (await saveResponse).json() as { id: string };
   await expect(page.getByText("Station gespeichert.")).toBeVisible();
-  return target;
+  return { target, stationId: savedStation.id };
 }
 
 async function setStationPositionFromOverview(page: import("@playwright/test").Page, stationName: string, xRatio: number, yRatio: number) {
