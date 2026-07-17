@@ -123,14 +123,6 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .platzguide-station-pin__icon {
   color: white;
 }
-.platzguide-station-drag-image {
-  position: fixed;
-  left: -1000px;
-  top: -1000px;
-  width: 46px;
-  height: 56px;
-  pointer-events: none;
-}
 .captcha-frame {
   max-width: 100%;
   overflow: hidden;

@@ -24,6 +24,7 @@ export function StationTemplateMap({
   stations,
   categories,
   mapConfig,
+  activeTemplateDrag,
   positioningStationName,
   onEdit,
   onDropTemplate,
@@ -33,6 +34,7 @@ export function StationTemplateMap({
   stations: Station[];
   categories: Category[];
   mapConfig: Tenant["map"];
+  activeTemplateDrag?: { stationId: string } | null;
   positioningStationName?: string;
   onEdit: (station: Station) => void;
   onDropTemplate: (stationId: string, coordinate: { longitude: number; latitude: number }) => void;
@@ -108,6 +110,23 @@ export function StationTemplateMap({
       map.getCanvas().style.cursor = "";
     };
   }, [onPositionStation]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !activeTemplateDrag) return;
+    const handlePointerUp = (event: PointerEvent) => {
+      const rect = map.getCanvasContainer().getBoundingClientRect();
+      const isInsideMap = event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
+      if (!isInsideMap) return;
+      const point = map.unproject([event.clientX - rect.left, event.clientY - rect.top]);
+      onDropTemplate(activeTemplateDrag.stationId, {
+        longitude: Number(point.lng.toFixed(6)),
+        latitude: Number(point.lat.toFixed(6))
+      });
+    };
+    window.addEventListener("pointerup", handlePointerUp);
+    return () => window.removeEventListener("pointerup", handlePointerUp);
+  }, [activeTemplateDrag, onDropTemplate]);
 
   useEffect(() => {
     const map = mapRef.current;

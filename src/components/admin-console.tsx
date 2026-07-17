@@ -9,7 +9,6 @@ import { createDefaultStationTemplates } from "@/lib/tenant-defaults";
 import type { Category, EventItem, GuestGuideItem, MediaAsset, OccupancyStatus, PushMessage, Reward, Station, Tenant, Tour } from "@/lib/types";
 import { cn, statusLabel } from "@/lib/utils";
 import { boundsCenter, coordinateToMapPosition, defaultBounds, validBounds } from "@/lib/map-bounds";
-import { setStationPinDragImage } from "@/lib/map-marker";
 import { StationImport } from "@/components/station-import";
 import { CampAreaPicker } from "@/components/camp-area-picker";
 import { StationTemplateMap } from "@/components/station-template-map";
@@ -337,6 +336,7 @@ function Stations({ tenant, stations, onEdit, onRemove, onCreate, onImport, onPl
 
 function StationTemplateDropZone({ tenantId, stations, categories, mapConfig, positioningStationId, onPositioningChange, onEdit, onPlaceTemplate, onMoveStation }: { tenantId: string; stations: Station[]; categories: Category[]; mapConfig: Tenant["map"]; positioningStationId: string | null; onPositioningChange: (stationId: string | null) => void; onEdit: (station: Station) => void; onPlaceTemplate: (station: Station, coordinate: { longitude: number; latitude: number }) => Promise<void>; onMoveStation: (station: Station, coordinate: { longitude: number; latitude: number }) => Promise<void> }) {
   const [placingId, setPlacingId] = useState<string | null>(null);
+  const [templateDrag, setTemplateDrag] = useState<{ stationId: string; name: string; color: string; x: number; y: number } | null>(null);
   const templates = useMemo(() => {
     const templateMap = new Map(createDefaultStationTemplates(tenantId).map((station) => [stationTemplateKey(station), station]));
     stations.filter((station) => station.isTemplate).forEach((station) => templateMap.set(stationTemplateKey(station), station));
@@ -360,12 +360,30 @@ function StationTemplateDropZone({ tenantId, stations, categories, mapConfig, po
     if (station) void place(station, coordinate);
   }
 
-  function startTemplateDrag(event: React.DragEvent<HTMLDivElement>, station: Station) {
+  function startTemplatePointerDrag(event: React.PointerEvent<HTMLDivElement>, station: Station) {
+    if (event.button !== 0 || (event.target as HTMLElement).closest("button")) return;
     const category = categories.find((item) => item.id === station.categoryId);
-    event.dataTransfer.effectAllowed = "copy";
-    event.dataTransfer.setData("text/plain", station.id);
-    setStationPinDragImage(event.nativeEvent, { label: station.name, color: category?.color ?? "#173c32" });
+    event.preventDefault();
+    setTemplateDrag({ stationId: station.id, name: station.name, color: category?.color ?? "#173c32", x: event.clientX, y: event.clientY });
   }
+
+  useEffect(() => {
+    if (!templateDrag) return;
+    const handleMove = (event: PointerEvent) => {
+      setTemplateDrag((current) => current ? { ...current, x: event.clientX, y: event.clientY } : current);
+    };
+    const handleUp = () => {
+      window.setTimeout(() => setTemplateDrag(null), 0);
+    };
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp, { once: true });
+    window.addEventListener("pointercancel", handleUp, { once: true });
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+      window.removeEventListener("pointercancel", handleUp);
+    };
+  }, [templateDrag]);
 
   function positionStation(coordinate: { longitude: number; latitude: number }) {
     const station = stations.find((item) => item.id === positioningStationId);
@@ -383,7 +401,7 @@ function StationTemplateDropZone({ tenantId, stations, categories, mapConfig, po
       <p className="mt-2 text-sm leading-6 text-black/55">Ziehe eine Vorlage auf die Karte oder nutze „Position setzen“ in der Stationsliste und klicke exakt auf die Karte.</p>
       <div className="mt-4 space-y-2">
         {templates.length === 0 && <p className="rounded-xl bg-white p-3 text-sm text-black/55">Noch keine Vorlagen vorhanden. Neue Orte kannst du jederzeit über „Neue Station“ anlegen.</p>}
-        {templates.map((station, index) => <div key={station.id} draggable onDragStart={(event) => startTemplateDrag(event, station)} className="cursor-grab rounded-xl border border-black/10 bg-white p-3 active:cursor-grabbing">
+        {templates.map((station, index) => <div key={station.id} data-testid={`station-template-${station.id}`} onPointerDown={(event) => startTemplatePointerDrag(event, station)} className="touch-none cursor-grab rounded-xl border border-black/10 bg-white p-3 active:cursor-grabbing">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0"><p className="truncate font-bold">{station.name}</p><p className="mt-1 text-xs text-black/45">{station.shortDescription || "Vorlage aktivieren und bearbeiten"}</p></div>
             <StationBadge station={station} />
@@ -395,7 +413,22 @@ function StationTemplateDropZone({ tenantId, stations, categories, mapConfig, po
         </div>)}
       </div>
     </div>
-    <StationTemplateMap stations={stations} categories={categories} mapConfig={mapConfig} positioningStationName={positioningStation?.name} onEdit={onEdit} onDropTemplate={placeDroppedTemplate} onPositionStation={positioningStationId ? positionStation : undefined} onMoveStation={(station, coordinate) => { void onMoveStation(station, coordinate); }} />
+    <StationTemplateMap stations={stations} categories={categories} mapConfig={mapConfig} activeTemplateDrag={templateDrag} positioningStationName={positioningStation?.name} onEdit={onEdit} onDropTemplate={placeDroppedTemplate} onPositionStation={positioningStationId ? positionStation : undefined} onMoveStation={(station, coordinate) => { void onMoveStation(station, coordinate); }} />
+    {templateDrag && <FloatingStationPin drag={templateDrag} />}
+  </div>;
+}
+
+function FloatingStationPin({ drag }: { drag: { name: string; color: string; x: number; y: number } }) {
+  return <div className="pointer-events-none fixed z-[9999]" style={{ left: drag.x - 23, top: drag.y - 53, ["--pin-color" as string]: drag.color }} aria-hidden="true">
+    <svg className="platzguide-station-pin__svg" viewBox="0 0 46 56">
+      <path className="platzguide-station-pin__body" d="M23 53C19.2 42.5 7 36.9 7 21.8C7 11.4 14.2 4 23 4C31.8 4 39 11.4 39 21.8C39 36.9 26.8 42.5 23 53Z" />
+      <circle className="platzguide-station-pin__center" cx="23" cy="21.5" r="11.5" />
+      <svg className="platzguide-station-pin__icon" x="14" y="12.5" viewBox="0 0 24 24" width="18" height="18" fill="none">
+        <path d="M12 3.75 14.05 9.95 20.25 12 14.05 14.05 12 20.25 9.95 14.05 3.75 12 9.95 9.95 12 3.75Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+        <circle cx="12" cy="12" r="2.1" fill="currentColor" />
+      </svg>
+    </svg>
+    <span className="sr-only">{drag.name}</span>
   </div>;
 }
 

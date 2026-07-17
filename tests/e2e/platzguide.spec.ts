@@ -140,7 +140,7 @@ async function loginAsPlatformAdmin(page: import("@playwright/test").Page) {
 }
 
 async function placeTemplateFromQuickstart(page: import("@playwright/test").Page, stationName: string) {
-  const card = page.locator('div[draggable="true"]').filter({ hasText: stationName }).first();
+  const card = page.getByTestId(new RegExp(`^station-template-`)).filter({ hasText: stationName }).first();
   await expect(card).toBeVisible();
   await Promise.all([
     page.waitForResponse((response) => response.url().includes("/api/admin/stations") && response.ok()),
