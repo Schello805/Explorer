@@ -151,7 +151,6 @@ export function StationTemplateMap({
     <div ref={containerRef} className="absolute inset-0" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
     <div className="pointer-events-none absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1.5 text-xs font-bold text-[#173c32] shadow-sm">Fixierter Platz-Ausschnitt</div>
     {positioningStationName && <div className="pointer-events-none absolute left-4 right-4 top-16 rounded-xl bg-[#173c32] p-3 text-sm font-bold text-white shadow-lg">Positioniermodus aktiv: Klicke auf die neue Stelle für „{positioningStationName}“.</div>}
-    <div className="pointer-events-none absolute bottom-4 left-4 right-4 rounded-xl bg-white/90 p-3 text-xs leading-5 text-black/60 shadow-sm">{positioningStationName ? "Karte anklicken zum Speichern. Abbrechen über die Stationsliste." : "Tipp: Vorlage hierher ziehen. Bestehende Marker direkt verschieben oder per „Position setzen“ exakt platzieren."}</div>
   </div>;
 }
 
@@ -184,7 +183,7 @@ function lockMapInteractions(map: import("maplibre-gl").Map, bounds: [[number, n
 function fitAndLockBounds(map: import("maplibre-gl").Map, bounds: [[number, number], [number, number]]) {
   map.setMinZoom(0);
   map.setMaxZoom(24);
-  map.fitBounds(bounds, { padding: 55, maxZoom: 18, duration: 0 });
+  map.fitBounds(bounds, { padding: 95, maxZoom: 18, duration: 0 });
   const fixedZoom = map.getZoom();
   map.setMinZoom(fixedZoom);
   map.setMaxZoom(fixedZoom);
