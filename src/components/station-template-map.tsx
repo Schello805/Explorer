@@ -210,6 +210,8 @@ function startMarkerDrag(
   eventType: "pointer" | "mouse"
 ) {
   const start = { x: startX, y: startY };
+  const anchor = map.project(marker.getLngLat());
+  const grabOffset = { x: start.x - anchor.x, y: start.y - anchor.y };
   let moved = false;
   map.dragPan.disable();
   element.dataset.dragged = "false";
@@ -223,7 +225,10 @@ function startMarkerDrag(
     }
     if (!moved) return;
     const rect = map.getCanvasContainer().getBoundingClientRect();
-    const point = map.unproject([moveEvent.clientX - rect.left, moveEvent.clientY - rect.top]);
+    const point = map.unproject([
+      moveEvent.clientX - rect.left - grabOffset.x,
+      moveEvent.clientY - rect.top - grabOffset.y
+    ]);
     marker.setLngLat(point);
   };
 

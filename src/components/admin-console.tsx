@@ -1037,7 +1037,7 @@ function StationEditor({ station, categories, canDelete, onClose, onSave, onDele
       <div className="mt-5 grid gap-2 rounded-2xl bg-[#f7f7f4] p-3 text-xs font-bold text-black/55 sm:grid-cols-3">
         <p className="rounded-xl bg-white p-3">1. Kategorie wählen</p>
         <p className="rounded-xl bg-white p-3">2. Texte ergänzen</p>
-        <p className="rounded-xl bg-white p-3">3. Marker in Übersicht ziehen</p>
+        <p className="rounded-xl bg-white p-3">3. In Übersicht platzieren</p>
       </div>
       <div className="mt-8 space-y-5">
         <label className="block text-sm font-bold"><LabelText label="Name" tooltip={tooltipForLabel("Name")} /><input required title={tooltipForLabel("Name")} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} className="mt-2 w-full rounded-xl border p-3" /></label>
@@ -1047,14 +1047,6 @@ function StationEditor({ station, categories, canDelete, onClose, onSave, onDele
         <label className="block text-sm font-bold"><LabelText label="Öffnungszeiten" tooltip="Öffnungszeiten oder kurzer Hinweis, z. B. Heute 08:00–20:00 oder Durchgehend geöffnet." /><input title="Öffnungszeiten oder kurzer Hinweis, z. B. Heute 08:00–20:00 oder Durchgehend geöffnet." value={draft.openingHours} onChange={(event) => setDraft({ ...draft, openingHours: event.target.value })} className="mt-2 w-full rounded-xl border p-3" /></label>
         <div className="block text-sm font-bold"><LabelText label="Status" tooltip={tooltipForLabel("Status")} /><div className="mt-2 grid gap-2 sm:grid-cols-2">{(["open", "limited", "closed", "maintenance"] as Station["status"][]).map((status) => <button type="button" key={status} onClick={() => setDraft({ ...draft, status })} className={cn("rounded-xl border px-4 py-3 text-left text-sm font-bold", draft.status === status ? "border-[#173c32] bg-[#eff3ec] text-[#173c32]" : "border-black/10 bg-[#fafaf8] text-black/60")}>{statusLabel[status]}</button>)}</div></div>
         <label className="flex items-start gap-3 rounded-xl bg-[#f7f7f4] p-4 text-sm font-bold"><input title="Aktiviert diese Station für Besucher. Deaktiviert bleibt sie als Vorlage in der Verwaltung." type="checkbox" checked={!draft.isTemplate} onChange={(event) => setDraft({ ...draft, isTemplate: !event.target.checked })} className="mt-0.5 h-5 w-5 accent-[#286551]" /><span><span className="inline-flex items-center gap-1.5">In Besucher-App anzeigen<HelpBubble text="Aktiviert diese Station für Besucher. Deaktiviert bleibt sie als Vorlage in der Verwaltung." /></span><span className="mt-1 block font-normal leading-5 text-black/50">Standardstationen starten als Vorlage und werden erst nach Aktivierung öffentlich sichtbar.</span></span></label>
-        <section className="rounded-2xl bg-[#f7f7f4] p-4">
-          <p className="text-sm font-bold">Position</p>
-          <p className="mt-1 text-xs font-normal leading-5 text-black/50">Die sichtbare Position wird direkt in der Stationsübersicht auf der großen Karte gesetzt. Ziehe dort den Marker an die gewünschte Stelle; diese Koordinaten werden automatisch gespeichert.</p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <label className="text-xs font-bold text-black/55">Breitengrad<input title="Nord-Süd-Koordinate als Dezimalzahl. Normalerweise direkt über die Übersichtskarte setzen." type="number" step="any" value={draft.latitude} onChange={(event) => setDraft({ ...draft, latitude: Number(event.target.value) })} className="mt-1 w-full rounded-xl border p-3 text-sm text-black" /></label>
-            <label className="text-xs font-bold text-black/55">Längengrad<input title="Ost-West-Koordinate als Dezimalzahl. Normalerweise direkt über die Übersichtskarte setzen." type="number" step="any" value={draft.longitude} onChange={(event) => setDraft({ ...draft, longitude: Number(event.target.value) })} className="mt-1 w-full rounded-xl border p-3 text-sm text-black" /></label>
-          </div>
-        </section>
       </div>
       <div className="mt-8 flex gap-3"><button type="button" onClick={onClose} className="flex-1 rounded-xl border px-4 py-3 font-bold">Abbrechen</button><button className="flex-1 rounded-xl bg-[#173c32] px-4 py-3 font-bold text-white">Speichern</button></div>
     </form>
