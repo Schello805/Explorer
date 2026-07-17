@@ -36,12 +36,11 @@ export function CampMap({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import("maplibre-gl").Map | null>(null);
-  const markersRef = useRef<import("maplibre-gl").Marker[]>([]);
+  const markersRef = useRef<Map<string, import("maplibre-gl").Marker>>(new Map());
   const userMarkerRef = useRef<import("maplibre-gl").Marker | null>(null);
   const [layer, setLayer] = useState<Layer>("map");
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [tilesVisible, setTilesVisible] = useState(false);
   const [locationMessage, setLocationMessage] = useState("");
   const [locating, setLocating] = useState(false);
   const validStations = useMemo(() => stations.filter(hasCoordinates), [stations]);
@@ -52,6 +51,7 @@ export function CampMap({
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+    const markerMap = markersRef.current;
     let cancelled = false;
     let loaded = false;
     let visibleTiles = false;
@@ -80,7 +80,6 @@ export function CampMap({
       map.on("sourcedata", (event) => {
         if (event.sourceId === "osm" && event.isSourceLoaded) {
           visibleTiles = true;
-          setTilesVisible(true);
         }
       });
 
@@ -88,7 +87,6 @@ export function CampMap({
         loaded = true;
         if (getMapStyle(tenant.map.styleUrl) !== rasterMapStyle) {
           visibleTiles = true;
-          setTilesVisible(true);
         }
         window.clearTimeout(fallbackTimer);
         setFailed(false);
@@ -123,15 +121,7 @@ export function CampMap({
           });
         }
 
-        if (mapBounds) map.fitBounds(mapBounds, { padding: 0, maxZoom: 18, duration: 0 });
-
-        markersRef.current = visibleStations.map((station) => {
-          const category = tenant.categories.find((item) => item.id === station.categoryId);
-          const element = createStationPinElement({ label: station.name, color: category?.color ?? "#195f4c", onClick: () => onSelect(station) });
-          return new maplibregl.Marker({ element, anchor: "bottom" })
-            .setLngLat([station.longitude, station.latitude])
-            .addTo(map);
-        });
+        if (mapBounds) map.fitBounds(mapBounds, { padding: 48, maxZoom: 18, duration: 0 });
         setReady(true);
         tileTimer = window.setTimeout(() => {
           const canvas = containerRef.current?.querySelector("canvas");
@@ -149,13 +139,39 @@ export function CampMap({
       cancelled = true;
       window.clearTimeout(fallbackTimer);
       window.clearTimeout(tileTimer);
-      markersRef.current.forEach((marker) => marker.remove());
+      markerMap.forEach((marker) => marker.remove());
+      markerMap.clear();
       userMarkerRef.current?.remove();
       mapRef.current?.remove();
       mapRef.current = null;
       userMarkerRef.current = null;
     };
-  }, [tenant, visibleStations, onSelect, center, zoom, mapBounds]);
+  }, [tenant, center, zoom, mapBounds]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    const visibleIds = new Set(visibleStations.map((station) => station.id));
+    markersRef.current.forEach((marker, stationId) => {
+      if (!visibleIds.has(stationId)) {
+        marker.remove();
+        markersRef.current.delete(stationId);
+      }
+    });
+    for (const station of visibleStations) {
+      const existingMarker = markersRef.current.get(station.id);
+      if (existingMarker) {
+        existingMarker.setLngLat([station.longitude, station.latitude]);
+        continue;
+      }
+      const category = tenant.categories.find((item) => item.id === station.categoryId);
+      const element = createStationPinElement({ label: station.name, color: category?.color ?? "#195f4c", onClick: () => onSelect(station) });
+      const marker = new maplibregl.Marker({ element, anchor: "bottom" })
+        .setLngLat([station.longitude, station.latitude])
+        .addTo(map);
+      markersRef.current.set(station.id, marker);
+    }
+  }, [ready, tenant.categories, visibleStations, onSelect]);
 
   useEffect(() => {
     if (!selected || !mapRef.current || !hasCoordinates(selected)) return;
@@ -207,15 +223,6 @@ export function CampMap({
 
   return <div className="map-texture relative mt-4 h-[52vh] min-h-[360px] overflow-hidden rounded-[1.5rem] border-4 border-white bg-[#dce8d0] shadow-soft sm:min-h-[440px]">
     <div ref={containerRef} className="absolute inset-0" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} aria-label={`Interaktive Karte von ${tenant.name}`} />
-    {ready && !tilesVisible && mapBounds && visibleStations.map((station) => <button
-      key={`overlay-${station.id}`}
-      onClick={() => onSelect(station)}
-      className="pointer-events-auto absolute z-10 grid h-10 w-10 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-4 border-white bg-[#195f4c] text-white shadow-lg transition hover:scale-110"
-      style={projectStation(station, mapBounds)}
-      aria-label={station.name}
-    >
-      <MapIcon size={17} />
-    </button>)}
     {!ready && <div className="absolute inset-0 grid place-items-center bg-[#dce8d0] text-sm font-bold text-[#18332b]/55">Karte wird geladen …</div>}
     {choices.length > 1 && <div className="glass absolute left-3 top-3 z-10 flex rounded-xl p-1 shadow-lg">{choices.map((choice) => <button key={choice.id} onClick={() => switchLayer(choice.id)} className={cn("flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold", layer === choice.id && "bg-[var(--primary)] text-white")}><choice.icon size={15} />{choice.label}</button>)}</div>}
     <div className="absolute bottom-3 left-3 z-10 max-w-[calc(100%-1.5rem)]">
@@ -260,7 +267,7 @@ function getMapStyle(styleUrl: string) {
 }
 
 function hasCoordinates(station: Station) {
-  return Number.isFinite(station.longitude) && Number.isFinite(station.latitude);
+  return Number.isFinite(station.longitude) && Number.isFinite(station.latitude) && (station.longitude !== 0 || station.latitude !== 0);
 }
 
 function hasLngLat(value: unknown): value is [number, number] {

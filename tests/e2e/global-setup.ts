@@ -15,7 +15,7 @@ export default async function globalSetup() {
 
 function testTenant(tenantId: string, slug: string, name: string, publishReady = false): Tenant {
   const stations = createDefaultStationTemplates(tenantId);
-  if (publishReady) stations[0] = { ...stations[0], isTemplate: false, status: "open" };
+  if (publishReady) stations[0] = { ...stations[0], isTemplate: false, status: "open", longitude: 10.56, latitude: 49.16 };
 
   return {
     ...structuredClone(tenantDefaults),

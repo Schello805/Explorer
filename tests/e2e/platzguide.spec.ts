@@ -47,6 +47,7 @@ test("platform admin can preview and publish a tenant manually", async ({ page, 
   await context.clearCookies();
   await page.goto("/c/publishplatz");
   await expect(page.getByRole("main").getByText("Camping Publishplatz")).toBeVisible();
+  await expect(page.getByLabel("Rezeption öffnen")).toBeVisible();
   await expect(page.getByText("Gerade nicht erreichbar")).toHaveCount(0);
 });
 
