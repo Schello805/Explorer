@@ -108,7 +108,7 @@ export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey, 
         <div className="mt-4 grid grid-cols-3 gap-2">{signupSteps.map((step) => <div key={step.label} className="rounded-xl bg-[#f7f4ed] p-2 text-xs font-bold"><CheckCircle2 size={15} className={step.done ? "text-emerald-600" : "text-black/20"} />{step.label}</div>)}</div>
         <p className="mt-3 rounded-xl bg-[#f7f4ed] p-3 text-sm leading-5 text-[#18332b]/65">Du kannst alles vorbereiten, prüfen und später mit deinem gewählten Paket veröffentlichen.</p>
         <div className="mt-5 space-y-4">
-          <Field label="Name der App" tooltip="Der sichtbare Name deines Campingplatz-Guides, z. B. Camping Sonnental." value={name} onChange={setName} />
+          <Field label="Name der App" tooltip="Der sichtbare Name deines Campingplatz-Guides, z. B. Platzguide Demo." value={name} onChange={setName} />
           <Field label="Link-Kürzel" tooltip="Kurzer, eindeutiger Link ohne Leerzeichen. Daraus wird platzguide.de/c/dein-kuerzel." value={slug} onChange={(value) => setSlug(value.toLowerCase().replace(/[^a-z0-9-]/g, ""))} prefix="/c/" />
           <Field label="Admin-E-Mail" tooltip="E-Mail-Adresse für den späteren Verwaltungszugang dieses Campingplatzes." value={ownerEmail} onChange={setOwnerEmail} />
           <Field label="Admin-Passwort" tooltip="Mindestens 12 Zeichen. Verwende ein eigenes, starkes Passwort." type="password" value={ownerPassword} onChange={setOwnerPassword} />

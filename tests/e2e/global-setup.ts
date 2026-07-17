@@ -8,13 +8,13 @@ export default async function globalSetup() {
   await rm(dataDirectory, { recursive: true, force: true });
   await mkdir(dataDirectory, { recursive: true });
   await writeFile(path.join(dataDirectory, "tenants.json"), JSON.stringify([
-    testTenant("55555555-5555-4555-8555-555555555555", "demo", "DEMO", true, true),
+    testTenant("55555555-5555-4555-8555-555555555555", "demo", "DEMO", true),
     testTenant("11111111-1111-4111-8111-111111111111", "testplatz", "Camping Testplatz"),
     testTenant("44444444-4444-4444-8444-444444444444", "publishplatz", "Camping Publishplatz", true)
   ], null, 2));
 }
 
-function testTenant(tenantId: string, slug: string, name: string, publishReady = false, publicReady = false): Tenant {
+function testTenant(tenantId: string, slug: string, name: string, publishReady = false): Tenant {
   const stations = createDefaultStationTemplates(tenantId);
   if (publishReady) stations[0] = { ...stations[0], isTemplate: false, status: "open", longitude: 10.56, latitude: 49.16 };
 
@@ -58,23 +58,5 @@ function testTenant(tenantId: string, slug: string, name: string, publishReady =
       createdAt: new Date().toISOString()
     }]
   };
-  if (publicReady) {
-    tenant.billing.status = "active";
-    tenant.billing.publicEnabled = true;
-    const publicTenant = structuredClone(tenant);
-    publicTenant.publishing = undefined;
-    tenant.publishing = {
-      hasUnpublishedChanges: false,
-      publishedAt: new Date().toISOString(),
-      publishedVersion: 1,
-      versions: [{
-        id: "66666666-6666-4666-8666-666666666666",
-        version: 1,
-        createdAt: new Date().toISOString(),
-        createdBy: "admin@schellenberger.biz",
-        tenant: publicTenant
-      }]
-    };
-  }
   return tenant;
 }

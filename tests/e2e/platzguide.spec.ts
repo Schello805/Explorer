@@ -15,7 +15,11 @@ test("marketing page explains pricing and publishing", async ({ page }) => {
   const demoMarker = demoMap.getByLabel("Rezeption öffnen");
   await expect(demoMarker).toBeVisible();
   await expectMarkerRootOwnedByMap(demoMarker);
+  expect(await page.content()).not.toContain("demo@example.org");
   await expectNoHorizontalOverflow(page);
+  await page.goto("/c/demo");
+  await expect(page.getByRole("main").getByText("DEMO")).toBeVisible();
+  await expect(page.getByLabel("Rezeption öffnen")).toBeVisible();
 });
 
 test("anonymous visitors cannot open an unpublished tenant", async ({ page }) => {

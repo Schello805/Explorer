@@ -5,11 +5,18 @@ import type { Tenant, TenantPublicSnapshot } from "@/lib/types";
 
 export function publicTenantFor(tenant: Tenant) {
   const latest = tenant.publishing?.versions?.[0];
-  return latest?.tenant ?? tenant;
+  return stripPrivateTenantState(latest?.tenant ?? tenant);
 }
 
 export function canShowPublicTenant(tenant: Tenant) {
+  if (isMarketingDemoTenant(tenant)) {
+    return !tenant.archivedAt && tenant.map.configured !== false && tenant.stations.some((station) => !station.isTemplate);
+  }
   return tenant.billing.status === "active" && tenant.billing.publicEnabled && !tenant.archivedAt && Boolean(tenant.publishing?.versions?.length);
+}
+
+export function isMarketingDemoTenant(tenant: Tenant) {
+  return tenant.slug.trim().toLowerCase() === "demo" || tenant.name.trim().toLowerCase() === "demo";
 }
 
 export async function publishTenant(tenant: Tenant, actorEmail: string) {
@@ -93,6 +100,19 @@ function stripPrivateTenantState(tenant: Tenant): TenantPublicSnapshot["tenant"]
     publishing: undefined,
     auditLog: [],
     users: [],
-    privacyRequests: []
+    privacyRequests: [],
+    pushSubscriptions: [],
+    checkins: [],
+    feedback: [],
+    billing: {
+      ...tenant.billing,
+      stripeCustomerId: undefined,
+      stripeSubscriptionId: undefined,
+      stripePriceId: undefined,
+      stripeLatestInvoiceUrl: undefined,
+      stripeCheckoutSessionId: undefined,
+      stripePortalUrl: undefined,
+      manualOverrideReason: undefined
+    }
   };
 }

@@ -968,7 +968,7 @@ function HelpBubble({ text }: { text: string }) {
 function tooltipForLabel(label: string) {
   const exact: Record<string, string> = {
     "Name": "Der sichtbare Name, der in Listen, Überschriften oder Karten erscheint.",
-    "Link-Kürzel": "Kurzer eindeutiger Linkteil ohne Leerzeichen, z. B. sonnental für /c/sonnental.",
+    "Link-Kürzel": "Kurzer eindeutiger Linkteil ohne Leerzeichen, z. B. mein-platzguide für /c/mein-platzguide.",
     "Optionale eigene Domains": "BETA: Eigene Domains kommasepariert eintragen, z. B. guide.camping-example.de. DNS per CNAME auf platzguide.de oder per A-Record auf den Server setzen. Keine URL mit /c/... eintragen.",
     "Kontakt-Telefon": "Telefonnummer für Gäste und Kontaktbereiche.",
     "Kontakt-E-Mail": "Öffentliche Kontaktadresse des Campingplatzes.",

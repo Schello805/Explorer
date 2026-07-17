@@ -226,7 +226,7 @@ export function CampAreaPicker({ mapConfig, onChange }: {
     <form onSubmit={searchAddress} className="rounded-2xl border border-black/10 bg-[#fafaf8] p-3">
       <label htmlFor="camp-area-address-search" className="block text-sm font-bold">Adresse oder Ort suchen</label>
       <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-        <input id="camp-area-address-search" value={addressQuery} onChange={(event) => setAddressQuery(event.target.value)} placeholder="z. B. Campingplatz Sonnental, Musterstraße 1, Bechhofen" className="min-w-0 flex-1 rounded-xl border border-black/10 bg-white px-4 py-3 text-sm outline-none" />
+        <input id="camp-area-address-search" value={addressQuery} onChange={(event) => setAddressQuery(event.target.value)} placeholder="Campingplatz, Ort oder vollständige Adresse" className="min-w-0 flex-1 rounded-xl border border-black/10 bg-white px-4 py-3 text-sm outline-none" />
         <button disabled={searching} className="rounded-xl bg-[#173c32] px-4 py-3 text-sm font-bold text-white disabled:opacity-60"><Search size={16} className="mr-1.5 inline" />{searching ? "Suche …" : "Suchen"}</button>
       </div>
       {results.length > 0 && <div className="mt-3 overflow-hidden rounded-xl border border-black/10 bg-white">

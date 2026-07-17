@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { PlatformLanding } from "@/components/platform-landing";
 import { SystemError } from "@/components/system-error";
 import { TenantExperience } from "@/components/tenant-experience";
-import { canShowPublicTenant, publicTenantFor } from "@/lib/publishing";
+import { isMarketingDemoTenant, publicTenantFor } from "@/lib/publishing";
 import { isPlatformHost, resolveTenant } from "@/lib/tenant-resolver";
 import { listTenants } from "@/lib/tenant-store";
 
@@ -22,8 +22,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     return <SystemError title="Datenbank nicht bereit" message="Die App konnte die Mandantendaten nicht laden. Bitte PostgreSQL-Verbindung und Migrationen prüfen." />;
   }
   if (isPlatformHost(host)) {
-    const demoCandidate = tenants.find((tenant) => tenant.slug.toLowerCase() === "demo" || tenant.name.trim().toLowerCase() === "demo");
-    const demoTenant = demoCandidate && canShowPublicTenant(demoCandidate) ? publicTenantFor(demoCandidate) : undefined;
+    const demoCandidate = tenants.find(isMarketingDemoTenant);
+    const demoTenant = demoCandidate && !demoCandidate.archivedAt ? publicTenantFor(demoCandidate) : undefined;
     return <PlatformLanding
       allowSignup={process.env.ALLOW_PUBLIC_SIGNUP === "true"}
       captchaProvider={process.env.CAPTCHA_PROVIDER === "turnstile" || process.env.CAPTCHA_PROVIDER === "hcaptcha" || process.env.CAPTCHA_PROVIDER === "recaptcha" ? process.env.CAPTCHA_PROVIDER : "disabled"}
