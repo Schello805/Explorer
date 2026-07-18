@@ -79,8 +79,18 @@ test("mobile admin and visitor views stay within viewport", async ({ page, isMob
 
   await page.goto("/c/publishplatz");
   const mobileVisitorMarker = page.getByLabel("Rezeption öffnen");
+  const mobileVisitorMap = page.locator(".maplibregl-map").first();
   await expect(mobileVisitorMarker).toBeVisible();
   await expectMarkerRootOwnedByMap(mobileVisitorMarker);
+  const markerBeforeDetails = await markerCenterRelativeTo(mobileVisitorMarker, mobileVisitorMap);
+  await mobileVisitorMarker.tap();
+  await expect(page.getByRole("button", { name: "Stationsdetails schließen" })).toBeVisible();
+  await page.getByRole("button", { name: "Stationsdetails schließen" }).tap();
+  await expect(page.getByRole("button", { name: "Stationsdetails schließen" })).toHaveCount(0);
+  await expect.poll(async () => {
+    const markerAfterDetails = await markerCenterRelativeTo(mobileVisitorMarker, mobileVisitorMap);
+    return Math.hypot(markerAfterDetails.x - markerBeforeDetails.x, markerAfterDetails.y - markerBeforeDetails.y);
+  }).toBeLessThanOrEqual(2);
   await expectNoHorizontalOverflow(page);
 });
 
@@ -278,6 +288,14 @@ async function markerCenter(locator: import("@playwright/test").Locator) {
   expect(box).not.toBeNull();
   if (!box) return { x: 0, y: 0 };
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+}
+
+async function markerCenterRelativeTo(marker: import("@playwright/test").Locator, map: import("@playwright/test").Locator) {
+  const markerPosition = await markerCenter(marker);
+  const mapBox = await map.boundingBox();
+  expect(mapBox).not.toBeNull();
+  if (!mapBox) return markerPosition;
+  return { x: markerPosition.x - mapBox.x, y: markerPosition.y - mapBox.y };
 }
 
 async function markerCoordinates(locator: import("@playwright/test").Locator) {

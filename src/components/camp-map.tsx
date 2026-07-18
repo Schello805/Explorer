@@ -26,12 +26,10 @@ const rasterMapStyle: StyleSpecification = {
 export function CampMap({
   tenant,
   stations,
-  selected,
   onSelect
 }: {
   tenant: Tenant;
   stations: Station[];
-  selected: Station | null;
   onSelect: (station: Station) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -204,11 +202,6 @@ export function CampMap({
       markersRef.current.set(station.id, entry);
     }
   }, [ready, tenant.categories, visibleStations]);
-
-  useEffect(() => {
-    if (!selected || !mapRef.current || !hasCoordinates(selected)) return;
-    mapRef.current.flyTo({ center: [selected.longitude, selected.latitude], zoom: Math.max(zoom, 17) });
-  }, [selected, zoom]);
 
   function switchLayer(next: Layer) {
     const map = mapRef.current;
