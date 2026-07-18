@@ -3,6 +3,7 @@ import path from "node:path";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { rateLimit } from "@/lib/rate-limit";
 import { resolveTenant } from "@/lib/tenant-resolver";
 import { listTenants, saveFeedback } from "@/lib/tenant-store";
 import type { FeedbackAttachment } from "@/lib/types";
@@ -34,6 +35,9 @@ export async function POST(request: Request) {
     : feedbackSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Ungültige Meldung" }, { status: 400 });
   const requestHeaders = await headers();
+  const ip = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || requestHeaders.get("x-real-ip")?.trim() || "local";
+  const limited = rateLimit(`feedback:${ip}`, 20, 60 * 60 * 1000);
+  if (!limited.ok) return NextResponse.json({ error: "Zu viele Meldungen. Bitte später erneut versuchen." }, { status: 429 });
   const host = requestHeaders.get("host") ?? "localhost";
   const tenants = await listTenants();
   const tenant = parsed.data.tenantSlug

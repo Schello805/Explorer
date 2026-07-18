@@ -1,30 +1,51 @@
 # Roadmap
 
-## Nächste Produktionsschritte
+Diese Roadmap beschreibt nur noch Punkte, die für Betrieb, Verkauf und stabile Weiterentwicklung wichtig sind.
 
-- [x] PostgreSQL-Adapter und persistente Admin-Serveraktionen anbinden
-- [x] Echte MapLibre-Karte mit austauschbarem Tile-Provider integrieren
-- [x] Präzisen Karten-/GPS-Positionseditor für Stationen integrieren
-- [x] Luftbild- und georeferenzierten Platzplan-Layer vorbereiten
-- [ ] Upload und grafische Vierpunkt-Kalibrierung eigener Platzpläne serverseitig umsetzen
-- [x] Kategorien-, Medien- und Audit-Log-Grundverwaltung ergänzen
-- [x] CSV-/XLSX-Import mit Vorschau und Fehlerbericht umsetzen
-- [ ] Wildcard-Domain, unbekannte Hosts und Custom Domains produktiv konfigurieren
-- [ ] Rechtstexte pro Mandant juristisch prüfen und vervollständigen
-- [ ] E2E-Tests mit zwei echten Mandanten und PostgreSQL-RLS ergänzen
-- [ ] Uptime-Monitoring mit Fehleralarm per E-Mail einrichten
-- [ ] Rate-Limits für Login, Registrierung, Feedback und Uploads erweitern
-- [ ] Upload-Cleanup für nicht mehr verwendete Dateien ergänzen
-- [ ] Admin-Audit sichtbarer pro Mandant auswerten
-- [ ] GPS-Praxistest auf Android und iOS/Safari durchführen
+## Produktionsreife
 
-## Optionale Module
+- [x] PostgreSQL als verbindliche Produktionsdatenbank nutzen
+- [x] Tenant-Isolation über `tenantId`, serverseitige Autorisierung und RLS-Grundlagen absichern
+- [x] Sichere Standard-HTTP-Header setzen
+- [x] Rate-Limits für Login, Feedback, Check-ins und Admin-Uploads aktivieren
+- [x] Uploads nach Größe, MIME-Typ, Dateiendung und Magic Bytes prüfen
+- [x] SMTP zentral für Systemmails konfigurieren
+- [x] Stripe-Grundintegration für Abos, Kundenportal und Webhooks vorbereiten
+- [x] Backup, Smoke-Test und Rollback im Update-Prozess vorsehen
+- [x] Monitoring- und Cleanup-Endpunkte vorbereiten
+- [ ] Produktionswerte final setzen und testen: SMTP, Stripe, Webhooks, VAPID, `NEXT_PUBLIC_BASE_URL`
+- [ ] Backup/Restore einmal real auf einem Testsystem durchspielen
+- [ ] Rechtstexte vor Livegang juristisch prüfen lassen
+
+## Kernfunktionen
+
+- [x] Marketing-Startseite für `platzguide.de`
+- [x] Mandanten über Platzguide-Link wie `/p/demo` statt Pflicht-Subdomain aufrufen
+- [x] Optional eigene Domains als Beta verwalten
+- [x] Besucherkarte mobile-first darstellen
+- [x] Stationspositionen über eine gemeinsame Kartenlogik platzieren und anzeigen
+- [x] Stationseditor mit Drag & Drop, Detailbearbeitung und Löschen
+- [x] Standardstationen für neue Campingplätze bereitstellen
+- [x] Kategorien, Medien, Auditlog und Mandantenstatus verwalten
+- [x] CSV/XLSX-Import und Export vorbereiten
+- [ ] Platzplan-Upload mit grafischer Vierpunkt-Kalibrierung produktionsreif fertigstellen
+- [ ] Mehrsprachige Inhalte für Besucheransicht vollständig ausbauen
+
+## Module
 
 - [x] Veranstaltungskalender
-- [x] Rundgänge und GPS-Check-in-Grundlage
+- [x] Rundgänge
 - [x] Platzguide-Pass und Belohnungen
-- [ ] Web-Push-Mitteilungen
+- [x] Web-Push-Grundlage
 - [x] Feedback- und Fehlermeldungen
 - [x] Digitale Gästemappe
-- [ ] Mehrsprachige Inhalte
 - [x] Belegungs- und Live-Statusanzeigen als aktivierbares Modul vorbereiten
+- [ ] Belegungsdaten später optional automatisiert per Schnittstelle/Sensor anbinden
+
+## Qualitätssicherung
+
+- [x] GitHub Actions mit Build, Tests und PostgreSQL-RLS-Test
+- [x] Playwright-Smoke-Tests für wichtige Besucher- und Adminwege
+- [ ] GPS-Praxistest auf Android, iOS und Safari direkt vor Ort durchführen
+- [ ] Stripe-Testmodus vollständig durchspielen: Abo, Kündigung, Rechnung, Webhook, Reaktivierung
+- [ ] E-Mail-Flows prüfen: Registrierung, Systemhinweis, Testmail, Massenmail

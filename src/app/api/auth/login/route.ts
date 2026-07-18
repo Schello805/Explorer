@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { compare } from "bcryptjs";
 import { z } from "zod";
 import { createAdminSession, createSession } from "@/lib/auth";
+import { rateLimit } from "@/lib/rate-limit";
 import { findTenantUser } from "@/lib/tenant-store";
 
 const credentials = z.object({
@@ -18,6 +19,13 @@ export async function POST(request: Request) {
   }
 
   const email = parsed.data.email.toLowerCase();
+  const ip = clientIp(request);
+  const ipLimit = rateLimit(`login:ip:${ip}`, 30, 15 * 60 * 1000);
+  const accountLimit = rateLimit(`login:account:${email}:${ip}`, 8, 15 * 60 * 1000);
+  if (!ipLimit.ok || !accountLimit.ok) {
+    return NextResponse.json({ error: "Zu viele Login-Versuche. Bitte später erneut versuchen." }, { status: 429 });
+  }
+
   const adminConfig = await getAdminConfig();
   let token: string | null = null;
 
@@ -65,6 +73,12 @@ export async function POST(request: Request) {
     maxAge: 60 * 60 * 8
   });
   return response;
+}
+
+function clientIp(request: Request) {
+  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    || request.headers.get("x-real-ip")?.trim()
+    || "local";
 }
 
 function shouldUseSecureCookie(request: Request) {

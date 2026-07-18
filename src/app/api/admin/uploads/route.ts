@@ -4,6 +4,7 @@ import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { canManageTenant, verifyAdminSession } from "@/lib/auth";
 import { resolveAdminTenant } from "@/lib/admin-tenant-auth";
+import { rateLimit } from "@/lib/rate-limit";
 import { listTenants, saveTenantConfiguration } from "@/lib/tenant-store";
 
 const fallbackTypes = ["image/png", "image/jpeg", "image/webp", "application/pdf", "video/mp4", "video/webm"];
@@ -24,9 +25,19 @@ async function authorize(requestedTenantId?: string) {
 }
 
 export async function POST(request: Request) {
+  const ip = clientIp(request);
+  const coarseUploadLimit = rateLimit(`admin-upload-ip:${ip}`, 120, 60 * 60 * 1000);
+  if (!coarseUploadLimit.ok) return NextResponse.json({ error: "Zu viele Uploads. Bitte später erneut versuchen." }, { status: 429 });
+  const contentLength = Number(request.headers.get("content-length") ?? 0);
+  const absoluteMaxUploadMb = Number(process.env.UPLOAD_MAX_MB ?? 30);
+  if (contentLength > (absoluteMaxUploadMb * 1024 * 1024) + 1024 * 1024) {
+    return NextResponse.json({ error: `Upload ist größer als ${absoluteMaxUploadMb} MB` }, { status: 413 });
+  }
   const formData = await request.formData();
   const authorization = await authorize(String(formData.get("tenantId") ?? ""));
   if (!authorization) return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  const uploadLimit = rateLimit(`admin-upload:${authorization.tenant.id}:${authorization.session.email}:${ip}`, 60, 60 * 60 * 1000);
+  if (!uploadLimit.ok) return NextResponse.json({ error: "Zu viele Uploads. Bitte später erneut versuchen." }, { status: 429 });
 
   const file = formData.get("file");
   const purpose = String(formData.get("purpose") ?? "media");
@@ -87,6 +98,12 @@ export async function POST(request: Request) {
     media: [media, ...authorization.tenant.media].slice(0, 500)
   }, authorization.session.email);
   return NextResponse.json(media);
+}
+
+function clientIp(request: Request) {
+  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    || request.headers.get("x-real-ip")?.trim()
+    || "local";
 }
 
 function extensionFor(type: string) {
