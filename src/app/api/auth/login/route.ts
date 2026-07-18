@@ -20,8 +20,8 @@ export async function POST(request: Request) {
 
   const email = parsed.data.email.toLowerCase();
   const ip = clientIp(request);
-  const ipLimit = rateLimit(`login:ip:${ip}`, 30, 15 * 60 * 1000);
-  const accountLimit = rateLimit(`login:account:${email}:${ip}`, 8, 15 * 60 * 1000);
+  const ipLimit = rateLimit(`login:ip:${ip}`, process.env.PLAYWRIGHT_TEST === "1" ? 300 : 30, 15 * 60 * 1000);
+  const accountLimit = rateLimit(`login:account:${email}:${ip}`, process.env.PLAYWRIGHT_TEST === "1" ? 100 : 8, 15 * 60 * 1000);
   if (!ipLimit.ok || !accountLimit.ok) {
     return NextResponse.json({ error: "Zu viele Login-Versuche. Bitte später erneut versuchen." }, { status: 429 });
   }

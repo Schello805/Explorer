@@ -10,7 +10,7 @@ const securityHeaders = [
   },
   {
     key: "Content-Security-Policy",
-    value: "base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests"
+    value: "base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'"
   }
 ];
 
