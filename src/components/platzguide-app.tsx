@@ -136,7 +136,7 @@ export function PlatzguideApp({ tenant, basePath = "" }: { tenant: Tenant; baseP
         {!mapConfigured && <div className="mt-4 rounded-[1.5rem] border-4 border-white bg-[#dce8d0] p-6 shadow-soft">
           <p className="text-xs font-bold uppercase tracking-[.18em] text-[var(--primary)]">Noch keine Karte</p>
           <h2 className="mt-2 font-display text-3xl">Der Platz wird gerade eingerichtet.</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#18332b]/65">Sobald der Betreiber Adresse, Kartenmittelpunkt und erste Stationen gepflegt hat, erscheint hier die interaktive Platzkarte.</p>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#18332b]/65">Schau später noch einmal vorbei.</p>
         </div>}
 
         {mapConfigured && view === "map" ? (

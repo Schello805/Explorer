@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Activity, AlertTriangle, Bell, CheckCircle2, ChevronRight, CreditCard, Database, Eye, EyeOff, FileText, HardDrive, Mail, Plus, ShieldCheck, Terminal, Users } from "lucide-react";
+import { Activity, AlertTriangle, Bell, CheckCircle2, ChevronRight, CreditCard, Database, Eye, EyeOff, FileText, HardDrive, HelpCircle, Mail, Plus, ShieldCheck, Terminal, Users } from "lucide-react";
 import type { AuditEntry, Tenant } from "@/lib/types";
 
 const platformLogo = "/icons/platzguide-logo.png";
@@ -91,9 +91,7 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
         <PlatformNavLink href="#recht" label="Rechtstexte" icon={<FileText size={18} />} />
         <PlatformNavLink href="#werkzeuge" label="Werkzeuge" icon={<Terminal size={18} />} />
         <PlatformNavLink href="#logs" label="Systemlogs" icon={<AlertTriangle size={18} />} />
-        {tenants.length > 0
-          ? <Link href="/admin/tenant" className="mt-5 flex items-center gap-3 rounded-xl bg-white px-3 py-3 text-sm font-bold text-[#173c32]"><Database size={18} />Mandantenverwaltung</Link>
-          : <p className="mt-5 rounded-xl bg-white/5 px-3 py-3 text-xs font-bold leading-5 text-white/45">Mandantenverwaltung erscheint nach dem ersten Campingplatz.</p>}
+        {tenants.length > 0 && <Link href="/admin/tenant" className="mt-5 flex items-center gap-3 rounded-xl bg-white px-3 py-3 text-sm font-bold text-[#173c32]"><Database size={18} />Mandantenverwaltung</Link>}
       </nav>
       <div className="mt-4 shrink-0 rounded-xl bg-white/5 p-3">
         <p className="truncate text-xs font-bold">{adminEmail}</p>
@@ -122,17 +120,10 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
         <Metric icon={<Activity />} label="System" value={mailConfigured ? "Bereit" : "Prüfen"} note={mailConfigured ? "SMTP konfiguriert" : "SMTP fehlt oder lädt"} />
       </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
-        <StatusTile ok label="PostgreSQL" note="Pflichtdatenbank aktiv" />
-        <StatusTile ok={mailConfigured} label="SMTP" note={mailConfigured ? "Systemmails aktiv" : "SMTP speichern und Testmail senden"} />
-        <StatusTile ok={tenants.length > 0} label="Mandanten" note={tenants.length > 0 ? "Mandantenverwaltung bereit" : "Ersten Campingplatz anlegen"} />
-      </div>
-
       {tenants.length === 0 && <section id="mandanten" className="mt-6 grid scroll-mt-6 gap-6 rounded-[2rem] bg-white p-6 shadow-sm xl:grid-cols-[.9fr_1.1fr]">
         <div>
           <p className="text-xs font-bold uppercase tracking-[.18em] text-[#286551]/70">Noch leer</p>
           <h2 className="mt-2 font-display text-4xl">Noch kein Campingplatz angelegt.</h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-black/55">Lege hier den ersten Mandanten an. Danach erscheint die normale Verwaltungsoberfläche mit Stationen, Branding, Rechtstexten, Analytics, Billing und Veröffentlichung.</p>
         </div>
         <CreateTenantForm />
       </section>}
@@ -142,7 +133,6 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
           <div>
             <p className="text-xs font-bold uppercase tracking-[.18em] text-[#286551]/70">Mandanten bereit</p>
             <h2 className="mt-2 font-display text-4xl">Campingplätze verwalten.</h2>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-black/55">Öffne die normale Admin-Konsole, um Mandanten zu filtern, zu archivieren, zu reaktivieren oder zu löschen.</p>
           </div>
           <Link href="/admin/tenant" className="rounded-xl bg-[#173c32] px-5 py-3 text-sm font-bold text-white">Mandantenverwaltung öffnen</Link>
         </div>
@@ -150,7 +140,7 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
       </section>}
 
       <div className="mt-6 grid gap-6">
-        <AdminCard id="werkzeuge" title="Admin-Werkzeuge" icon={<Terminal />}>
+        <AdminCard id="werkzeuge" title="Admin-Werkzeuge" help="Wichtige Serverbefehle für Betrieb, Logs, Updates und Healthcheck." icon={<Terminal />}>
           <Command label="Live-Logs" command="journalctl -u platzguide -f" />
           <Command label="Status" command="systemctl status platzguide" />
           <Command label="Update" command="sudo RUN_VERIFY=false bash /opt/platzguide/scripts/update-ubuntu.sh" />
@@ -173,15 +163,13 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
 
         <LegalSettingsCard />
 
-        <AdminCard id="logs" title="Systemlogs" icon={<AlertTriangle />}>
-          <p className="text-sm leading-6 text-black/55">Live-Auszug aus dem Systemdienst. Falls der Server keinen Zugriff auf `journalctl` erlaubt, zeigt die Ansicht eine verständliche Meldung statt eines Absturzes.</p>
+        <AdminCard id="logs" title="Systemlogs" help="Live-Auszug aus dem Systemdienst. Wenn journalctl nicht erreichbar ist, erscheint eine Meldung statt eines Absturzes." icon={<AlertTriangle />}>
           <div className="flex flex-wrap gap-2"><button onClick={loadSystemLogs} className="rounded-xl border border-black/10 px-4 py-3 text-sm font-bold">Logs aktualisieren</button><button onClick={checkMonitoring} className="rounded-xl border border-black/10 px-4 py-3 text-sm font-bold">Monitoring prüfen</button><Link href="/api/health" target="_blank" className="rounded-xl border border-black/10 px-4 py-3 text-sm font-bold">Healthcheck öffnen</Link></div>
           {systemMessage && <p className="rounded-xl bg-[#f7f7f4] p-3 text-sm font-bold text-[#286551]">{systemMessage}</p>}
           <pre className="max-h-80 overflow-auto rounded-xl bg-[#101f1a] p-3 text-xs leading-5 text-white/80">{systemLogs.length ? systemLogs.join("\n") : "Noch keine Logs geladen."}</pre>
         </AdminCard>
 
-        <AdminCard title="Upload-Cleanup" icon={<HardDrive />}>
-          <p className="text-sm leading-6 text-black/55">Findet Upload-Dateien, die in keinem Mandanten mehr referenziert sind. Gelöscht wird erst nach Rückfrage.</p>
+        <AdminCard title="Upload-Cleanup" help="Findet Upload-Dateien, die in keinem Mandanten mehr verwendet werden. Löschen erfolgt erst nach Rückfrage." icon={<HardDrive />}>
           <div className="rounded-xl bg-[#f7f7f4] p-4 text-sm">
             <p><strong>{cleanup?.candidates.length ?? 0}</strong> ungenutzte Dateien · {Math.round((cleanup?.reclaimableBytes ?? 0) / 1024 / 1024 * 10) / 10} MB freigebbar</p>
             <div className="mt-3 flex flex-wrap gap-2"><button onClick={previewCleanup} className="rounded-xl border border-black/10 px-4 py-3 text-sm font-bold">Erneut prüfen</button><button onClick={runCleanup} disabled={!cleanup?.candidates.length} className="rounded-xl bg-red-700 px-4 py-3 text-sm font-bold text-white disabled:opacity-40">Ungenutzte löschen</button></div>
@@ -189,8 +177,7 @@ export function PlatformAdminConsole({ adminEmail, tenants }: { adminEmail: stri
           <div className="max-h-44 overflow-auto rounded-xl border border-black/10 p-3 text-xs text-black/55">{cleanup?.candidates.slice(0, 20).map((item) => <p key={item.url} className="break-all">{item.url}</p>) || "Keine Kandidaten."}</div>
         </AdminCard>
 
-        <AdminCard title="Auditlog" icon={<ShieldCheck />}>
-          <p className="text-sm leading-6 text-black/55">Mandantenübergreifende Übersicht der letzten protokollierten Änderungen.</p>
+        <AdminCard title="Auditlog" help="Mandantenübergreifende Übersicht der letzten protokollierten Änderungen." icon={<ShieldCheck />}>
           <button onClick={loadAudit} className="rounded-xl border border-black/10 px-4 py-3 text-sm font-bold">Auditlog aktualisieren</button>
           {auditLines.length === 0 && <p className="rounded-xl bg-[#f7f7f4] p-4 text-sm text-black/55">Noch keine Audit-Einträge vorhanden.</p>}
           <div className="space-y-2">{auditLines.map((entry) => <div key={`${entry.id}-${entry.createdAt}`} className="rounded-xl border border-black/10 p-3 text-sm">
@@ -230,8 +217,7 @@ function PlatformAccountCard({ adminEmail }: { adminEmail: string }) {
     setState({ loading: false, message: "Profil gespeichert. Deine Session wurde aktualisiert.", error: "" });
   }
 
-  return <AdminCard id="profil" title="Profil & Zugang" complete={Boolean(email.trim())} icon={<ShieldCheck />}>
-    <p className="text-sm leading-6 text-black/55">Diese Zugangsdaten gelten nur für den zentralen Superadmin. Änderungen werden in `.env.local` gespeichert und die aktuelle Session wird sofort erneuert.</p>
+  return <AdminCard id="profil" title="Profil & Zugang" complete={Boolean(email.trim())} help="Diese Zugangsdaten gelten nur für den zentralen Superadmin. Änderungen speichern sich sicher in der Server-Konfiguration." icon={<ShieldCheck />}>
     <form onSubmit={saveAccount} className="space-y-3">
       <MailInput label="Login-E-Mail" type="email" value={email} onChange={setEmail} required />
       <label className="text-sm font-bold">Aktuelles Passwort
@@ -246,13 +232,6 @@ function PlatformAccountCard({ adminEmail }: { adminEmail: string }) {
       {state.error && <p className="rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{state.error}</p>}
     </form>
   </AdminCard>;
-}
-
-function StatusTile({ ok, label, note }: { ok: boolean; label: string; note: string }) {
-  return <article className="flex items-start gap-3 rounded-2xl bg-white p-4 shadow-sm">
-    <span className={ok ? "text-emerald-600" : "text-amber-600"}>{ok ? <CheckCircle2 /> : <AlertTriangle />}</span>
-    <div className="min-w-0"><p className="font-bold">{label}</p><p className="mt-1 text-sm leading-5 text-black/50">{note}</p></div>
-  </article>;
 }
 
 function TenantOverview({ tenants }: { tenants: Tenant[] }) {
@@ -313,8 +292,7 @@ function LegalSettingsCard() {
 
   const complete = [legal.imprint, legal.privacy, legal.cookies, legal.terms].every((value) => value.trim().length > 20);
 
-  return <AdminCard id="recht" title="Zentrale Rechtstexte" complete={complete} icon={<FileText />}>
-    <p className="text-sm leading-6 text-black/55">Diese Texte gelten für die Hauptdomain und alle Campingplatz-Links. Mandantenadmins pflegen keine eigenen Rechtstexte.</p>
+  return <AdminCard id="recht" title="Zentrale Rechtstexte" complete={complete} help="Diese Texte gelten für die Hauptdomain und alle Campingplatz-Links. Mandantenadmins pflegen keine eigenen Rechtstexte." icon={<FileText />}>
     <form onSubmit={save} className="space-y-3">
       <LegalTextarea label="Impressum" value={legal.imprint} onChange={(imprint) => setLegal({ ...legal, imprint })} />
       <LegalTextarea label="Datenschutz" value={legal.privacy} onChange={(privacy) => setLegal({ ...legal, privacy })} />
@@ -363,8 +341,7 @@ function PlatformDefaultsCard() {
   if (!settings) return <AdminCard id="vorgaben" title="Modul- & Integrations-Vorgaben" icon={<Database />}><p className="text-sm text-black/55">{state.loading ? "Lade Vorgaben …" : state.error}</p></AdminCard>;
   const complete = modules.length > 0 && settings.defaultIntegrations.storage.maxUploadMb > 0 && settings.defaultIntegrations.backup.schedule.trim().length > 0;
 
-  return <AdminCard id="vorgaben" title="Modul- & Integrations-Vorgaben" complete={complete} icon={<Database />}>
-    <p className="text-sm leading-6 text-black/55">Diese Vorgaben gelten für neu angelegte Campingplätze. Bestehende Mandanten bleiben bewusst unverändert und können von dir einzeln in der Mandantenverwaltung angepasst werden.</p>
+  return <AdminCard id="vorgaben" title="Modul- & Integrations-Vorgaben" complete={complete} help="Diese Vorgaben gelten für neu angelegte Campingplätze. Bestehende Mandanten bleiben unverändert." icon={<Database />}>
     <form onSubmit={save} className="space-y-5">
       <div className="grid gap-3 lg:grid-cols-2">
         {modules.map((module) => <article key={module.id} className="rounded-xl border border-black/10 p-4">
@@ -381,7 +358,6 @@ function PlatformDefaultsCard() {
 
       <div className="rounded-2xl bg-[#f7f7f4] p-4">
         <h3 className="font-display text-2xl">Mandantenadmin-Rechte</h3>
-        <p className="mt-1 text-sm leading-6 text-black/55">Hier legst du fest, ob Betreiber eigene Integrationsbereiche sehen dürfen. SMTP bleibt immer global und ist nie mandantenänderbar.</p>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           {[
             ["integrations", "Integrationen-Menü sichtbar"],
@@ -502,8 +478,7 @@ function CaptchaSettingsCard() {
 
   const complete = config.provider === "disabled" || Boolean(config.siteKey.trim() && (hasSecret || secretValue.trim()));
 
-  return <AdminCard id="captcha" title="Captcha & Registrierung" complete={complete} icon={<ShieldCheck />}>
-    <p className="text-sm leading-6 text-black/55">Diese Werte gelten global für die Konto- und Campingplatz-Erstellung auf der Startseite. Für Google nutzt du reCAPTCHA v2 Checkbox mit Domain `platzguide.de`.</p>
+  return <AdminCard id="captcha" title="Captcha & Registrierung" complete={complete} help="Globale Bot-Schutz-Einstellungen für Konto- und Campingplatz-Erstellung. Google: reCAPTCHA v2 Checkbox für platzguide.de." icon={<ShieldCheck />}>
     <form onSubmit={saveCaptcha} className="space-y-3">
       <label className="text-sm font-bold">Captcha-Anbieter
         <select value={config.provider} onChange={(event) => setConfig({ ...config, provider: event.target.value as CaptchaProvider })} className="mt-1 w-full rounded-xl border border-black/10 bg-white px-3 py-3">
@@ -654,9 +629,7 @@ function MailSettingsCard({ onConfiguredChange }: { onConfiguredChange: (configu
 
   const complete = Boolean(config.smtpHost.trim() && config.smtpPort > 0 && config.smtpUser.trim() && (config.hasSmtpPassword || config.smtpPassword.trim()) && config.mailFrom.trim() && config.mailFromName.trim());
 
-  return <AdminCard id="smtp" title="SMTP & E-Mail" complete={complete} icon={<Mail />}>
-    <p className="text-sm leading-6 text-black/55">Diese Einstellungen gelten zentral für die ganze Plattform. Absender, Name und SMTP-Zugang werden hier gespeichert; Mandanten können diese Werte nicht ändern.</p>
-    <p className="rounded-xl bg-[#f7f7f4] p-3 text-xs leading-5 text-black/55">Systemmails gehen an Mandantenadmins oder an dich als Superadmin. Gäste erhalten keine E-Mails.</p>
+  return <AdminCard id="smtp" title="SMTP & E-Mail" complete={complete} help="Zentrale SMTP-Konfiguration. Mandanten können Absender und Zugangsdaten nicht ändern." icon={<Mail />}>
     <form onSubmit={save} className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-2">
         <MailInput label="SMTP Host" value={config.smtpHost} onChange={(smtpHost) => setConfig({ ...config, smtpHost })} placeholder="smtp.example.de" required />
@@ -722,9 +695,7 @@ function PushSettingsCard() {
 
   const complete = Boolean(config.publicKey.trim() && (config.hasPrivateKey || config.privateKey.trim()));
 
-  return <AdminCard id="push" title="Web-Push" complete={complete} icon={<Bell />}>
-    <p className="text-sm leading-6 text-black/55">Web-Push nutzt VAPID-Schlüssel. Besucher müssen Push in der PWA aktiv erlauben; danach können Mandantenadmins aktive Mitteilungen zusätzlich als Geräte-Push senden.</p>
-    <p className="rounded-xl bg-[#f7f7f4] p-3 text-xs leading-5 text-black/55">Schlüssel erzeugst du z. B. einmalig mit <code>npx web-push generate-vapid-keys</code>. Der öffentliche Schlüssel darf im Frontend stehen, der private Schlüssel bleibt geheim.</p>
+  return <AdminCard id="push" title="Web-Push" complete={complete} help="Web-Push nutzt VAPID-Schlüssel. Besucher müssen Push aktiv erlauben. Schlüssel kannst du z. B. mit npx web-push generate-vapid-keys erzeugen." icon={<Bell />}>
     <form onSubmit={save} className="space-y-3">
       <MailInput label="VAPID Public Key" value={config.publicKey} onChange={(publicKey) => setConfig({ ...config, publicKey })} placeholder="B..." />
       <label className="text-sm font-bold">VAPID Private Key
@@ -772,8 +743,7 @@ function BroadcastMailCard() {
     setState({ loading: false, message: response.ok ? `${testOnly ? "Testmail" : "Rundmail"} versendet an ${payload?.recipients ?? 0} Empfänger.` : "", error: response.ok ? "" : payload?.error ?? "Rundmail konnte nicht versendet werden." });
     if (response.ok && testOnly) setTestSent(true);
   }
-  return <AdminCard id="rundmail" title="Rundmail" complete={Boolean(subject.trim() && body.trim() && groups.length > 0 && testSent)} icon={<Mail />}>
-    <p className="text-sm leading-6 text-black/55">Sende Produktinfos oder wichtige Hinweise an Mandantenadmins. Vor echtem Versand muss zuerst eine Testmail an deinen Superadmin-Zugang gesendet werden.</p>
+  return <AdminCard id="rundmail" title="Rundmail" complete={Boolean(subject.trim() && body.trim() && groups.length > 0 && testSent)} help="Sendet Produktinfos oder Hinweise an ausgewählte Mandantenadmins. Vor Versand ist eine Testmail Pflicht." icon={<Mail />}>
     <div className="grid gap-2 sm:grid-cols-3">
       {options.map(([id, label]) => <label key={id} className="flex items-center gap-2 rounded-xl border border-black/10 p-3 text-sm font-bold"><input type="checkbox" checked={groups.includes(id)} onChange={(event) => setGroups((current) => event.target.checked ? [...current, id] : current.filter((item) => item !== id))} className="h-4 w-4 accent-[#286551]" />{label}</label>)}
     </div>
@@ -884,8 +854,7 @@ function StripeSettingsCard() {
 
   const complete = config.enabled && setupSteps.every((step) => step.done);
 
-  return <AdminCard id="stripe" title="Stripe Billing" complete={complete} icon={<CreditCard />}>
-    <p className="text-sm leading-6 text-black/55">Stripe verwaltet Abos, Rechnungen, Kündigungen und Zahlungsdaten. Platzguide speichert nur Schlüssel, Price-IDs, Webhook-Status und später Stripe-Referenzen am Mandanten.</p>
+  return <AdminCard id="stripe" title="Stripe Billing" complete={complete} help="Stripe verwaltet Abos, Rechnungen, Kündigungen und Zahlungsdaten. Platzguide speichert nur Schlüssel, Price-IDs und Referenzen." icon={<CreditCard />}>
     <div className="rounded-xl bg-[#f7f7f4] p-4 text-sm leading-6 text-black/60">
       <p className="font-bold text-[#173c32]">Beim Stripe-Setup auswählen:</p>
       <p>Online-Zahlungen, Abonnements erstellen und Rechnungen senden. Nicht nötig sind Stripe Connect/Plattform, Vor-Ort-Zahlungen, Kartenausgabe oder Identitätsprüfung.</p>
@@ -949,20 +918,45 @@ function Metric({ icon, label, value, note }: { icon: React.ReactNode; label: st
   return <article className="rounded-2xl bg-white p-5 shadow-sm"><div className="flex justify-between text-[#286551]"><p className="text-xs font-bold uppercase tracking-widest text-[#1b302a]/40">{label}</p>{icon}</div><p className="mt-4 font-display text-4xl">{value}</p><p className="mt-1 text-xs text-[#1b302a]/45">{note}</p></article>;
 }
 
-function AdminCard({ id, title, complete = false, icon, children }: { id?: string; title: string; complete?: boolean; icon: React.ReactNode; children: React.ReactNode }) {
+function AdminCard({ id, title, complete = false, help, icon, children }: { id?: string; title: string; complete?: boolean; help?: string; icon: React.ReactNode; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   return <section id={id} className="overflow-hidden scroll-mt-6 rounded-[1.5rem] bg-white shadow-sm">
-    <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)} className="flex w-full items-start justify-between gap-3 p-5 text-left">
-      <div className="min-w-0">
+    <div className="flex w-full items-start justify-between gap-3 p-5">
+      <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)} className="min-w-0 flex-1 text-left">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <span role="heading" aria-level={2} className="break-words font-display text-2xl">{title}</span>
-          {complete && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700"><CheckCircle2 size={14} /> vollständig</span>}
+          {complete && <span title="Vollständig" className="inline-grid h-7 w-7 place-items-center rounded-full bg-emerald-50 text-emerald-700"><CheckCircle2 size={15} /><span className="sr-only">vollständig</span></span>}
         </div>
-      </div>
-      <span className="flex shrink-0 items-center gap-2 text-[#286551]">{complete ? <CheckCircle2 /> : icon}<ChevronRight className={open ? "rotate-90 transition" : "transition"} size={20} /></span>
-    </button>
+      </button>
+      {help && <HelpBubble text={help} />}
+      <button type="button" aria-label={open ? `${title} schließen` : `${title} öffnen`} aria-expanded={open} onClick={() => setOpen((value) => !value)} className="flex shrink-0 items-center gap-2 text-[#286551]">{complete ? <CheckCircle2 /> : icon}<ChevronRight className={open ? "rotate-90 transition" : "transition"} size={20} /></button>
+    </div>
     {open && <div className="space-y-3 px-5 pb-5">{children}</div>}
   </section>;
+}
+
+function HelpBubble({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    function closeOnOutsideClick(event: PointerEvent) {
+      if (!wrapperRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+  return <span ref={wrapperRef} className="relative inline-flex shrink-0 text-[#286551]">
+    <button type="button" aria-label="Hilfe anzeigen" onClick={(event) => { event.stopPropagation(); setOpen((value) => !value); }} className="rounded-full p-1 text-[#286551]"><HelpCircle size={16} aria-hidden="true" /></button>
+    {open && <span className="absolute right-0 top-8 z-40 w-64 max-w-[80vw] rounded-xl bg-[#173c32] p-3 text-xs font-normal leading-5 text-white shadow-xl">{text}</span>}
+  </span>;
 }
 
 function Command({ label, command }: { label: string; command: string }) {

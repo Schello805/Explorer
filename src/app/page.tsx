@@ -19,7 +19,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     tenants = await listTenants();
   } catch (error) {
     console.error("Platzguide Startseite konnte Mandanten nicht laden.", error);
-    return <SystemError title="Datenbank nicht bereit" message="Die App konnte die Mandantendaten nicht laden. Bitte PostgreSQL-Verbindung und Migrationen prüfen." />;
+    return <SystemError title="Gerade nicht erreichbar." message="Platzguide lädt gerade nicht. Bitte versuche es in Kürze erneut." />;
   }
   if (isPlatformHost(host)) {
     const demoCandidate = tenants.find(isMarketingDemoTenant);
@@ -33,7 +33,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   }
   const tenant = resolveTenant(host, tenants);
   if (!tenant) {
-    return <SystemError title="Campingplatz nicht gefunden" message="Für diese Domain ist noch kein Mandant eingerichtet." />;
+    return <SystemError title="Nicht gefunden." message="Dieser Platzguide ist noch nicht eingerichtet." />;
   }
   return <TenantExperience tenant={tenant} basePath="" />;
 }

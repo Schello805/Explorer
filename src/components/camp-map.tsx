@@ -262,7 +262,7 @@ function UnavailableMap({ tenant }: { tenant: Tenant }) {
     <div className="max-w-md rounded-3xl bg-white/95 p-6 shadow-soft">
       <MapIcon className="mx-auto text-[#195f4c]" size={34} />
       <h3 className="mt-3 font-display text-2xl">Karte gerade nicht verfügbar</h3>
-      <p className="mt-2 text-sm leading-6 text-[#18332b]/65">Die Stationen bleiben über die Listenansicht vollständig erreichbar. Bitte versuche die Karte später erneut.</p>
+      <p className="mt-2 text-sm leading-6 text-[#18332b]/65">Die Liste bleibt verfügbar.</p>
     </div>
   </div>;
 }

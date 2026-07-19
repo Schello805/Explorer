@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { Crosshair, MapPinned, RotateCcw, Search } from "lucide-react";
+import { Crosshair, HelpCircle, MapPinned, RotateCcw, Search } from "lucide-react";
 import maplibregl from "maplibre-gl";
 import type { StyleSpecification } from "maplibre-gl";
 import { boundsCenter, boundsCorners, defaultBounds, defaultMapStyleUrl, normalizeBounds, resizeBoundsFromCorner, validBounds, type Bounds } from "@/lib/map-bounds";
@@ -235,12 +235,17 @@ export function CampAreaPicker({ mapConfig, onChange }: {
           <span className="mt-1 block text-xs text-black/50">{result.label}</span>
         </button>)}
       </div>}
-      <p className="mt-2 text-xs leading-5 text-black/45">Die Suche nutzt OpenStreetMap/Nominatim. Nach Auswahl bitte den Ausschnitt prüfen und übernehmen.</p>
+      <div className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-black/45">
+        <span>OpenStreetMap-Suche</span>
+        <HelpBubble text="Nach Auswahl den Kartenausschnitt prüfen und mit „Ausschnitt übernehmen“ speichern." />
+      </div>
     </form>
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div>
-        <p className="text-sm font-bold">Campingplatzfläche markieren</p>
-        <p className="mt-1 text-xs font-normal leading-5 text-black/50">Karte auf den Platz verschieben, Rechteck setzen und die Ecken fein ausrichten.</p>
+        <div className="inline-flex items-center gap-2 text-sm font-bold">
+          <span>Campingplatzfläche markieren</span>
+          <HelpBubble text="Karte verschieben, Rechteck setzen und die Ecken fein ausrichten." />
+        </div>
       </div>
       <div className="flex flex-wrap gap-2">
         <button type="button" onClick={useCurrentView} className="rounded-xl bg-[#173c32] px-3 py-2 text-xs font-bold text-white"><Crosshair size={15} className="mr-1.5 inline" />Ausschnitt übernehmen</button>
@@ -251,13 +256,30 @@ export function CampAreaPicker({ mapConfig, onChange }: {
       <div ref={containerRef} className="absolute inset-0" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
       <div className="pointer-events-none absolute left-3 top-3 max-w-[calc(100%-1.5rem)] rounded-xl bg-white/95 px-3 py-2 text-xs font-bold leading-5 shadow"><MapPinned size={14} className="mr-1 inline" /> OSM-Basiskarte · grünes Rechteck = öffentlicher Platzbereich</div>
     </div>
-    <div className="grid gap-3 rounded-xl bg-[#f7f7f4] p-3 text-xs leading-5 text-black/60 sm:grid-cols-3">
-      <p><strong>Mittelpunkt:</strong><br />{boundsCenter(bounds).map((value) => value.toFixed(6)).join(", ")}</p>
-      <p><strong>Südwest:</strong><br />{bounds[0].map((value) => value.toFixed(6)).join(", ")}</p>
-      <p><strong>Nordost:</strong><br />{bounds[1].map((value) => value.toFixed(6)).join(", ")}</p>
-    </div>
     {message && <p className="rounded-xl bg-emerald-50 p-3 text-xs font-bold leading-5 text-emerald-800">{message}</p>}
   </section>;
+}
+
+function HelpBubble({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: PointerEvent) => {
+      if (ref.current?.contains(event.target as Node)) return;
+      setOpen(false);
+    };
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
+  }, [open]);
+  return <span ref={ref} className="relative inline-flex align-middle">
+    <button type="button" onClick={(event) => { event.stopPropagation(); setOpen((value) => !value); }} aria-label="Hilfe anzeigen" className="inline-grid h-6 w-6 place-items-center rounded-full text-[#286551] hover:bg-emerald-50">
+      <HelpCircle size={15} />
+    </button>
+    {open && <span role="tooltip" className="absolute left-1/2 top-7 z-50 w-64 -translate-x-1/2 rounded-xl bg-[#173c32] p-3 text-xs font-bold leading-5 text-white shadow-xl">
+      {text}
+    </span>}
+  </span>;
 }
 
 function getMapStyle(styleUrl: string) {

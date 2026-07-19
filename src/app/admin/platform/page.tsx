@@ -19,7 +19,7 @@ export default async function PlatformAdminPage() {
     tenants = await listTenants();
   } catch (error) {
     console.error("Platzguide Plattformadmin konnte Mandanten nicht laden.", error);
-    return <SystemError title="Admin-Daten nicht bereit" message="Der Plattformbereich konnte die Mandanten nicht laden. Bitte PostgreSQL-Verbindung und Migrationen prüfen." />;
+    return <SystemError title="Admin nicht erreichbar." message="Die Verwaltungsdaten konnten gerade nicht geladen werden." />;
   }
   return <PlatformAdminConsole adminEmail={session.email} tenants={tenants} />;
 }

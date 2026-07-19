@@ -24,8 +24,8 @@ test("marketing page explains pricing and publishing", async ({ page }) => {
 
 test("anonymous visitors cannot open an unpublished tenant", async ({ page }) => {
   await page.goto("/c/testplatz");
-  await expect(page.getByRole("heading", { name: "Dieser Platzguide macht kurz Pause." })).toBeVisible();
-  await expect(page.getByText("Die Besucher-App dieses Campingplatzes ist gerade nicht öffentlich erreichbar")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Gerade nicht erreichbar." })).toBeVisible();
+  await expect(page.getByText("Dieser Platzguide ist momentan nicht öffentlich")).toBeVisible();
   await expect(page.getByText("journalctl")).toHaveCount(0);
 });
 
@@ -41,10 +41,10 @@ test("platform admin can preview and publish a tenant manually", async ({ page, 
   await page.getByLabel("Mandant wählen").selectOption({ label: "Camping Publishplatz" });
   await page.getByRole("button", { name: /Abo & Veröffentlichung/i }).click();
   await expect(page.getByRole("heading", { name: "Pakete" })).toBeVisible();
-  await page.getByRole("button", { name: /Pakete/i }).click();
+  await page.getByRole("button", { name: "Pakete öffnen" }).click();
   await expect(page.getByRole("button", { name: /Starter.*100 MB/s })).toBeVisible();
   await expect(page.getByText("19,99")).toBeVisible();
-  await page.getByRole("button", { name: /^Veröffentlichung\b/i }).click();
+  await page.getByRole("button", { name: "Veröffentlichung öffnen" }).click();
   const publicToggle = page.locator('label:has-text("Besucher-App öffentlich freischalten") input[type="checkbox"]');
   if (!await publicToggle.isChecked()) await publicToggle.check();
   await Promise.all([
@@ -99,7 +99,7 @@ test("camp area map can be dragged and applied", async ({ page, isMobile }) => {
   await loginAsPlatformAdmin(page);
   await page.goto("/admin/tenant");
   await page.getByRole("button", { name: /Kontakt & Link/i }).click();
-  await page.getByRole("button", { name: /Kartengrundlagen/i }).click();
+  await page.getByRole("button", { name: "Kartengrundlagen öffnen" }).click();
 
   await expect(page.getByLabel("Adresse oder Ort suchen")).toBeVisible();
   const map = page.locator(".maplibregl-map").first();
@@ -204,7 +204,7 @@ test("platform admin can open system logs, audit and cleanup tools", async ({ pa
   await expect(page.getByRole("heading", { name: "Platzguide Admin" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Systemlogs" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Upload-Cleanup" })).toBeVisible();
-  await page.getByRole("button", { name: /Systemlogs/i }).click();
+  await page.getByRole("button", { name: "Systemlogs öffnen" }).click();
   await page.getByRole("button", { name: "Logs aktualisieren" }).click();
   await expect(page.locator("pre").filter({ hasText: /Noch keine Logs geladen|next start|Ready|journalctl/i })).toBeVisible();
   await page.getByRole("button", { name: "Monitoring prüfen" }).click();

@@ -20,7 +20,7 @@ export default async function TenantAdminPage({ searchParams }: { searchParams: 
     tenants = await listTenants();
   } catch (error) {
     console.error("Platzguide Mandantenadmin konnte Mandanten nicht laden.", error);
-    return <SystemError title="Admin-Daten nicht bereit" message="Der Mandantenbereich konnte die Campingplätze nicht laden. Bitte PostgreSQL-Verbindung und Migrationen prüfen." />;
+    return <SystemError title="Admin nicht erreichbar." message="Die Campingplätze konnten gerade nicht geladen werden." />;
   }
   const isPlatformAdmin = isPlatformAdminSession(session);
   const visibleTenants = isPlatformAdmin
@@ -29,7 +29,7 @@ export default async function TenantAdminPage({ searchParams }: { searchParams: 
   const tenant = visibleTenants.find((candidate) => candidate.slug === requestedTenant || candidate.id === requestedTenant) ?? visibleTenants[0];
   if (!tenant) {
     if (isPlatformAdmin) redirect("/admin/platform");
-    return <SystemError title="Noch kein Campingplatz zugeordnet" message="Deinem Zugang ist noch kein Campingplatz zugeordnet." />;
+    return <SystemError title="Kein Campingplatz zugeordnet." message="Bitte wende dich an den Platzguide-Admin." />;
   }
   const platformSettings = await readPlatformSettings();
   return <AdminConsole tenant={tenant} tenants={visibleTenants} adminEmail={session.email} isPlatformAdmin={isPlatformAdmin} tenantAdminPermissions={platformSettings.tenantAdminPermissions} />;

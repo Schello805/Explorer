@@ -87,8 +87,8 @@ export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey, 
       <div className="min-w-0">
         <a href="https://platzguide.de" className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-bold text-[#195f4c] shadow-sm"><Image src={platformLogo} alt="" width={20} height={20} className="h-5 w-5 object-contain" /> Platzguide</a>
         <h1 className="mt-5 max-w-3xl break-words font-display text-[clamp(2.35rem,10vw,4.8rem)] leading-[1.02]">Dein digitaler Campingplatz-Guide in wenigen Minuten.</h1>
-        <p className="mt-4 max-w-2xl text-base leading-7 text-[#18332b]/65">Platzguide ist die mobile-first PWA für Campingplätze: Stationen, Platzplan, Gästemappe, Events, Rechtstexte und Adminbereich — getrennt je Mandant und erreichbar über einen einfachen Platzguide-Link.</p>
-        <p className="mt-3 max-w-2xl rounded-xl bg-white/85 p-3 text-sm font-bold leading-6 text-[#195f4c]">Kostenlos einrichten und testen. Sobald dein Platzguide bereit ist, kannst du ihn veröffentlichen.</p>
+        <p className="mt-4 max-w-2xl text-base leading-7 text-[#18332b]/65">Mobile Karte, Stationen, Gästemappe und Adminbereich — sauber getrennt je Campingplatz.</p>
+        <p className="mt-3 max-w-2xl rounded-xl bg-white/85 p-3 text-sm font-bold leading-6 text-[#195f4c]">Kostenlos einrichten und testen. Veröffentlichen, wenn alles passt.</p>
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
           <WorkflowStep number="1" title="Instanz erstellen" text="Name, Link-Kürzel und Adminzugang festlegen." />
           <WorkflowStep number="2" title="Platz einrichten" text="Stationen, Karte, Medien und Rechtstexte pflegen." />
@@ -106,7 +106,7 @@ export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey, 
           <span className="rounded-full bg-[#eef4ed] px-3 py-1 text-xs font-bold text-[#195f4c]">{completedSteps}/3</span>
         </div>
         <div className="mt-4 grid grid-cols-3 gap-2">{signupSteps.map((step) => <div key={step.label} className="rounded-xl bg-[#f7f4ed] p-2 text-xs font-bold"><CheckCircle2 size={15} className={step.done ? "text-emerald-600" : "text-black/20"} />{step.label}</div>)}</div>
-        <p className="mt-3 rounded-xl bg-[#f7f4ed] p-3 text-sm leading-5 text-[#18332b]/65">Du kannst alles vorbereiten, prüfen und später mit deinem gewählten Paket veröffentlichen.</p>
+        <p className="mt-3 rounded-xl bg-[#f7f4ed] p-3 text-sm leading-5 text-[#18332b]/65">Einrichten, prüfen, veröffentlichen.</p>
         <div className="mt-5 space-y-4">
           <Field label="Name der App" tooltip="Der sichtbare Name deines Campingplatz-Guides, z. B. Platzguide Demo." value={name} onChange={setName} />
           <Field label="Link-Kürzel" tooltip="Kurzer, eindeutiger Link ohne Leerzeichen. Daraus wird platzguide.de/c/dein-kuerzel." value={slug} onChange={(value) => setSlug(value.toLowerCase().replace(/[^a-z0-9-]/g, ""))} prefix="/c/" />
@@ -130,7 +130,7 @@ export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey, 
       <div className="rounded-[2rem] bg-[#18332b] p-5 text-white sm:p-8">
         <p className="text-xs font-bold uppercase tracking-[.18em] text-[#e8b65f]">Preise</p>
         <h2 className="mt-2 font-display text-4xl">Einfach starten, flexibel wachsen.</h2>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-white/65">Monatlich kündbar, {yearlyDiscountPercent}% Jahresrabatt bei Jahreszahlung. Die optionale Einrichtung durch Michael kostet einmalig {formatEuro(setupServicePriceCents)}.</p>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-white/65">Monatlich kündbar · {yearlyDiscountPercent}% Jahresrabatt · Einrichtung optional {formatEuro(setupServicePriceCents)}.</p>
         <div className="mt-6 grid gap-4 lg:grid-cols-2">
           <PriceCard title="Starter" price={billingPlans.starter.monthlyPriceCents} badge="Für die meisten Plätze" lines={["100 MB Speicher für Bilder/kurze Medien", "Support innerhalb von 24 Stunden", "Platzguide-Link inklusive", "Veröffentlichung inklusive"]} />
           <PriceCard title="Pro" price={billingPlans.pro.monthlyPriceCents} badge="Für wachsende Teams" lines={["1 GB Speicher", "Support innerhalb von 6 Stunden", "Mehrere Admins und künftige Pro-Module", "Eigene Domain möglich"]} />
@@ -147,7 +147,7 @@ export function PlatformLanding({ allowSignup, captchaProvider, captchaSiteKey, 
         <div>
           <p className="text-xs font-bold uppercase tracking-[.18em] text-[#195f4c]/65">Demo</p>
           <h2 className="mt-2 font-display text-[clamp(2rem,8vw,3.6rem)] leading-[1.02]">So sehen Gäste deinen Platzguide.</h2>
-          <p className="mt-3 text-sm leading-6 text-[#18332b]/60">Eine ruhige Vorschau zeigt, wie Gäste Stationen auf dem Platz entdecken. Die vollständige Bedienung öffnet sich im DEMO-Platzguide.</p>
+          <p className="mt-3 text-sm leading-6 text-[#18332b]/60">Eine kurze Vorschau. Die volle Demo öffnet den DEMO-Platzguide.</p>
         </div>
         <DemoVisitorPreview tenant={demoTenant} />
       </div>
@@ -186,8 +186,8 @@ function DemoVisitorPreview({ tenant }: { tenant?: Tenant }) {
     return <div className="grid min-h-80 place-items-center rounded-[1.7rem] border border-[#18332b]/10 bg-[#f5f2e9] p-6 text-center shadow-sm">
       <div className="max-w-sm">
         <Image src={platformLogo} alt="" width={52} height={52} className="mx-auto h-13 w-13 rounded-2xl bg-white p-2 object-contain shadow-sm" />
-        <h3 className="mt-4 font-display text-3xl">Die Live-Demo wird vorbereitet.</h3>
-        <p className="mt-2 text-sm leading-6 text-[#18332b]/60">Sobald der veröffentlichte Mandant „DEMO“ eingerichtet ist, erscheint seine interaktive Karte automatisch hier.</p>
+        <h3 className="mt-4 font-display text-3xl">Demo wird geladen.</h3>
+        <p className="mt-2 text-sm leading-6 text-[#18332b]/60">Die Vorschau erscheint hier automatisch.</p>
       </div>
     </div>;
   }

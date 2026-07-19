@@ -398,8 +398,10 @@ function StationTemplateDropZone({ tenantId, stations, categories, mapConfig, po
   return <div className="grid gap-4 border-b border-black/5 p-4 xl:grid-cols-[320px_1fr]">
     <div className="rounded-2xl bg-[#f7f7f4] p-4">
       <p className="text-xs font-bold uppercase tracking-widest text-[#286551]">Schnellstart</p>
-      <h3 className="mt-2 font-display text-2xl">Standardstationen platzieren</h3>
-      <p className="mt-2 text-sm leading-6 text-black/55">Ziehe eine Vorlage auf die Karte oder nutze „Position setzen“ in der Stationsliste und klicke exakt auf die Karte.</p>
+      <div className="mt-2 flex items-center gap-2">
+        <h3 className="font-display text-2xl">Standardstationen</h3>
+        <HelpBubble text="Vorlage auf die Karte ziehen oder „Position setzen“ wählen und dann in die Karte klicken." />
+      </div>
       <div className="mt-4 space-y-2">
         {templates.length === 0 && <p className="rounded-xl bg-white p-3 text-sm text-black/55">Noch keine Vorlagen vorhanden. Neue Orte kannst du jederzeit über „Neue Station“ anlegen.</p>}
         {templates.map((station, index) => <div key={station.id} data-testid={`station-template-${station.id}`} onPointerDown={(event) => startTemplatePointerDrag(event, station)} className="touch-none cursor-grab rounded-xl border border-black/10 bg-white p-3 active:cursor-grabbing">
@@ -487,34 +489,27 @@ function TenantSettings({ tenant, saving, platformAdmin, onLifecycle, onSave }: 
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-amber-700">BETA</span>
-          <p className="text-xs leading-5 text-black/50">Eigene Domains zeigen per DNS auf Platzguide. Keine URL mit <code>/c/...</code> eintragen.</p>
+          <LabelText label="Eigene Domains" tooltip="BETA: Domain im DNS auf Platzguide zeigen lassen, TLS im Reverse Proxy aktivieren und die Domain hier eintragen. Keine URL mit /c/... verwenden." />
         </div>
         <Field label="Optionale eigene Domains" value={hostText} onChange={(hosts) => setDraft({ ...draft, hosts: hosts.split(",").map((host) => host.trim()).filter(Boolean) })} />
       </div>
-      <div className="rounded-xl bg-[#f7f7f4] p-4 text-sm leading-6 text-black/65">
-        <p className="font-bold text-[#1b302a]">Öffentlicher Link</p>
-        <p>Standard-Link: <code>/c/{draft.slug}</code>. Dafür ist kein Wildcard-DNS und kein Wildcard-Zertifikat nötig.</p>
-        <p>Eigene Domains: Domain per A-/CNAME-Record auf die Plattform zeigen lassen, TLS im Reverse Proxy aktivieren und die Domain hier eintragen. Platzguide ordnet den Aufruf dann diesem Mandanten zu.</p>
-      </div>
+      <p className="rounded-xl bg-[#f7f7f4] p-3 text-sm font-bold text-black/55">Link: /c/{draft.slug}</p>
       <Field label="Kontakt-Telefon" value={draft.contact.phone} onChange={(phone) => setDraft({ ...draft, contact: { ...draft.contact, phone } })} />
       <Field label="Kontakt-E-Mail" value={draft.contact.email} onChange={(email) => setDraft({ ...draft, contact: { ...draft.contact, email } })} />
       <Field label="Notfallkontakt" value={draft.contact.emergency} onChange={(emergency) => setDraft({ ...draft, contact: { ...draft.contact, emergency } })} />
       <Save saving={saving} onClick={save} />
     </SettingsCard>
     <SettingsCard title="Kartengrundlagen" complete={Boolean(draft.map.configured && Number.isFinite(draft.map.center[0]) && Number.isFinite(draft.map.center[1]))} description="Das Kernfeature: freie OpenFreeMap-Basiskarte, grafisch markierte Campingplatzfläche und optional eigener Lageplan.">
-      <div className="rounded-xl bg-emerald-50 p-4 text-sm leading-6 text-emerald-900"><strong>Standard:</strong> Platzguide nutzt OpenFreeMap/OSM als freie Basiskarte. Der Betreiber markiert seinen Campingplatz als Rechteck; daraus werden Mittelpunkt, Zoom und Besucherkarte sauber abgeleitet.</div>
       <CampAreaPicker mapConfig={draft.map} onChange={(map) => setDraft({ ...draft, map })} />
       <Field label="Platzplan-Bild-URL" value={draft.map.sitePlan?.imageUrl ?? ""} onChange={(imageUrl) => setDraft({ ...draft, map: { ...draft.map, configured: Boolean(imageUrl) || draft.map.configured, sitePlan: imageUrl ? draft.map.sitePlan ?? { imageUrl, coordinates: [[draft.map.center[0] - 0.001, draft.map.center[1] + 0.001], [draft.map.center[0] + 0.001, draft.map.center[1] + 0.001], [draft.map.center[0] + 0.001, draft.map.center[1] - 0.001], [draft.map.center[0] - 0.001, draft.map.center[1] - 0.001]], attribution: "Eigener Lageplan" } : undefined } })} />
       <label className="block text-sm font-bold"><LabelText label="Platzplan hochladen" tooltip="Lade einen eigenen Lageplan als PNG, JPG, WebP oder PDF hoch." /><input title="Lade einen eigenen Lageplan als PNG, JPG, WebP oder PDF hoch." type="file" accept="image/png,image/jpeg,image/webp,application/pdf" onChange={(event) => event.target.files?.[0] && uploadSitePlan(event.target.files[0])} className="mt-2 block w-full rounded-xl border border-dashed border-black/20 bg-[#fafaf8] p-4 text-sm font-normal" /></label>
       {draft.map.sitePlan && <div className="rounded-xl border border-black/10 p-4">
-        <p className="text-sm font-bold">Vierpunkt-Kalibrierung</p>
-        <p className="mt-1 text-xs text-black/45">Reihenfolge: oben links, oben rechts, unten rechts, unten links. Werte sind Längengrad/Breitengrad.</p>
+        <LabelText label="Vierpunkt-Kalibrierung" tooltip="Reihenfolge: oben links, oben rechts, unten rechts, unten links. Werte sind Längengrad und Breitengrad." />
         <div className="mt-3 grid gap-3 md:grid-cols-2">{draft.map.sitePlan.coordinates.map((point, index) => <div key={index} className="grid gap-2 sm:grid-cols-2">
           <Field label={`P${index + 1} Längengrad`} value={String(point[0])} onChange={(value) => updateSitePlanCorner(index, 0, value)} />
           <Field label={`P${index + 1} Breitengrad`} value={String(point[1])} onChange={(value) => updateSitePlanCorner(index, 1, value)} />
         </div>)}</div>
       </div>}
-      <p className="text-xs leading-5 text-black/45">Für exakte Wege abseits öffentlicher Straßen: eigenen Lageplan hinterlegen und über vier Eckpunkte georeferenzieren.</p>
       <Save saving={saving} onClick={save} />
     </SettingsCard>
     {platformAdmin && <SettingsCard title="Mandantenstatus" complete description="Archivieren sperrt die Besucher-App. Reaktivieren stellt den Mandanten wieder zur Bearbeitung bereit.">
@@ -529,7 +524,6 @@ function TenantSettings({ tenant, saving, platformAdmin, onLifecycle, onSave }: 
           : <button disabled={saving} onClick={() => onLifecycle("archive")} className="rounded-xl border border-orange-200 px-4 py-3 text-sm font-bold text-orange-700 disabled:opacity-60">Archivieren / sperren</button>}
         <button disabled={saving} onClick={() => onLifecycle("delete")} className="rounded-xl border border-red-200 px-4 py-3 text-sm font-bold text-red-700 disabled:opacity-60">Endgültig löschen</button>
       </div>
-      <p className="text-xs leading-5 text-black/45">Löschen entfernt den Mandanten dauerhaft aus der Datenbank. Vorher Backup/Export prüfen.</p>
     </SettingsCard>}
   </div>;
 }
@@ -588,16 +582,11 @@ function Integrations({ tenant, saving, platformAdmin, tenantAdminPermissions, o
   }
   return <div className="space-y-6">
     <SettingsCard title="E-Mail-Benachrichtigungen" complete description="E-Mails werden immer vom zentralen Platzguide-System gesendet. Mandanten können SMTP und Absender nicht ändern.">
-      <div className="rounded-xl bg-[#f7f7f4] p-3 text-sm leading-6 text-black/55">
-        <p><strong>Empfänger:</strong> Mandanten-Admins mit Rolle Owner oder Editor.</p>
-        <p><strong>Absender:</strong> immer das zentrale System aus der Server-Konfiguration.</p>
-        <p><strong>Gäste:</strong> keine E-Mails; spätere Hinweise laufen maximal über Push-Mitteilungen nach Einwilligung.</p>
-        {platformAdmin && <p><strong>SMTP:</strong> Host, Port, Benutzer, Passwort, Absendername und Absenderadresse liegen nur in der Server-Umgebung.</p>}
-      </div>
+      <p className="rounded-xl bg-[#f7f7f4] p-3 text-sm font-bold text-black/55">Empfänger: Mandanten-Admins</p>
       <div className="flex flex-wrap gap-2"><button type="button" onClick={sendTestMail} className="rounded-xl border px-4 py-3 text-sm font-bold">Testmail an Mandanten-Admins senden</button></div>
       {mailTest && <p className="rounded-xl bg-[#eff3ec] p-3 text-sm font-bold text-[#286551]">{mailTest}</p>}
     </SettingsCard>
-    {platformAdmin && <SettingsCard title="Captcha & Self-Service" complete={draft.integrations.captcha.provider === "disabled" || Boolean(draft.integrations.captcha.siteKey.trim())} description="Turnstile, hCaptcha oder reCAPTCHA schützt öffentliche Registrierung.">
+    {platformAdmin && <SettingsCard title="Captcha & Registrierung" complete={draft.integrations.captcha.provider === "disabled" || Boolean(draft.integrations.captcha.siteKey.trim())} description="Turnstile, hCaptcha oder reCAPTCHA schützt öffentliche Registrierung.">
       <Select label="Captcha-Provider" value={draft.integrations.captcha.provider} options={["disabled", "turnstile", "hcaptcha", "recaptcha"]} onChange={(provider) => setDraft({ ...draft, integrations: { ...draft.integrations, captcha: { ...draft.integrations.captcha, provider: provider as Tenant["integrations"]["captcha"]["provider"] } } })} />
       <Field label="Öffentlicher Site-Key" value={draft.integrations.captcha.siteKey} onChange={(siteKey) => setDraft({ ...draft, integrations: { ...draft.integrations, captcha: { ...draft.integrations.captcha, siteKey } } })} />
       <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-3 text-sm font-bold"><span className="inline-flex items-center gap-1.5">Für Registrierung erforderlich<HelpBubble text="Wenn aktiv, muss jede neue Registrierung zuerst die Captcha-Prüfung bestehen." /></span><input title="Wenn aktiv, muss jede neue Registrierung zuerst die Captcha-Prüfung bestehen." type="checkbox" checked={draft.integrations.captcha.requiredForSignup} onChange={(event) => setDraft({ ...draft, integrations: { ...draft.integrations, captcha: { ...draft.integrations.captcha, requiredForSignup: event.target.checked } } })} className="h-5 w-5 accent-[#286551]" /></label>
@@ -610,10 +599,8 @@ function Integrations({ tenant, saving, platformAdmin, tenantAdminPermissions, o
       <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-3 text-sm font-bold"><span className="inline-flex items-center gap-1.5">IP anonymisieren<HelpBubble text="Empfohlen für Datenschutz: Matomo speichert IP-Adressen gekürzt." /></span><input title="Empfohlen für Datenschutz: Matomo speichert IP-Adressen gekürzt." type="checkbox" checked={draft.tracking.anonymizeIp} onChange={(event) => setDraft({ ...draft, tracking: { ...draft.tracking, anonymizeIp: event.target.checked } })} className="h-5 w-5 accent-[#286551]" /></label>
       <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-3 text-sm font-bold"><span className="inline-flex items-center gap-1.5">Do-Not-Track respektieren<HelpBubble text="Wenn aktiv, wird bei gesetztem Browser-Datenschutzsignal nicht getrackt." /></span><input title="Wenn aktiv, wird bei gesetztem Browser-Datenschutzsignal nicht getrackt." type="checkbox" checked={draft.tracking.respectDoNotTrack} onChange={(event) => setDraft({ ...draft, tracking: { ...draft.tracking, respectDoNotTrack: event.target.checked } })} className="h-5 w-5 accent-[#286551]" /></label>
       {draft.tracking.matomoUrl && <a href={draft.tracking.matomoUrl} target="_blank" rel="noreferrer" className="inline-flex w-fit rounded-xl border border-black/10 px-4 py-3 text-sm font-bold">Matomo öffnen</a>}
-      <p className="rounded-xl bg-[#f7f7f4] p-3 text-xs leading-5 text-black/55">Wichtig: Matomo muss separat betrieben oder gebucht werden. Hier wird nur die Verbindung je Mandant verwaltet.</p>
     </SettingsCard>}
     {(platformAdmin || canManageStorage || canManageBackup) && <SettingsCard title="Dateiablage, Datenbank & Backup" complete={Boolean(draft.integrations.storage.provider && draft.integrations.storage.maxUploadMb > 0 && draft.integrations.storage.allowedTypes.length > 0 && draft.integrations.database.provider === "postgresql")} description="Betriebsparameter für Uploads, PostgreSQL und Sicherungen.">
-      <div className="rounded-xl bg-[#f7f7f4] p-4 text-sm leading-6 text-black/65"><strong className="text-[#1b302a]">Wichtig:</strong> Mandanten, Stationen, Einstellungen, Audit-Log und Metadaten liegen in PostgreSQL. Die Dateiablage betrifft nur hochgeladene Bilder, PDFs und Videos; bei „Server-Dateisystem“ werden diese Dateien lokal auf dem Server gespeichert und tenantgetrennt referenziert.</div>
       {canManageStorage && <label className="block min-w-0 text-sm font-bold"><LabelText label="Dateiablage für Uploads" tooltip="Speicherort für hochgeladene Medien. Die eigentlichen App-Daten liegen weiterhin in PostgreSQL." /><select title="Speicherort für hochgeladene Medien. Die eigentlichen App-Daten liegen weiterhin in PostgreSQL." aria-label="Dateiablage für Uploads" value={draft.integrations.storage.provider} onChange={(event) => setDraft({ ...draft, integrations: { ...draft.integrations, storage: { ...draft.integrations.storage, provider: event.target.value as Tenant["integrations"]["storage"]["provider"] } } })} className="mt-2 w-full rounded-xl border border-black/10 bg-[#fafaf8] px-4 py-3 outline-none">
         <option value="local">Server-Dateisystem, tenantgetrennt</option>
         <option value="s3">S3-kompatibler Objektspeicher</option>
@@ -695,11 +682,7 @@ function Billing({ tenant, saving, platformAdmin, onSave }: { tenant: Tenant; sa
             </div>}
         </article>)}
       </div>
-      <div className="rounded-xl bg-[#f7f7f4] p-4 text-sm leading-6 text-black/65">
-        <p><strong>Jahreszahlung:</strong> {draft.billing.yearlyDiscountPercent}% Rabatt, aktuell {formatEuro(yearlyPrice)} pro Jahr.</p>
-        <p><strong>Einrichtungsservice:</strong> optional durch Michael für {formatEuro(draft.billing.setupServicePriceCents)} einmalig.</p>
-        <p><strong>Rechnungen & Kündigung:</strong> werden sicher über Stripe verwaltet. Zahlungsdaten speichert Platzguide nicht.</p>
-      </div>
+      <p className="rounded-xl bg-[#f7f7f4] p-3 text-sm font-bold text-black/55">Jährlich: {formatEuro(yearlyPrice)} · Einrichtung: {formatEuro(draft.billing.setupServicePriceCents)}</p>
       <div className="flex flex-wrap gap-2">
         <button type="button" onClick={openPortal} disabled={billingState.loading === "portal" || !draft.billing.stripeCustomerId} className="rounded-xl border border-black/10 px-5 py-3 text-sm font-bold disabled:opacity-50">{billingState.loading === "portal" ? "Öffnet …" : "Abo & Rechnungen verwalten"}</button>
         {draft.billing.stripeLatestInvoiceUrl && <a href={draft.billing.stripeLatestInvoiceUrl} target="_blank" rel="noreferrer" className="rounded-xl border border-black/10 px-5 py-3 text-sm font-bold">Letzte Rechnung öffnen</a>}
@@ -711,12 +694,8 @@ function Billing({ tenant, saving, platformAdmin, onSave }: { tenant: Tenant; sa
       {platformAdmin && <Select label="Status" value={draft.billing.status} options={["trial", "active", "past_due", "blocked"]} onChange={(status) => setDraft({ ...draft, billing: { ...draft.billing, status: status as Tenant["billing"]["status"], publicEnabled: status === "active" ? draft.billing.publicEnabled : false, manualOverride: true } })} />}
       {platformAdmin && <Field label="Interner Freigabegrund" value={draft.billing.manualOverrideReason ?? ""} onChange={(manualOverrideReason) => setDraft({ ...draft, billing: { ...draft.billing, manualOverrideReason, manualOverride: Boolean(manualOverrideReason) } })} />}
       {platformAdmin && <label className="flex items-center justify-between gap-4 rounded-xl border border-black/10 p-4 text-sm font-bold"><span className="inline-flex items-center gap-1.5">Einrichtungsservice gebucht<HelpBubble text="Markiert, ob die optionale Einrichtung durch dich gebucht wurde." /></span><input title="Markiert, ob die optionale Einrichtung durch dich gebucht wurde." type="checkbox" checked={draft.billing.setupServiceBooked ?? false} onChange={(event) => setDraft({ ...draft, billing: { ...draft.billing, setupServiceBooked: event.target.checked } })} className="h-5 w-5 accent-[#286551]" /></label>}
-      <div className="rounded-xl bg-[#f7f7f4] p-4 text-sm leading-6 text-black/65">
-        <p><strong>Speicher:</strong> {usedMb} MB von {draft.billing.storageLimitMb} MB genutzt.</p>
-        <p><strong>Frontend:</strong> {frontendState}.</p>
-        <p><strong>Statuslogik:</strong> Nur <code>active</code> plus Veröffentlichung macht die Besucher-App öffentlich. <code>trial</code>, <code>past_due</code> und <code>blocked</code> bleiben gesperrt.</p>
-        {draft.billing.stripeCurrentPeriodEnd && <p><strong>Aktueller Stripe-Zeitraum bis:</strong> {new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(new Date(draft.billing.stripeCurrentPeriodEnd))}</p>}
-      </div>
+      <p className="rounded-xl bg-[#f7f7f4] p-3 text-sm font-bold text-black/55">{usedMb} MB von {draft.billing.storageLimitMb} MB · {frontendState}</p>
+      {draft.billing.stripeCurrentPeriodEnd && <p className="text-sm text-black/55">Stripe-Zeitraum bis {new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(new Date(draft.billing.stripeCurrentPeriodEnd))}</p>}
       {platformAdmin && <Save saving={saving} onClick={() => onSave(draft)} />}
     </SettingsCard>
   </div>;
@@ -795,7 +774,6 @@ function PushMessages({ tenant, saving, onSave }: { tenant: Tenant; saving: bool
       : `Mitteilung gespeichert. Für echten Geräte-Push fehlen noch VAPID-Keys. Abos: ${payload?.subscriptions ?? 0}.`);
   }
   return <SettingsCard title="Mitteilungen" complete={(draft.pushMessages ?? []).every((message) => message.title.trim() && message.body.trim())} description="Aktuelle Hinweise in der Besucher-App anzeigen und optional als Web-Push senden.">
-    <p className="rounded-xl bg-[#f7f7f4] p-3 text-sm leading-6 text-black/55">Aktive Mitteilungen erscheinen sofort in der Besucher-App. Web-Push wird gesendet, wenn VAPID-Keys gesetzt sind und Besucher Push erlaubt haben.</p>
     {pushResult && <p className="rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{pushResult}</p>}
     <ModuleListHeader onAdd={add} saving={saving} onSave={() => onSave(draft)} />
     {(draft.pushMessages ?? []).map((message) => <AdminItem key={message.id} active={message.active} onToggle={(active) => update(message.id, { active })} onRemove={() => setDraft({ ...draft, pushMessages: (draft.pushMessages ?? []).filter((item) => item.id !== message.id) })}>
@@ -814,7 +792,6 @@ function Occupancy({ tenant, saving, onSave }: { tenant: Tenant; saving: boolean
   const add = () => setDraft({ ...draft, occupancyStatuses: [{ id: crypto.randomUUID(), tenantId: draft.id, label: "Schwimmbad", status: "free", note: "Aktuell frei", active: true, updatedAt: new Date().toISOString() }, ...(draft.occupancyStatuses ?? [])] });
   const update = (id: string, changes: Partial<OccupancyStatus>) => setDraft({ ...draft, occupancyStatuses: (draft.occupancyStatuses ?? []).map((item) => item.id === id ? { ...item, ...changes, updatedAt: new Date().toISOString() } : item) });
   return <SettingsCard title="Belegungs- & Statusanzeigen" complete={(draft.occupancyStatuses ?? []).every((status) => status.label.trim() && status.note.trim())} description="Manuelle Ampelanzeigen für Bereiche, Einrichtungen oder Services.">
-    <p className="rounded-xl bg-[#f7f7f4] p-3 text-sm leading-6 text-black/55">Damit kann ein Betreiber einfache Zustände wie frei, gut besucht, voll oder geschlossen veröffentlichen. Sensoren oder automatische Belegungsdaten sind noch nicht angebunden.</p>
     <ModuleListHeader onAdd={add} saving={saving} onSave={() => onSave(draft)} />
     {(draft.occupancyStatuses ?? []).map((status) => <AdminItem key={status.id} active={status.active} onToggle={(active) => update(status.id, { active })} onRemove={() => setDraft({ ...draft, occupancyStatuses: (draft.occupancyStatuses ?? []).filter((item) => item.id !== status.id) })}>
       <Field label="Name" value={status.label} onChange={(label) => update(status.id, { label })} />
@@ -904,12 +881,11 @@ function Profile({ tenant, adminEmail }: { tenant: Tenant; adminEmail: string })
         {state.message && <p className="rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{state.message}</p>}
         {state.error && <p className="rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{state.error}</p>}
       </form>
-      <p className="text-sm text-black/55">Mandant: {tenant.name}<br />Tenant-ID: <span className="break-all">{tenant.id}</span></p>
+      <p className="text-sm text-black/55">Mandant: {tenant.name}</p>
     </SettingsCard>
     <SettingsCard title="Datenschutz" complete description="Export und Löschanfragen werden protokolliert.">
       <a href="/api/admin/privacy" target="_blank" className="inline-flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold"><Download size={17} /> Datenexport öffnen</a>
       <button onClick={requestDeletion} className="ml-0 inline-flex items-center gap-2 rounded-xl border border-red-200 px-4 py-3 text-sm font-bold text-red-700 sm:ml-2"><Trash2 size={17} /> Löschanfrage erstellen</button>
-      <p className="text-xs leading-5 text-black/45">Produktive Löschung sollte erst nach Identitätsprüfung und Backup-Frist final ausgeführt werden.</p>
     </SettingsCard>
     <SettingsCard title="Platzguide Export & Import" complete description="Exportiert Inhalte als Platzguide-Bundle. Stripe, Rechnungen, Passwörter und Auditlog werden nicht exportiert. Import landet als Entwurf.">
       <a href={`/api/admin/tenant/bundle?tenantId=${tenant.id}`} target="_blank" className="inline-flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold"><Download size={17} /> Platzguide-Bundle exportieren</a>
@@ -922,16 +898,16 @@ function Security() { return <div className="min-w-0"><SettingsCard title="Siche
 function SettingsCard({ title, description, complete = false, children }: { title: string; description: string; complete?: boolean; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   return <section className="min-w-0 w-full overflow-hidden animate-enter rounded-xl bg-white shadow-sm">
-    <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)} className="flex w-full min-w-0 items-start justify-between gap-4 p-5 text-left">
-      <div className="min-w-0">
+    <div className="flex w-full min-w-0 items-start justify-between gap-3 p-5">
+      <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)} className="min-w-0 flex-1 text-left">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <span role="heading" aria-level={2} className="break-words font-display text-2xl">{title}</span>
-          {complete && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700"><CheckCircle2 size={14} /> vollständig</span>}
+          {complete && <span title="Vollständig" className="inline-grid h-7 w-7 place-items-center rounded-full bg-emerald-50 text-emerald-700"><CheckCircle2 size={15} /><span className="sr-only">vollständig</span></span>}
         </div>
-        <span className="mt-1 block break-words text-sm text-black/45">{description}</span>
-      </div>
-      <ChevronRight className={cn("mt-1 shrink-0 text-[#286551] transition", open && "rotate-90")} size={20} />
-    </button>
+      </button>
+      <HelpBubble text={description} />
+      <button type="button" aria-label={open ? `${title} schließen` : `${title} öffnen`} aria-expanded={open} onClick={() => setOpen((value) => !value)} className="mt-1 shrink-0 text-[#286551]"><ChevronRight className={cn("transition", open && "rotate-90")} size={20} /></button>
+    </div>
     {open && <div className="min-w-0 space-y-4 px-5 pb-5">{children}</div>}
   </section>;
 }

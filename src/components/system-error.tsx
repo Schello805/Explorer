@@ -7,17 +7,9 @@ export function SystemError({ title, message }: { title: string; message: string
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f4c564]/20 text-2xl" aria-hidden="true">
           ⏳
         </div>
-        <p className="mt-6 text-xs font-bold uppercase tracking-[.18em] text-[#c9653d]">Platzguide Hinweis</p>
+        <p className="mt-6 text-xs font-bold uppercase tracking-[.18em] text-[#c9653d]">Platzguide</p>
         <h1 className="mt-3 max-w-sm font-display text-4xl leading-[.98] sm:text-5xl">{title}</h1>
-        <p className="mt-5 text-lg leading-8 text-[#18332b]/70">{message}</p>
-        <div className="mt-6 rounded-3xl bg-[#f7f4ed] p-5">
-          <p className="font-bold">Was du jetzt tun kannst</p>
-          <ul className="mt-3 space-y-2 text-sm leading-6 text-[#18332b]/70">
-            <li>• Seite in ein paar Minuten erneut öffnen.</li>
-            <li>• QR-Code oder Link vom Campingplatz noch einmal scannen.</li>
-            <li>• Bei Fragen direkt an der Rezeption nachfragen.</li>
-          </ul>
-        </div>
+        <p className="mt-5 text-base leading-7 text-[#18332b]/65">{message}</p>
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <a className="rounded-2xl bg-[#124333] px-5 py-4 text-center font-bold text-white shadow-sm transition hover:bg-[#0d3328]" href=".">
             Erneut versuchen
